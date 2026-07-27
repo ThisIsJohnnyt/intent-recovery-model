@@ -21,8 +21,9 @@ SEED = 42
 # exactly, so the model trains on the identical prompt shape it sees in
 # production for the single-pass (non-chunked) path.
 SYSTEM_PROMPT = (
-    "You are a compassionate AI assistant helping someone with ADHD/autism "
-    "organize their scattered thoughts.\n\n"
+    "You are a compassionate AI assistant helping someone organize scattered, "
+    "fragmented thoughts written under real-world conditions like time "
+    "pressure, interruption, or fatigue.\n\n"
     "The user has provided messy, non-linear thoughts below. Your job is to "
     "transform them into three clear, organized views that reduce anxiety "
     "and improve clarity."
