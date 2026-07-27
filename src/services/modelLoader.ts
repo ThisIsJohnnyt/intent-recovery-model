@@ -1,9 +1,14 @@
 import { pipeline, env } from '@xenova/transformers'
 
-// Set up transformers.js environment
-env.allowLocalModels = false
-env.allowRemoteModels = true
-env.localModelPath = 'https://huggingface.co/'
+// Self-hosted, fine-tuned model served from public/models/ (see
+// training/export_onnx.py), not a Hugging Face Hub id — this model was
+// fine-tuned specifically on this app's ###NARRATIVE###/###BULLETS###/
+// ###ACTIONS### output format and Xenova/flan-t5-base can't produce it.
+const MODEL_NAME = 'thoughtorganizer-flan-t5'
+
+env.allowLocalModels = true
+env.allowRemoteModels = false
+env.localModelPath = '/models/'
 
 let cachedModel: any = null
 let modelLoadingPromise: Promise<any> | null = null
@@ -26,41 +31,18 @@ export async function loadModel(): Promise<any> {
 
 async function loadModelInternal(): Promise<any> {
   try {
-    console.log('Loading text-to-text generation model...')
+    console.log('Loading fine-tuned text-to-text generation model...')
 
-    // Use a smaller, quantized model that works well in-browser
-    // FLAN-T5 is reliable for text organization and summarization
-    const model = await pipeline(
-      'text2text-generation',
-      'Xenova/flan-t5-base',
-      {
-        quantized: true,
-      }
-    )
+    const model = await pipeline('text2text-generation', MODEL_NAME, {
+      quantized: true,
+    })
 
     console.log('Model loaded successfully')
     cachedModel = model
     return model
   } catch (err) {
-    console.error('Failed to load primary model:', err)
-
-    // Fallback to an even smaller model
-    try {
-      console.log('Falling back to smaller model...')
-      const fallbackModel = await pipeline(
-        'text2text-generation',
-        'Xenova/flan-t5-small',
-        {
-          quantized: true,
-        }
-      )
-      console.log('Fallback model loaded')
-      cachedModel = fallbackModel
-      return fallbackModel
-    } catch (fallbackErr) {
-      console.error('Fallback model also failed:', fallbackErr)
-      throw new Error('Failed to load any text generation model')
-    }
+    console.error('Failed to load model:', err)
+    throw new Error('Failed to load the text generation model')
   }
 }
 
@@ -69,9 +51,58 @@ export function clearModel(): void {
   modelLoadingPromise = null
 }
 
-export async function streamFromModel(
+export async function* streamFromModel(
   model: any,
-  prompt: string
-): Promise<AsyncGenerator<string>> {
-  return model.tokenizer.encode(prompt)
+  prompt: string,
+  // Bounds worst-case runaway generation: a model that fails to emit EOS at
+  // the right point (more likely on a small/undertrained checkpoint) will
+  // otherwise loop until it exhausts this budget. parseModelOutput tolerates
+  // a truncated ACTIONS section gracefully, so this is a safety cap, not a
+  // quality lever — no_repeat_ngram_size was tried and rejected here because
+  // it corrupts the literal ###MARKER### delimiters instead of stopping the
+  // loop.
+  maxNewTokens = 300
+): AsyncGenerator<string> {
+  const tokenizer = model.tokenizer
+  const chunks: string[] = []
+  let lastText = ''
+  let done = false
+  let error: unknown = null
+  let notify: (() => void) | null = null
+
+  model(prompt, {
+    max_new_tokens: maxNewTokens,
+    repetition_penalty: 1.3,
+    callback_function: (beams: any[]) => {
+      const decoded = tokenizer.decode(beams[0].output_token_ids, {
+        skip_special_tokens: true,
+      })
+      if (decoded.length > lastText.length) {
+        chunks.push(decoded.slice(lastText.length))
+        lastText = decoded
+        notify?.()
+      }
+    },
+  })
+    .catch((err: unknown) => {
+      error = err
+    })
+    .finally(() => {
+      done = true
+      notify?.()
+    })
+
+  while (true) {
+    if (chunks.length > 0) {
+      yield chunks.shift() as string
+      continue
+    }
+    if (done) {
+      if (error) throw error
+      return
+    }
+    await new Promise<void>((resolve) => {
+      notify = resolve
+    })
+  }
 }

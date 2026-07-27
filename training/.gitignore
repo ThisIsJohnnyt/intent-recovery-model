@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+checkpoints/
+data/processed/
+# Real personal notes used as a held-out eval set — not synthetic, not meant
+# to be published alongside the code.
+data/real_holdout.jsonl
+*.log

@@ -1,4 +1,4 @@
-import { loadModel } from './modelLoader'
+import { loadModel, streamFromModel } from './modelLoader'
 import { parseModelOutput } from '../utils/outputParser'
 import { intelligentChunk, estimateTokens } from '../utils/tokenization'
 
@@ -6,15 +6,20 @@ const SYSTEM_PROMPT = `You are a compassionate AI assistant helping someone with
 
 The user has provided messy, non-linear thoughts below. Your job is to transform them into three clear, organized views that reduce anxiety and improve clarity.`
 
-const USER_PROMPT_TEMPLATE = `Please provide:
+// Plain delimited text, not JSON: testing showed FLAN-T5-base reliably gets
+// the *content* right after fine-tuning, but a small model frequently loses
+// track of bracket/quote nesting on a JSON array (fails ~50% of the time
+// even on memorized training examples). Marker lines degrade gracefully —
+// a mistake in one section doesn't invalidate the whole response the way an
+// unbalanced bracket does.
+const USER_PROMPT_TEMPLATE = `Respond with exactly this format, using these three section markers each on their own line, with no other text before or after:
 
-1. **ORGANIZED NARRATIVE**: Rewrite the thoughts as a coherent, flowing narrative. Group related ideas. Keep the original meaning and tone. Make it less anxiety-inducing to read.
-
-2. **KEY POINTS**: Extract 3-7 key ideas as clear, simple bullet points.
-
-3. **ACTION ITEMS**: Extract any tasks, next steps, or things to do. If none, write "None identified."
-
-Format your response exactly as shown above with those three sections clearly labeled.`
+###NARRATIVE###
+a coherent, flowing narrative that groups related ideas, keeps the original meaning and tone, and reads less anxiety-inducing than the raw thoughts
+###BULLETS###
+one key idea per line, 3 to 7 lines
+###ACTIONS###
+one task per line; leave this section empty if there are no tasks`
 
 interface OrganizedNote {
   narrative: string
@@ -63,7 +68,7 @@ async function* processSinglePass(
   let tokenCount = 0
 
   try {
-    for await (const chunk of model.stream(prompt)) {
+    for await (const chunk of streamFromModel(model, prompt)) {
       fullOutput += chunk
       tokenCount++
 
@@ -131,7 +136,7 @@ async function* processMultiChunk(
 
       let chunkOutput = ''
 
-      for await (const token of model.stream(prompt)) {
+      for await (const token of streamFromModel(model, prompt)) {
         chunkOutput += token
       }
 
@@ -151,20 +156,21 @@ async function* processMultiChunk(
 
     const mergePrompt = `You are organizing scattered thoughts. Here are multiple processed sections that came from a single raw input.
 
-Please create ONE unified organized output that combines all these sections coherently:
+Combine all these sections into ONE unified result:
 
 ${outputs.map((out, idx) => `SECTION ${idx + 1}:\n${out}`).join('\n\n---\n\n')}
 
-Please provide the FINAL UNIFIED OUTPUT using the same format:
+Respond with exactly this format, using these three section markers each on their own line, with no other text before or after:
 
-1. **ORGANIZED NARRATIVE**: Single coherent narrative combining all sections
-2. **KEY POINTS**: Consolidated key points from all sections (remove duplicates)
-3. **ACTION ITEMS**: All action items from all sections
-
-Format your response clearly with these exact section labels.`
+###NARRATIVE###
+a single coherent narrative combining all sections
+###BULLETS###
+consolidated key points from all sections, one per line, duplicates removed
+###ACTIONS###
+all action items from all sections, one per line, duplicates removed`
 
     let mergedOutput = ''
-    for await (const token of model.stream(mergePrompt)) {
+    for await (const token of streamFromModel(model, mergePrompt)) {
       mergedOutput += token
     }
 
