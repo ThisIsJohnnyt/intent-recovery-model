@@ -59,3 +59,12 @@ Dataset-content decisions (exactly which examples, how many per category,
 how evaluation is scored) come from the product owner + ChatGPT. Significant
 project decisions are recorded in [../decisions/](../decisions/) as they're
 made, not left to chat history.
+
+**Evaluation is a shared practice, not a fourth role.** Every dataset
+release ends with all three roles asking the same questions together: did
+accuracy improve? Which categories improved, which regressed? What new
+failure modes appeared? What surprised us? These get written down as
+`gold_vX.Y_lessons_learned.md` (see
+[`../datasets/REVIEW_GUIDE.md`](../datasets/REVIEW_GUIDE.md)'s release
+bundle) — distinct from why an example was authored (design notes) or
+whether a batch passed the quality bar before training (review report).

@@ -48,3 +48,22 @@ Model 0.1
   zero_action_items      99%
   longitudinal           N/A
 ```
+
+## Negative examples
+
+Some benchmark examples should be inputs the model is **expected to fail**
+until a later version — not a bug in the benchmark, the point of it.
+Example: given a bare `blue folder / Steve / Tuesday / that thing`, there
+isn't enough information to say how these relate. A correct response
+preserves that uncertainty (*"I noted a blue folder, Steve, Tuesday, and
+'that thing,' but there isn't enough information to determine how they
+relate"*); an incorrect one invents a connection (*"Steve left the blue
+folder for Tuesday's meeting"*).
+
+Negative examples measure whether a model over-invents connections under
+ambiguity — the opposite failure mode from under-extracting. They're
+**benchmark data, never training data**: live in `datasets/benchmark/`
+(see its `README.md`), which `training/prepare_data.py` never reads (it
+only reads `synthetic.jsonl`/`real_holdout.jsonl` for the training path).
+No negative examples are authored yet — that's a dataset curator decision,
+not something to fabricate speculatively here.

@@ -70,3 +70,29 @@ edited after the notes are written.)
   equivalent) and `CATEGORY_REFERENCE.md`.
 - Rejected/needs-revision: send back with which checklist item(s) failed —
   specific enough that the fix is obvious, not just "doesn't feel right."
+
+## Release bundle
+
+Every gold release is more than a `.jsonl` file. Going forward (starting
+`gold_v1.2`), a release is:
+
+| File | Written by | When |
+|---|---|---|
+| `gold_vX.Y.jsonl` | Curator | Before release |
+| `gold_vX.Y_design_notes.md` (using [DESIGN_NOTES_TEMPLATE.md](DESIGN_NOTES_TEMPLATE.md)) | Curator (author intent) | Before release |
+| `gold_vX.Y_review_report.md` (this checklist, filled in) | Claude Code (independent check) | Before release |
+| `CHANGELOG.md` entry | Whoever accepts the release | At acceptance |
+| `gold_vX.Y_lessons_learned.md` | Shared — all three roles | After training + evaluation |
+| `gold_vX.Y_benchmark_results.md` | Whoever runs the benchmark | After training + evaluation |
+
+Three of these ask genuinely different questions, not overlapping ones:
+
+- **Design notes**: why was each example written?
+- **Review report**: does this batch pass the quality bar, independently
+  checked?
+- **Lessons learned**: after actually training and evaluating on it, what
+  did we discover — unexpected successes, unexpected failures, surprises,
+  recommendations for the next release?
+
+Reuses the existing `gold_vX.Y` version number for every file in the
+bundle — one identifier per release, not a separate numbering scheme.

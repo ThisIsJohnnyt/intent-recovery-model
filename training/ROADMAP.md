@@ -18,8 +18,32 @@ Single fine-tuned FLAN-T5-base, delimited-marker output format
 (`###NARRATIVE###`/`###BULLETS###`/`###ACTIONS###` — JSON is not viable for
 this model, see below). Pipeline: `prepare_data.py` → `train.py` →
 `export_onnx.py`, self-hosted in `public/models/`. Proven end-to-end on a
-15-example placeholder fixture; next step is a real dataset generated per
-[DATASET_SPEC.md](DATASET_SPEC.md).
+15-example placeholder fixture. Real dataset generation is underway per
+[DATASET_SPEC.md](DATASET_SPEC.md) — see the release curriculum below.
+
+## Release curriculum
+
+Each gold release teaches one new capability, not just more volume — see
+[`../docs/datasets/REVIEW_GUIDE.md`](../docs/datasets/REVIEW_GUIDE.md)'s
+"release bundle" section for what a release actually consists of.
+
+| Release | Focus | Status |
+|---|---|---|
+| `gold_v1.0` | Basic recovery (schema validation, pipeline proof) | ✅ Complete |
+| `gold_v1.1` | Realistic note styles, authentic messiness | ✅ Complete |
+| `gold_v1.2` | Multiple interleaved topics (many unrelated topics at once — segmentation, not summarization) | Next |
+| `gold_v1.3` | Sensory overwhelm | Planned |
+| `gold_v1.4` | Emotional journaling | Planned |
+| `gold_v1.5` | Burnout (follows emotional journaling — enough overlap that it shouldn't lead) | Planned |
+
+**Temporal Recovery is explicitly not on this list.** It requires
+multi-note/sequence input (e.g. "Monday: mentioned an invoice, Wednesday:
+asked if it was ever sent, Friday: mentioned it again" — recognizing a
+thought resurfacing across *separate* notes), which is a different input
+shape than today's single-note `{"input": "...", "output": {...}}` schema.
+It belongs under **v2/v3**'s "Longitudinal continuity" below, gated behind
+input-schema work that doesn't exist yet — not a same-architecture gold
+release.
 
 Hard-won findings from getting v1 working, worth remembering before changing
 the format or model again:
@@ -90,10 +114,12 @@ extending `training/`:
   presentation quality improve without retraining the reasoning model, and
   lets "did it recover the right intent" be evaluated independently of
   "does it read well."
-- **Longitudinal continuity.** Real notes aren't independent — the same
-  thought resurfaces and evolves across days. Training on sequences (not
-  isolated notes) so the model learns "this is the same thought evolving,"
-  not "four unrelated notes."
+- **Longitudinal continuity / Temporal Recovery.** Real notes aren't
+  independent — the same thought resurfaces and evolves across days.
+  Training on sequences (not isolated notes) so the model learns "this is
+  the same thought evolving," not "four unrelated notes." See the release
+  curriculum above for why this waits for input-schema work rather than
+  becoming a near-term gold release.
 - **Formal Intent Recovery Dataset Specification (IRDS).** A versioned,
   RFC-style spec — hidden generation data (metadata, cognitive/emotional
   context, thought graph) never seen by the model, separate from the
