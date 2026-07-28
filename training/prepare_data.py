@@ -3,7 +3,7 @@
 Usage:
     python prepare_data.py
 
-Reads training/data/synthetic.jsonl (trained on) and training/data/real_holdout.jsonl
+Reads datasets/synthetic.jsonl (trained on) and datasets/real_holdout.jsonl
 (held out, eval only) and writes training/data/processed/{train,val,real_eval}.jsonl,
 each record shaped {"prompt": ..., "target": ...} ready for tokenization.
 """
@@ -12,8 +12,8 @@ import random
 import sys
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent / "data"
-PROCESSED_DIR = DATA_DIR / "processed"
+DATA_DIR = Path(__file__).parent.parent / "datasets"
+PROCESSED_DIR = Path(__file__).parent / "data" / "processed"
 VAL_FRACTION = 0.1
 SEED = 42
 

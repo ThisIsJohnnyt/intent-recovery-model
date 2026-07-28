@@ -28,8 +28,8 @@ accuracy per category instead of one aggregate number (see ROADMAP.md's
 benchmark suite section).
 
 Two files:
-- `training/data/synthetic.jsonl` — ChatGPT-generated examples (see prompt below).
-- `training/data/real_holdout.jsonl` — your real notes, same format. Written by hand (you write the `input` from a real note, and either write the `output` yourself or have ChatGPT help draft it and you correct it). These are **not** trained on in round 1 — they're the eval set that tells us whether synthetic-only training generalizes to how you actually write.
+- `datasets/synthetic.jsonl` — ChatGPT-generated examples (see prompt below).
+- `datasets/real_holdout.jsonl` — your real notes, same format. Written by hand (you write the `input` from a real note, and either write the `output` yourself or have ChatGPT help draft it and you correct it). These are **not** trained on in round 1 — they're the eval set that tells us whether synthetic-only training generalizes to how you actually write.
 
 ## Two rules for every example
 
@@ -127,9 +127,21 @@ should be long and rambling.
 ## Where files go
 
 ```
-training/data/synthetic.jsonl      <- ChatGPT output, appended across batches
-training/data/real_holdout.jsonl   <- your real notes, held out from training
+datasets/synthetic.jsonl              <- ChatGPT output, appended across batches
+datasets/real_holdout.jsonl           <- your real notes, held out from training (gitignored)
+datasets/gold/gold_v1.0.jsonl         <- hand-curated gold-tier examples, one file per batch
+                                          (gold_v1.1.jsonl, gold_v1.2.jsonl, ... as more arrive),
+                                          each with a matching *_design_notes.md explaining
+                                          why every example exists — not trained on until the
+                                          gold tier is consolidated with (or instead of) synthetic.jsonl
+datasets/gold/DATASET_CARD.md         <- purpose, scope, generation process, limitations, ethics
+datasets/gold/CHANGELOG.md            <- version history of the gold tier
+datasets/gold/LICENSE.md              <- CC-BY-4.0
 ```
+
+The dataset lives in its own top-level `datasets/` directory (sibling to
+`training/`), separate from the training pipeline/code — see
+`datasets/gold/DATASET_CARD.md` for the full picture.
 
 `prepare_data.py` reads both, validates schema, and produces the tokenized
 train/val split `train.py` trains on (only from `synthetic.jsonl` in round 1).
