@@ -74,11 +74,14 @@ def main() -> None:
         output_dir=str(OUTPUT_DIR),
         per_device_train_batch_size=4,
         per_device_eval_batch_size=4,
-        # 100 is tuned for the tiny (~15 example) fixture set used to smoke-test
-        # this pipeline. With a real dataset of a few hundred+ diverse examples,
-        # lower this substantially (start around 8-15) and watch eval_loss —
-        # more data needs far fewer passes over it.
-        num_train_epochs=100,
+        # Scaled down from 100 (tuned for the ~15-example placeholder fixture)
+        # given 36 real training examples now (datasets/gold v1.0-v1.2
+        # consolidated) — roughly matches the total gradient-step budget that
+        # produced a working checkpoint on the fixture. Still far from "a few
+        # hundred+" examples, so this isn't the final tuning point — with a
+        # much larger real dataset, lower substantially further (8-15) and
+        # watch eval_loss instead of holding step count constant.
+        num_train_epochs=40,
         learning_rate=3e-4,
         weight_decay=0.01,
         eval_strategy="epoch",

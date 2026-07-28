@@ -5,7 +5,7 @@ The `category` field on a training example (see
 specific recovery skill that example teaches. This is a living document —
 add a category here the first time it's used in a batch.
 
-## Categories in use (as of `gold_v1.1`)
+## Categories in use (as of `gold_v1.2`)
 
 | Category | Teaches | Difficulty seen | Introduced in |
 |---|---|---|---|
@@ -26,20 +26,41 @@ add a category here the first time it's used in a batch.
 | `dangling_reference` | A second flavor of unresolved reference (a memory-recall prompt, not just an object) | medium | v1.1 |
 | `anxious_task_dump` | Recover tasks from a note where the writer names being overwhelmed | medium | v1.1 |
 | `hyperfocus_details` | Distinguish technical detail/observations from the one real task among them | medium | v1.1 |
+| `two_unrelated_tasks` | Two unrelated tasks, no relationship between them | easy | v1.2 |
+| `task_plus_observation` | One task, one non-actionable observation | easy | v1.2 |
+| `task_plus_idea` | One task, one speculative (not committed) idea | easy | v1.2 |
+| `observation_plus_idea` | Two non-actionable fragments — action_items should stay empty | easy | v1.2 |
+| `three_independent_topics` / `four_independent_topics` / `five_independent_topics` | Scale topic count with no structural complexity | medium | v1.2 |
+| `topic_switch_and_return` | Leave a topic, insert an unrelated aside, then return to the original | medium | v1.2 |
+| `observation_among_tasks` / `idea_among_tasks` | Position in the note doesn't change classification | medium | v1.2 |
+| `buried_reminder` | A real task hidden inside a much longer unrelated reflection | hard | v1.2 |
+| `interrupted_thought_multi_topic` | A thought interrupted by an unrelated topic, then explicitly resumed | hard | v1.2 |
+| `stream_of_consciousness_topics` | Run-on style blurs topics that aren't actually related | hard | v1.2 |
+| `nested_thought` | A parenthetical aside nested within one topic, not a second topic | hard | v1.2 |
+| `long_rambling_multi_topic` | Length alone shouldn't merge or drop topics | hard | v1.2 |
+| `reminder_inside_narrative` | A task remembered mid-story; distinguish it from what's outside the writer's control | hard | v1.2 |
+| `emotional_aside_multi_topic` | An emotional reflection interleaved with tasks it isn't causally connected to | expert | v1.2 |
+| `repeated_reminder_multi_topic` | Dedupe a reminder repeated under emphasis, not just simple restatement | expert | v1.2 |
+| `rapid_topic_switching_incomplete_sentences` | Very rapid topic changes with a genuinely unfinished sentence | expert | v1.2 |
+| `maximum_interleaving` | Combines rapid switching, an emotional aside, and a repeated mention at once | expert | v1.2 |
 
 *\*See [`gold_v1.1_review_report.md`](../../datasets/gold/gold_v1.1_review_report.md)
 — this label may not perfectly match what the example demonstrates
 (a resolved narrative arc, not an unresolved mood contradiction).*
 
+`gold_v1.2` categories and difficulty calibration: see
+[`gold_v1.2_review_report.md`](../../datasets/gold/gold_v1.2_review_report.md)
+for how the difficulty tiers were derived directly from
+`gold_v1.2_curriculum.md`'s own level definitions (an initial draft had
+inconsistencies between the two that this release corrects).
+
 ## Target categories not yet represented
 
-- **Multiple unrelated topics interleaved at once** (distinct from
-  `topic_switching`'s two-out-of-order and `interleaved_work_personal`'s
-  two-threads — this is several unrelated topics at once). **Confirmed as
-  `gold_v1.2`'s focus** — see `training/ROADMAP.md`'s release curriculum.
 - Author-only references/abbreviations beyond "unfinished" — in-jokes or
   shorthand only the writer would parse (distinct from `dangling_reference`,
   which is closer to a memory-recall prompt).
+- Multi-note/longitudinal recovery — explicitly out of scope for any
+  single-note gold release; see `training/ROADMAP.md`'s v2/v3 section.
 
 ## Cognitive/emotional states represented
 
@@ -49,7 +70,15 @@ underrepresentation early (see `REVIEW_GUIDE.md`).
 
 **Represented**: hyperfocus (`hyperfocus_details`, v1.1), rapid-branching
 excitement (`rapid_branching_excitement`, v1.1), anxiety
-(`anxious_task_dump`, v1.1).
+(`anxious_task_dump`, v1.1, and incidentally in `maximum_interleaving`,
+v1.2).
+
+**Incidentally touched, not yet a dedicated release**: burnout language
+appears in `emotional_aside_multi_topic` (v1.2, "feeling really burnt out
+lately") as one fragment within a topic-segmentation example — this is not
+a substitute for `gold_v1.3`'s planned dedicated burnout release, just an
+early, brief appearance worth noting so `v1.3` isn't designed as if burnout
+were entirely unrepresented.
 
 **Not yet represented** — prioritized by the dataset curator for upcoming
 releases: sensory overwhelm (next, `gold_v1.3`), emotional journaling
