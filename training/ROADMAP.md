@@ -2,29 +2,15 @@
 
 ## North star
 
-> The model should adapt to the person — not the person to the model.
-
-The mission is to help people recover their own intent with as little
-cognitive and emotional burden as possible. Not "organize notes." Not
-"summarize text." Not "detect ADHD." Every dataset, evaluation, and
-architecture decision should be checked against one question: **does this
-make it easier for the user to recover what mattered, without making them
-revisit more than they need to?**
+See [../docs/vision/NORTH_STAR.md](../docs/vision/NORTH_STAR.md) for the
+mission and the formal definition of Intent Recovery as a task.
 
 ## Collaboration model
 
-- **Product owner** (the user): owns the problem and the vision — the
-  lived experience of what it's like to look at your own note and not want
-  to mentally return to the state you wrote it in just to understand it.
-- **Claude Code**: implementation engineer — repository, training scripts,
-  ONNX export, quantization, inference, deployment, debugging.
-- **ChatGPT**: dataset & evaluation architect — dataset specification,
-  synthetic data generation rules, diversity/balance analysis, benchmark
-  creation, evaluation methodology, difficulty progression.
-
-Dataset-content decisions (exactly which examples, how many per category,
-how evaluation is scored) come from the product owner + ChatGPT. This repo's
-job is building what that specification asks for.
+See [../docs/vision/NORTH_STAR.md](../docs/vision/NORTH_STAR.md)'s
+"Collaboration model" section. In short: dataset-content decisions come from
+the product owner + ChatGPT; this repo's job is building what that
+specification asks for.
 
 ## v1 — prove the pipeline (current)
 
