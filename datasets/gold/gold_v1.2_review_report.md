@@ -76,9 +76,11 @@ directly:
 
 Scanned the full file and design notes for `adhd`, `autis`, `diagnos`,
 `neurodivergen` (case-insensitive): no matches. The prior draft's curriculum
-label issue is not repeated in this authored content (the curriculum
-document itself is unchanged from the original review — that finding
-still stands there and is unaffected by this replacement).
+label issue is not repeated in this authored content. At the time of this
+review the curriculum document itself still had the issue unfixed; it has
+since been corrected (both the "Realistic neurodivergent writing" design
+principle and the coverage matrix's "Realistic ADHD-style note capture"
+label were reworded) — see the Findings summary below.
 
 ## 6. Category balance — ✅ Pass
 
@@ -142,9 +144,12 @@ lesson, fragment-by-fragment rationale, failure modes, expected recovery.
   provisionally accepted, flagged for a second look when available,
   especially on subjective calls like difficulty calibration and scenario
   realism.
-- `gold_v1.2_curriculum.md`'s own diagnosis-framing issue (§5 of the
-  original review) is untouched by this replacement — it's a separate
-  document, not modified here, and still needs a wording fix if that
-  document is to remain the authoritative curriculum reference.
+- **Update**: `gold_v1.2_curriculum.md`'s diagnosis-framing issue (§5 of
+  the original review) has since been fixed — both the "Realistic
+  neurodivergent writing" design principle and the coverage matrix's
+  "Realistic ADHD-style note capture" label were reworded to describe
+  cognitive/emotional state rather than a population, when a curator
+  revision of the curriculum doc surfaced both instances (only the second
+  had been caught in the original review).
 - No negative/benchmark examples identified yet for this release (per
   `docs/benchmarks/benchmark_suite.md`) — future work, not blocking.

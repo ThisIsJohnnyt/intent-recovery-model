@@ -1,5 +1,43 @@
 # Changelog
 
+## v1.2.1 — 2026-07-29
+
+14 examples, authored by ChatGPT (dataset and evaluation architect) — the
+first release drafted using its GitHub connector's confirmed read access to
+the live repo, rather than a manually relayed file bundle. Additive
+corrective release, not a new theme: reinforces `gold_v1.2` segmentation
+skills that `gold_v1.2_lessons_learned.md`'s real training run and
+real-world usage testing showed were unreliable — deeper interrupted/
+buried/nested Level 3 structures, multi-person attribution, open-question
+preservation, and task retention. See
+[`gold_v1.2.1_curriculum.md`](gold_v1.2.1_curriculum.md) for the full
+rationale and [`gold_v1.2.1_review_report.md`](gold_v1.2.1_review_report.md)
+for the review (zero blocking or borderline findings).
+
+Difficulty distribution: 5 medium, 5 hard, 4 expert — no `easy` tier, since
+this release reinforces already-advanced skills rather than introducing
+basic ones. 6 new categories, one per lesson (see
+[`gold_v1.2.1_design_notes.md`](gold_v1.2.1_design_notes.md) for the
+rationale per example):
+
+- `interrupted_thought_depth`, `buried_task_retention`,
+  `nested_boundary_depth` — deeper Level 3 structural reinforcement
+- `multi_person_attribution` — new: attribution across multiple named
+  people, including deliberately unresolved pronoun ambiguity
+- `open_question_preservation` — new: preserving an unanswered question
+  instead of inventing a resolution
+- `standalone_task_retention` — new: retaining a brief or repeatedly
+  emphasized task under competing narrative/emotional salience
+
+Also adds two `TAXONOMY.md` failure categories (`Invented Answer`,
+`Excessive Fragmentation` — the first over-segmentation failure named) and
+a canonical-vs-descriptive wording table, so future reviews use consistent
+terminology instead of parallel ad hoc labels for the same failure.
+
+**Not yet trained on or evaluated** — next step is consolidating with
+`gold_v1.0`-`v1.2` for a training run, then a `gold_v1.2.1_lessons_learned.md`
+entry.
+
 ## v1.2 — 2026-07-28
 
 20 examples, authored by Claude Code. Focus: multiple interleaved topics —

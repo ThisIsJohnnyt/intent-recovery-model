@@ -11,6 +11,8 @@ definition.
 | Area | Location |
 |---|---|
 | The app (React + TypeScript + Vite, in-browser inference via transformers.js) | [`../../src/`](../../src/), [`../../README.md`](../../README.md) |
+| Gold Curriculum Series' stable principles (constitution — link, don't restate) | [`GOLD_PHILOSOPHY.md`](GOLD_PHILOSOPHY.md) |
+| How the AI collaborators actually work together (roles, review, conflict resolution) | [`AI_COLLABORATION.md`](AI_COLLABORATION.md) |
 | Fine-tuning pipeline (data prep → train → export → self-host) | [`../../training/`](../../training/) |
 | Engineering roadmap, hard-won findings, v1/v1.5/v2-v3 plan | [`../../training/ROADMAP.md`](../../training/ROADMAP.md) |
 | Dataset generation spec (schema, rules, ChatGPT prompt) | [`../../training/DATASET_SPEC.md`](../../training/DATASET_SPEC.md) |

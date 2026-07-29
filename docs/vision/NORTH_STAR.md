@@ -60,11 +60,33 @@ how evaluation is scored) come from the product owner + ChatGPT. Significant
 project decisions are recorded in [../decisions/](../decisions/) as they're
 made, not left to chat history.
 
-**Evaluation is a shared practice, not a fourth role.** Every dataset
-release ends with all three roles asking the same questions together: did
-accuracy improve? Which categories improved, which regressed? What new
-failure modes appeared? What surprised us? These get written down as
-`gold_vX.Y_lessons_learned.md` (see
-[`../datasets/REVIEW_GUIDE.md`](../datasets/REVIEW_GUIDE.md)'s release
-bundle) — distinct from why an example was authored (design notes) or
-whether a batch passed the quality bar before training (review report).
+**Decisions are evidence-driven and independently reviewed** — including
+evaluation itself, which is a shared practice across all three roles, not a
+fourth one. The mechanics of how that actually happens day to day (who
+writes what, when) live in
+[`../datasets/REVIEW_GUIDE.md`](../datasets/REVIEW_GUIDE.md) and
+[`AI_COLLABORATION.md`](AI_COLLABORATION.md), not here — this document
+states the value, not the procedure.
+
+## Guiding values
+
+Project-wide values that hold regardless of which release or which
+collaborator is involved. See [`AI_COLLABORATION.md`](AI_COLLABORATION.md)
+for how these actually get carried out day to day — this section states
+what and why, not how.
+
+**Repository Authority** — the committed repository is the authoritative
+representation of project state. Conversation history provides context, not
+truth. When repository state and conversational context disagree, the
+discrepancy must be surfaced rather than silently resolved. This isn't
+specific to AI collaborators — it's a general engineering principle that
+happens to matter especially here, since a proposal made without checking
+the actual repo is exactly how this project's recurring conflicts have
+started. See `AI_COLLABORATION.md`'s "Conflict resolution" for the procedure
+this principle requires.
+
+**Preserve Decision History** — decisions should be recorded once,
+referenced often, and reconsidered only with new evidence, not re-litigated
+from scratch each time a question resurfaces. This is why
+[`../decisions/`](../decisions/) exists: so nobody has to reconstruct *why*
+something was decided from chat history months later.

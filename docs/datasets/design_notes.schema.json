@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ThisIsJohnnyt/thoughtorganizer/docs/datasets/design_notes.schema.json",
+  "title": "Gold curriculum design note (optional structured format)",
+  "description": "Optional machine-checkable structure for a design note (see DESIGN_NOTES_TEMPLATE.md). Design notes explain why an example was written and are never read by the training pipeline. This is NOT the trained-data schema — see training_data.schema.json for that. A curator may write a design note as free-form prose following DESIGN_NOTES_TEMPLATE.md, or as JSON validating against this schema; both are equally acceptable, this just gives the JSON option a checkable shape.",
+  "type": "object",
+  "required": [
+    "example_id",
+    "lesson",
+    "author_intent",
+    "scenario",
+    "boundary_evidence",
+    "failure_modes",
+    "expected_recovery"
+  ],
+  "properties": {
+    "example_id": {
+      "type": "string",
+      "description": "e.g. G1.2-001 — matches the batch-version-number convention in DESIGN_NOTES_TEMPLATE.md.",
+      "pattern": "^G[0-9]+\\.[0-9]+-[0-9]{3}$"
+    },
+
+    "curriculum_level": {
+      "type": "string",
+      "description": "Curriculum level name (see TAXONOMY.md's Difficulty categories). Not the trained difficulty value — see training_data.schema.json's difficulty enum (easy|medium|hard|expert) for that.",
+      "enum": ["Basic", "Moderate", "Complex", "High Cognitive Load"]
+    },
+
+    "lesson": {
+      "type": "string",
+      "description": "The one recovery skill this example teaches — should match its category in the trained data."
+    },
+
+    "author_intent": {
+      "type": "string",
+      "description": "What this example is meant to prove the model can (or currently cannot) do."
+    },
+
+    "scenario": {
+      "type": "string",
+      "description": "The real-world situation this note is set in."
+    },
+
+    "reason_each_fragment_exists": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fragment", "reason"],
+        "properties": {
+          "fragment": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+
+    "boundary_evidence": {
+      "type": "array",
+      "description": "For each topic boundary in this example: what signals it and how confident that signal is. See TAXONOMY.md's Boundary categories and Confidence categories.",
+      "items": {
+        "type": "object",
+        "required": ["boundary", "evidence", "confidence"],
+        "properties": {
+          "boundary": {
+            "type": "string",
+            "description": "e.g. 'insurance call -> mom's request'"
+          },
+          "boundary_type": {
+            "type": "string",
+            "enum": [
+              "topic_shift",
+              "intent_shift",
+              "context_shift",
+              "thought_interruption",
+              "embedded_reminder"
+            ]
+          },
+          "evidence": {
+            "type": "string",
+            "description": "What in the text actually signals this boundary."
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["High", "Medium", "Low"]
+          }
+        }
+      }
+    },
+
+    "failure_modes": {
+      "type": "array",
+      "description": "Which of TAXONOMY.md's Failure categories this example is designed to expose.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "topic_merge",
+          "topic_loss",
+          "unsupported_addition",
+          "invented_causality",
+          "invented_chronology",
+          "over_summarization",
+          "misattribution"
+        ]
+      }
+    },
+
+    "hallucinations_to_watch_for": {
+      "type": "array",
+      "description": "Specific plausible-sounding but false things a reviewer should check the model didn't invent for this example.",
+      "items": { "type": "string" }
+    },
+
+    "why_this_example_is_at_this_point_in_the_curriculum": {
+      "type": "string",
+      "description": "What makes this example harder or different from the ones before it."
+    },
+
+    "expected_recovery": {
+      "type": "string",
+      "description": "What a correct output looks like, in plain terms — not the literal trained-data JSON."
+    }
+  },
+  "additionalProperties": true
+}

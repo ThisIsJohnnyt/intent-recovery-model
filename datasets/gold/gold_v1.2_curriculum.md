@@ -20,7 +20,18 @@ Gold v1.2 introduces a new cognitive capability:
 
 > Recover multiple independent intentions from one note.
 
-This mirrors real neurodivergent note-taking, where unrelated thoughts are often captured together.
+This mirrors how anyone captures scattered thoughts under real-world
+conditions (time pressure, interruption, distraction, excitement) — unrelated
+thoughts are often recorded together regardless of who's writing them.
+
+### Core Learning Principle
+
+> Separate before summarizing.
+
+A note containing multiple intentions should first be segmented into
+independent components. Only after accurate segmentation should
+interpretation or summarization occur. Gold v1.2 intentionally teaches this
+separation step, not a more polished rewrite.
 
 ## Capability Being Taught
 
@@ -42,12 +53,19 @@ This mirrors real neurodivergent note-taking, where unrelated thoughts are often
 
 ## Design Principles
 
-- Evidence First
-- No Magic Examples
-- One primary lesson per example
-- Realistic neurodivergent writing
-- Increasing difficulty across the release
-- Every fragment exists for a documented reason
+The stable, cross-release principles (Evidence First, No Magic Examples,
+One Lesson Per Example, Progressive Difficulty, Boundary Evidence, Preserve
+Uncertainty, Human-Centered Intent Recovery) are defined once in
+[`docs/vision/GOLD_PHILOSOPHY.md`](../../docs/vision/GOLD_PHILOSOPHY.md) —
+see that document rather than this section for their definitions, so a
+wording change doesn't have to be repeated in every `gold_vX.Y_curriculum.md`.
+
+What's specific to this release:
+
+- Realistic scattered-note writing patterns (not a single stereotype — see
+  `training/DATASET_SPEC.md`'s "Diversity requirements")
+- Every fragment exists for a documented reason (this release's application
+  of "No Magic Examples," per-example in `gold_v1.2_design_notes.md`)
 
 ## Curriculum Progression
 
@@ -76,6 +94,24 @@ Distribution:
 
 ## Example Coverage Matrix
 
+**Note:** this matrix is the pre-authoring plan, not a description of the
+final release. The examples actually authored diverged from it in two ways
+worth knowing before reading this table: (1) several row labels below
+("Multiple errands," "Multiple projects," "Ideas mixed with obligations")
+don't correspond 1:1 to the `category` values actually built — see
+[`docs/datasets/CATEGORY_REFERENCE.md`](../../docs/datasets/CATEGORY_REFERENCE.md)
+for the real category list; (2) some difficulty tags below (rows `06`,
+`08`, `14`, `18`) predate the Curriculum Progression section above and
+don't match it — e.g. row `06` "Buried reminder" is tagged Medium here even
+though Level 3 above names "buried reminders" as a Level 3 trait.
+`gold_v1.2_review_report.md` §7 documents finding and correcting this exact
+mismatch in the actually-built `gold_v1.2.jsonl` (where `buried_reminder`
+is tagged `hard`), but that fix was never applied retroactively to this
+planning table. Treat
+[`gold_v1.2_design_notes.md`](gold_v1.2_design_notes.md) and
+`CATEGORY_REFERENCE.md` as authoritative for what was actually built and at
+what difficulty; this table is kept as-is below for historical reference.
+
 | Example | Primary Lesson | Difficulty |
 |---------|----------------|------------|
 |01|Two unrelated tasks|Easy|
@@ -97,7 +133,7 @@ Distribution:
 |17|Ideas mixed with obligations|Hard|
 |18|Repeated reminders|Hard|
 |19|Maximum interleaving|Expert|
-|20|Realistic ADHD-style note capture|Expert|
+|20|Realistic high-cognitive-load capture|Expert|
 
 ## Success Criteria
 
@@ -118,16 +154,34 @@ Improve:
 4. Lost topics
 5. Over-summarization
 
+## Boundary Evidence
+
+Every segmentation boundary an example contains should be documented with
+what evidence in the text supports it and how confident that signal is —
+not just that a boundary exists, but why. This lets a reviewer check
+segmentation *reasoning*, not just the final answer. See
+[`docs/datasets/DESIGN_NOTES_TEMPLATE.md`](../../docs/datasets/DESIGN_NOTES_TEMPLATE.md)'s
+"Boundary Evidence" field for the exact format and a worked example.
+
+**Important**: boundary evidence, like everything else in this section,
+belongs in design notes only. It is never a field in the trained JSONL —
+see [`training/DATASET_SPEC.md`](../../training/DATASET_SPEC.md)'s "Data
+contract" for the one schema that's actually authoritative for training.
+
 ## Design Notes Requirement
 
-Each example includes:
+Each example includes (using
+[`docs/datasets/DESIGN_NOTES_TEMPLATE.md`](../../docs/datasets/DESIGN_NOTES_TEMPLATE.md)):
 
 - Example ID
 - Lesson
 - Author Intent
 - Scenario
 - Reason each fragment exists
-- Expected Failure Modes
+- Boundary Evidence
+- Failure Modes
+- Hallucinations to watch for
+- Why this example is at this point in the curriculum
 - Expected Recovery
 
 ## Review Expectations
@@ -143,16 +197,15 @@ Independent review verifies:
 
 ## Release Acceptance Criteria
 
-- Schema validation passes
-- Design notes complete
-- Review report complete
-- CHANGELOG updated
-- Category reference updated
-- Benchmark cases identified
-- Independent review passes
+Passes [`docs/datasets/REVIEW_GUIDE.md`](../../docs/datasets/REVIEW_GUIDE.md)'s
+"Release Checklist" — nothing specific to this release beyond that standard
+bar.
 
 ## Future Curriculum
 
+- Gold v1.2.1 — Segmentation Reinforcement (additive corrective release,
+  addressing gaps this training run surfaced — see
+  [`gold_v1.2.1_curriculum.md`](gold_v1.2.1_curriculum.md))
 - Gold v1.3 — Sensory Overwhelm
 - Gold v1.4 — Emotional Journaling
 - Gold v1.5 — Burnout

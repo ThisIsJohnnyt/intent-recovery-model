@@ -8,12 +8,37 @@ people recover their own intent with as little cognitive and emotional burden
 as possible. Not "organize notes." Not "summarize text." See
 [ROADMAP.md](ROADMAP.md) for the fuller principles this dataset should serve.
 
+## Data contract (read this before proposing a different schema)
+
+The schema below is the **one authoritative format** for anything that
+gets trained on. It exists because it matches what
+[`training/prepare_data.py`](prepare_data.py) and the deployed model's
+output format (`###NARRATIVE###`/`###BULLETS###`/`###ACTIONS###`, see
+[ROADMAP.md](ROADMAP.md)'s hard-won findings) actually require — not by
+preference. A prior draft of `gold_v1.2` used a different schema
+(`note`/`segmented_intentions`, no `output` object) and was rejected
+outright because `prepare_data.py` couldn't read it at all — see
+`datasets/gold/gold_v1.2_review_report.md`. Before proposing a richer
+per-example format (additional fields, restructured output, etc.), put it
+in [`docs/datasets/DESIGN_NOTES_TEMPLATE.md`](../docs/datasets/DESIGN_NOTES_TEMPLATE.md)
+instead — design notes carry boundary evidence, failure modes, and any
+other analysis, and are never read by the training pipeline, so they're
+free to be as rich as useful without risking a repeat of that rejection.
+
+A machine-checkable version of this same contract lives at
+[`docs/datasets/training_data.schema.json`](../docs/datasets/training_data.schema.json)
+(standard JSON Schema, Draft 2020-12) — useful for validating a batch with
+any JSON Schema tool before it even reaches `prepare_data.py`. If the two
+ever disagree, `prepare_data.py`'s `validate_record()` wins, since that's
+what actually gates training — update the schema file to match, not the
+other way around.
+
 ## File format
 
 One JSON object per line (JSONL), UTF-8:
 
 ```json
-{"input": "<raw scattered thoughts, as the user would actually type them>", "output": {"narrative": "<coherent flowing narrative>", "bullets": ["<key point 1>", "<key point 2>"], "action_items": ["<task 1>"]}, "difficulty": "easy|medium|hard", "category": "<short label for the one lesson this example teaches>"}
+{"input": "<raw scattered thoughts, as the user would actually type them>", "output": {"narrative": "<coherent flowing narrative>", "bullets": ["<key point 1>", "<key point 2>"], "action_items": ["<task 1>"]}, "difficulty": "easy|medium|hard|expert", "category": "<short label for the one lesson this example teaches>"}
 ```
 
 Rules for `output`:
@@ -98,7 +123,7 @@ line each time to steer toward under-represented states:
 Generate 15 training examples in JSONL format (one JSON object per line,
 no markdown fences, no commentary) for a note-organizing app. Each line:
 
-{"input": "...", "output": {"narrative": "...", "bullets": ["..."], "action_items": ["..."]}, "difficulty": "easy|medium|hard", "category": "..."}
+{"input": "...", "output": {"narrative": "...", "bullets": ["..."], "action_items": ["..."]}, "difficulty": "easy|medium|hard|expert", "category": "..."}
 
 "input" = realistic scattered, messy personal notes a real person would
 jot down (voice-to-text or quick typing), NOT polished writing. "narrative"
@@ -130,14 +155,24 @@ should be long and rambling.
 datasets/synthetic.jsonl              <- ChatGPT output, appended across batches
 datasets/real_holdout.jsonl           <- your real notes, held out from training (gitignored)
 datasets/gold/gold_v1.0.jsonl         <- hand-curated gold-tier examples, one file per batch
-                                          (gold_v1.1.jsonl, gold_v1.2.jsonl, ... as more arrive),
-                                          each with a matching *_design_notes.md explaining
-                                          why every example exists — not trained on until the
-                                          gold tier is consolidated with (or instead of) synthetic.jsonl
+                                          (gold_v1.1.jsonl, gold_v1.2.jsonl, ... as more arrive)
+                                          — not trained on until the gold tier is consolidated
+                                          with (or instead of) synthetic.jsonl
 datasets/gold/DATASET_CARD.md         <- purpose, scope, generation process, limitations, ethics
 datasets/gold/CHANGELOG.md            <- version history of the gold tier
 datasets/gold/LICENSE.md              <- CC-BY-4.0
 ```
+
+Each gold release is a full bundle, not just the `.jsonl` — design notes,
+review report, lessons learned, and (once benchmarking exists) benchmark
+results, all sharing the release's `gold_vX.Y` version number. See
+[`docs/datasets/REVIEW_GUIDE.md`](../docs/datasets/REVIEW_GUIDE.md)'s
+"Release bundle" table for the authoritative list of what files that
+includes and who writes each one — not repeated here to avoid the list
+drifting out of sync in two places. The conceptual layer that supports
+authoring/reviewing a release (category vocabulary, design note format,
+review checklist, taxonomy, JSON Schema mirror) lives under
+`docs/datasets/`, sibling to this spec.
 
 The dataset lives in its own top-level `datasets/` directory (sibling to
 `training/`), separate from the training pipeline/code — see
