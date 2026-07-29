@@ -99,6 +99,23 @@ For gold-tier batches specifically: does the `*_design_notes.md` file
 actually describe what's in the `.jsonl`? (Easy to drift if the JSONL gets
 edited after the notes are written.)
 
+## 8. Curriculum Integrity
+
+Beyond whether a single example is internally sound (item 3), does this
+*batch* still fit the release it's part of?
+
+- **Could this example belong to a different release more naturally?** A
+  well-built example that teaches a `v1.4` (emotional journaling) lesson
+  doesn't belong in a `v1.2` (multiple interleaved topics) batch just
+  because it's good — move it, or hold it for the right release.
+- **Does the example introduce capabilities reserved for future releases?**
+  Check the batch's `gold_vX.Y_curriculum.md`'s "Out of Scope" section —
+  e.g. `gold_v1.2_curriculum.md` explicitly excludes multi-note reasoning,
+  longitudinal continuity, temporal recovery, preference learning, calendar
+  scheduling, and task prioritization. An example that quietly exercises one
+  of those is curriculum creep, even if it's a well-written example on its
+  own terms.
+
 ## After review
 
 - Accepted batches: update `datasets/gold/CHANGELOG.md` (or the synthetic

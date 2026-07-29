@@ -53,12 +53,19 @@ separation step, not a more polished rewrite.
 
 ## Design Principles
 
-- Evidence First
-- No Magic Examples
-- One primary lesson per example
-- Realistic scattered-note writing patterns
-- Increasing difficulty across the release
-- Every fragment exists for a documented reason
+The stable, cross-release principles (Evidence First, No Magic Examples,
+One Lesson Per Example, Progressive Difficulty, Boundary Evidence, Preserve
+Uncertainty, Human-Centered Intent Recovery) are defined once in
+[`docs/vision/GOLD_PHILOSOPHY.md`](../../docs/vision/GOLD_PHILOSOPHY.md) —
+see that document rather than this section for their definitions, so a
+wording change doesn't have to be repeated in every `gold_vX.Y_curriculum.md`.
+
+What's specific to this release:
+
+- Realistic scattered-note writing patterns (not a single stereotype — see
+  `training/DATASET_SPEC.md`'s "Diversity requirements")
+- Every fragment exists for a documented reason (this release's application
+  of "No Magic Examples," per-example in `gold_v1.2_design_notes.md`)
 
 ## Curriculum Progression
 
