@@ -1,4 +1,6 @@
-"""Export a fine-tuned checkpoint to the ONNX layout transformers.js expects.
+"""Export a fine-tuned checkpoint to the ONNX layout a downstream application
+(e.g. thought-organizer-app, via @xenova/transformers) expects, staged as a
+release-ready bundle.
 
 Usage:
     python export_onnx.py [checkpoint_dir] [output_name]
@@ -6,18 +8,28 @@ Usage:
 Defaults: checkpoint_dir=checkpoints/thoughtorganizer-flan-t5/final,
 output_name=thoughtorganizer-flan-t5.
 
-Produces ../public/models/<output_name>/ with:
+Produces training/releases/<output_name>/ (gitignored -- this repo doesn't
+commit exported models directly; upload the directory's contents as a
+GitHub Release's assets instead, per docs/decisions/PDR-003.md) with:
     config.json, generation_config.json, special_tokens_map.json,
     spiece.model, tokenizer.json, tokenizer_config.json
     onnx/encoder_model.onnx, onnx/encoder_model_quantized.onnx
     onnx/decoder_model_merged.onnx, onnx/decoder_model_merged_quantized.onnx
+    manifest.json (sha256 + size for every file above -- everything a
+    checksum manifest can state without a human decision; "release",
+    "contract_version", "base_model", and "training_datasets" are left as
+    placeholders since those are release-process decisions, not something
+    to infer from the export)
 
 This matches the layout @xenova/transformers reads for a local/self-hosted
 text2text-generation pipeline (see node_modules/@xenova/transformers/src/models.js
 and env.js: onnx/<fileName>[_quantized].onnx, quantized selected via the
 `quantized: true` pipeline option, root-level model files loaded from
-env.localModelPath + model name).
+env.localModelPath + model name). See docs/inference-contract.md for the
+versioned contract a release like this one satisfies.
 """
+import hashlib
+import json
 import shutil
 import sys
 import tempfile
@@ -49,7 +61,7 @@ ROOT_CONFIG_FILES = [
 def main() -> None:
     checkpoint_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).parent / "checkpoints" / "thoughtorganizer-flan-t5" / "final"
     output_name = sys.argv[2] if len(sys.argv) > 2 else "thoughtorganizer-flan-t5"
-    dest_dir = Path(__file__).parent.parent / "public" / "models" / output_name
+    dest_dir = Path(__file__).parent / "releases" / output_name
 
     if not checkpoint_dir.exists():
         print(f"Checkpoint not found: {checkpoint_dir}", file=sys.stderr)
@@ -100,10 +112,31 @@ def main() -> None:
                 onnx.checker.check_model(model)
                 onnx.save(model, str(quantized_dst))
 
+    manifest_path = dest_dir / "manifest.json"
+    manifest = {
+        "release": "REPLACE-ME e.g. intent-recovery-model-v0.2.0",
+        "contract_version": "REPLACE-ME -- see docs/inference-contract.md",
+        "files": [
+            {
+                "name": str(f.relative_to(dest_dir)).replace("\\", "/"),
+                "sha256": hashlib.sha256(f.read_bytes()).hexdigest(),
+                "size_bytes": f.stat().st_size,
+            }
+            for f in sorted(dest_dir.rglob("*"))
+            if f.is_file()
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
     print(f"\nDone. Model files written to {dest_dir}")
     for f in sorted(dest_dir.rglob("*")):
-        if f.is_file():
+        if f.is_file() and f != manifest_path:
             print(f"  {f.relative_to(dest_dir)} ({f.stat().st_size / 1e6:.1f} MB)")
+    print(
+        f"\nWrote {manifest_path.name} with checksums for every file above. "
+        "Fill in \"release\" and \"contract_version\" before uploading this "
+        "directory's contents as a GitHub Release's assets."
+    )
 
 
 if __name__ == "__main__":
