@@ -67,6 +67,14 @@ right-hand value when tagging an actual example, not the level name:
 | Complex | `hard` | Interrupted thoughts, topic switching, incomplete context |
 | High Cognitive Load | `expert` | Rapid switching, repeated thoughts, emotional interruptions, multiple active threads |
 
+Topic *count* is the calibration axis for `gold_v1.2`-style releases, but
+it isn't the only valid one. A reinforcement release like `gold_v1.2.1` can
+have a `medium` example with only two topics if the difficulty comes from
+depth — e.g. one topic being a deliberately incomplete thought that
+tempts invented completion — rather than from topic count. Calibrate on
+whichever axis (count or depth) the release is actually teaching, and say
+which one in the design notes if it isn't count.
+
 ## Boundary categories
 
 Standard vocabulary for the "Evidence" field in a design note's Boundary
@@ -107,6 +115,8 @@ instead of re-describing the failure in prose each time.
 | **Invented Chronology** | No invented chronology |
 | **Over-Summarization** | No over-summarization |
 | **Misattribution** | *(new — see below)* |
+| **Invented Answer** | An unresolved question is converted into an unsupported answer, conclusion, or factual statement |
+| **Excessive Fragmentation** | One coherent intention is split into multiple independent topics without sufficient boundary evidence |
 
 **Misattribution** was added after `gold_v1.2_lessons_learned.md`'s
 real-world usage findings: the model reassigned a question the writer
@@ -115,6 +125,52 @@ note. None of the other six categories describe this failure — it's not a
 merge, loss, invention, or over-summarization, it's assigning a correctly-
 recovered fragment to the wrong person. Worth its own category rather than
 stretching an existing one to cover it.
+
+**Invented Answer** was added for `gold_v1.2.1` after the same real-world
+evaluation showed the model could turn an open question into a confident
+factual answer. This is a specific form of unsupported invention, but it
+deserves a separate canonical label because it removes uncertainty and may
+falsely signal that no follow-up is needed:
+
+> Did Morgan already submit the form?
+
+Incorrect recovery: *"Morgan submitted the form."*
+Correct recovery: *"It is unresolved whether Morgan submitted the form."*
+
+Use **Invented Answer** specifically when a question is answered
+affirmatively, negatively, or indirectly without evidence. Continue using
+**Unsupported Addition** for other invented content — completing an
+unfinished thought, adding a deadline, inventing a task mechanism.
+
+**Excessive Fragmentation** was added for `gold_v1.2.1` as the
+over-segmentation counterpart to **Topic Merge**. It occurs when content
+forming one governed, qualified, or otherwise coherent intention is split
+into separate topics:
+
+> Ask Priya whether the revised chart is ready.
+
+Incorrect recovery: two separate items ("Ask Priya" / "Determine whether
+the revised chart is ready"). Correct recovery: one item ("Ask Priya
+whether the revised chart is ready"). Boundary Evidence must be evaluated
+in both directions — **Topic Merge** (separate intentions joined without
+support) and **Excessive Fragmentation** (one coherent intention divided
+without support) are opposite failure modes, not the same check run twice.
+
+### Release-specific wording
+
+Curriculum and design notes may use concrete, descriptive language in
+prose (a design note can say "dropped task" or "wrong speaker"). Review
+reports and aggregated results should use the canonical labels above
+instead, so results stay comparable across releases:
+
+| Descriptive wording | Canonical failure category |
+|---|---|
+| Dropped task / lost reminder / missing final fragment | Topic Loss |
+| Person misattribution / wrong speaker / wrong owner | Misattribution |
+| Premature completion / completed unfinished thought | Unsupported Addition |
+| Nested topic merge / buried intention absorbed into narrative | Topic Merge |
+| Answered open question / uncertainty converted to fact | Invented Answer |
+| Over-segmentation / split coherent task | Excessive Fragmentation |
 
 ## Confidence categories
 

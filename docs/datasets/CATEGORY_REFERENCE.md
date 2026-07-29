@@ -10,7 +10,7 @@ conceptual vocabulary used *while authoring* examples (fragment types,
 boundary types, failure types), see [`TAXONOMY.md`](TAXONOMY.md) instead —
 the two are complementary, not duplicates.
 
-## Categories in use (as of `gold_v1.2`)
+## Categories in use (as of `gold_v1.2.1`)
 
 A category is never deleted from this table just because a later release
 stops using it — see "Category lifecycle" below.
@@ -51,6 +51,12 @@ stops using it — see "Category lifecycle" below.
 | `repeated_reminder_multi_topic` | Dedupe a reminder repeated under emphasis, not just simple restatement | expert | v1.2 | — |
 | `rapid_topic_switching_incomplete_sentences` | Very rapid topic changes with a genuinely unfinished sentence | expert | v1.2 | — |
 | `maximum_interleaving` | Combines rapid switching, an emotional aside, and a repeated mention at once | expert | v1.2 | — |
+| `interrupted_thought_depth` | Preserve an interrupted thought, connect an explicit return to the original topic, and avoid inventing the missing content | medium, hard | v1.2.1 | — |
+| `buried_task_retention` | Recover a brief task embedded in a longer narrative or interleaved note without allowing it to disappear | medium, hard, expert | v1.2.1 | — |
+| `nested_boundary_depth` | Keep qualifiers and governed clauses attached to one coherent intention while separating genuinely independent content | medium, hard | v1.2.1 | — |
+| `multi_person_attribution` | Preserve who said, did, has, needs, or receives each item when multiple people are mentioned; retain ambiguity when attribution is unresolved | medium, hard, expert | v1.2.1 | — |
+| `open_question_preservation` | Preserve a question as unresolved instead of inventing an answer, while recovering any supported checking task separately | medium, hard, expert | v1.2.1 | — |
+| `standalone_task_retention` | Preserve a brief or repeatedly emphasized task as one action item even when more salient narrative, emotion, or other tasks surround it | expert | v1.2.1 | — |
 
 *\*See [`gold_v1.1_review_report.md`](../../datasets/gold/gold_v1.1_review_report.md)
 — this label may not perfectly match what the example demonstrates
@@ -71,6 +77,28 @@ entry). None of the categories above are deprecated yet.
 for how the difficulty tiers were derived directly from
 `gold_v1.2_curriculum.md`'s own level definitions (an initial draft had
 inconsistencies between the two that this release corrects).
+
+`gold_v1.2.1`'s six categories reinforce rather than duplicate existing
+`v1.2` categories — each targets a broader or previously-untested failure
+mode of an already-taught skill:
+
+- `buried_task_retention` is intentionally broader than `buried_reminder`:
+  the `v1.2` category teaches recovery of one reminder hidden in
+  reflection, while this one targets the general failure mode where *any*
+  brief supported task can disappear from the output.
+- `interrupted_thought_depth` extends `interrupted_thought` and
+  `interrupted_thought_multi_topic` by adding explicit return-linking,
+  unresolved content, and competing inserted intentions.
+- `nested_boundary_depth` extends `nested_thought` by testing both
+  boundary directions — avoiding merging independent content *and*
+  avoiding splitting one governed or qualified intention (see
+  `TAXONOMY.md`'s new `Excessive Fragmentation` failure category).
+- `standalone_task_retention` is scoped narrowly to survival/deduplication
+  of a brief, explicitly repeated task — not a generic label for every
+  example that happens to contain a task.
+
+See [`gold_v1.2.1_review_report.md`](../../datasets/gold/gold_v1.2.1_review_report.md)
+for the full review.
 
 ## Target categories not yet represented
 
