@@ -207,6 +207,9 @@ Independent review verifies:
 
 ## Future Curriculum
 
+- Gold v1.2.1 — Segmentation Reinforcement (additive corrective release,
+  addressing gaps this training run surfaced — see
+  [`gold_v1.2.1_curriculum.md`](gold_v1.2.1_curriculum.md))
 - Gold v1.3 — Sensory Overwhelm
 - Gold v1.4 — Emotional Journaling
 - Gold v1.5 — Burnout
