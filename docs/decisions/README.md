@@ -53,3 +53,4 @@ Each PDR is a short file: `PDR-NNN.md`, three-digit zero-padded, sequential.
 
 - [PDR-001](PDR-001.md) — Build dataset infrastructure before large datasets
 - [PDR-002](PDR-002.md) — Sync the dataset curator via live GitHub read access, not manual relay
+- [PDR-003](PDR-003.md) — Split into `intent-recovery-model` and `thought-organizer` repos (see [migration plan](PDR-003-migration-plan.md))

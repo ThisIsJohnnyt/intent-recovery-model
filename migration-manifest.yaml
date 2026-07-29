@@ -1,0 +1,95 @@
+# Migration manifest for PDR-003 (docs/decisions/PDR-003.md).
+#
+# Classifies every path currently tracked in this repository (verified
+# against `git ls-tree -r --name-only HEAD` at authoring time) into exactly
+# one destination. Checked, not just descriptive — see
+# scripts/verify_migration_manifest.py, which diffs this file against the
+# actual tracked file list and fails if anything is unclassified or
+# double-assigned.
+#
+# Temporary artifact: kept in intent-recovery-model after the split as a
+# historical record of how the split was done, per PDR-003's "Preserve
+# Decision History" reasoning — not deleted once migration completes.
+
+migration:
+  source_repository: thoughtorganizer
+  pre_split_tag: pre-repository-split
+
+# Paths that stay in this repository once it's renamed to
+# intent-recovery-model. No content changes needed.
+destinations:
+  intent-recovery-model:
+    keep:
+      - training/
+      - datasets/
+      - docs/vision/
+      - docs/datasets/
+      - docs/decisions/
+      - docs/benchmarks/
+      - research/
+      - .gitattributes
+
+    # Needs a rewrite, not a plain keep -- see notes.
+    rewrite:
+      - path: README.md
+        note: Model-focused version; links to thought-organizer.
+      - path: training/ROADMAP.md
+        note: Stays as the model roadmap (curriculum, evaluation maturity, export) -- no path change, content unaffected by the split itself.
+      - path: .gitignore
+        note: Promote training/.gitignore's venv/checkpoints/data-processed/*.log patterns to repo root; drop node_modules/dist entries (no longer relevant here).
+
+    # New files this migration introduces, not moved from anywhere.
+    new:
+      - migration-manifest.yaml
+      - scripts/verify_migration_manifest.py
+      - docs/inference-contract.md
+      - docs/decisions/PDR-003.md
+      - docs/decisions/PDR-003-migration-plan.md
+
+  # Paths copied (not moved via history-preserving tooling) into the new,
+  # separately-created thought-organizer repository.
+  thought-organizer:
+    copy:
+      - src/
+      - index.html
+      - thoughtorganizer-mobile.html
+      - tsconfig.json
+      - tsconfig.node.json
+      - vite.config.ts
+      - package.json
+      - package-lock.json
+      # public/ currently contains nothing except models/ (see special_cases
+      # below) -- listed for completeness, not because there's content to
+      # copy today.
+      - public/
+
+    rewrite:
+      - path: README.md
+        note: App-focused version; links to intent-recovery-model.
+
+    # Fresh app-specific roadmap and gitignore (node_modules/dist), not
+    # derived from the model repo's versions.
+    new:
+      - scripts/fetch-model.*
+      - docs/ROADMAP.md
+      - .gitignore
+
+# Paths that don't move as plain files -- handled by process, not a git mv.
+special_cases:
+  README.md:
+    action: split-deliberately
+    detail: >
+      Intentionally listed under both destinations' `rewrite` -- each repo
+      gets its own independent, repo-specific README (model-focused vs.
+      app-focused), not a copy of the same content. Not an accidental
+      overlap.
+
+  public/models/thoughtorganizer-flan-t5/:
+    action: convert-to-release-asset
+    detail: >
+      Removed from git entirely (currently tracked via Git LFS). Republished
+      as a checksummed intent-recovery-model GitHub Release
+      (intent-recovery-model-v0.1.0). thought-organizer's scripts/fetch-model.*
+      downloads and verifies it at setup/build time instead of committing
+      the binary. See docs/inference-contract.md and PDR-003-migration-plan.md
+      step 6.
