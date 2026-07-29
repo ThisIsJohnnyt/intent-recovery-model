@@ -4,8 +4,11 @@ Companion to [`PDR-003.md`](PDR-003.md) — the actual step sequence, kept as
 a permanent record since the split happens across two GitHub repositories
 and a tool-local plan file doesn't survive that boundary.
 
-**Status as of this writing**: steps 1-7 complete. Steps 8 onward are
-in progress — see each step's status note.
+**Status as of this writing**: steps 1-9 complete, verified. Steps 10-13
+are the remaining, higher-impact steps (renaming this repo, removing its
+now-migrated app files) — paused for explicit confirmation before
+proceeding, per this project's practice of checking in before hard-to-
+reverse or externally-visible actions.
 
 ## Sequence
 
@@ -25,13 +28,22 @@ in progress — see each step's status note.
    contract version, each file's SHA-256 and size).
 7. ✅ Create the new, empty `thought-organizer-app` GitHub repository
    (github.com/ThisIsJohnnyt/thought-organizer-app).
-8. Copy the application-only paths into it (commit message references
-   `pre-repository-split` for traceability), add `scripts/fetch-model.*`,
-   and test it against the release from step 6.
-9. **Gate**: confirm `thought-organizer-app` runs end-to-end from a fresh
-   clone (`fetch-model` downloads + verifies + installs the release,
-   `npm run dev` produces valid output) before touching the original repo
-   further. Nothing is removed from the original repo before this passes.
+8. ✅ Copy the application-only paths into it (initial commit references
+   `pre-repository-split` for traceability, local clone at
+   `Desktop/thought-organizer-app`), add `scripts/fetch-model.mjs`
+   (Node, checksum-verified, refuses incomplete/corrupt downloads), and
+   test it against the release from step 6 — worked end-to-end on first
+   real run except two real findings fixed along the way: GitHub release
+   assets can't preserve the `onnx/` subdirectory prefix (script already
+   handled this via `path.basename()` for the download URL), and the
+   manifest asset kept its original upload filename rather than the
+   generic `manifest.json` the script initially assumed.
+9. ✅ **Gate**: confirmed `thought-organizer-app` runs end-to-end from a
+   genuinely fresh clone (not the working copy that built it) — `npm
+   install --ignore-scripts` → `npm run fetch-model` (downloads, size- and
+   checksum-verifies, installs the real release) → `npm run build`
+   (`tsc` + `vite build`, clean). Nothing has been removed from the
+   original repo before this passed.
 10. Rename the original GitHub repository `thoughtorganizer` →
     `intent-recovery-model` (GitHub auto-redirects the old URL; update it
     in docs anyway).
