@@ -3,12 +3,26 @@
 **Date**: 2026-07-29
 **Evaluation method**: Gold v1.2.1 Semantic Live-Evaluation Suite (proposed
 by ChatGPT) — 16 probes (12 capability probes across 4 reinforcement skills
-+ 4 regression probes), run via
-`training/run_gold_v1.2.1_probes.py` against the fine-tuned checkpoint
-directly (not the browser app), then scored by Claude Code against each
-probe's stated Expected Behavior. Full raw outputs in
-`training/gold_v1.2.1_probe_results.json` (epoch 2) and
-`training/gold_v1.2.1_probe_results_epoch40.json` (epoch 40).
++ 4 regression probes), run via `training/run_benchmark.py` against the
+fine-tuned checkpoint directly (not the browser app), then scored by Claude
+Code against each probe's stated Expected Behavior. Full raw output for the
+epoch 2 checkpoint in `training/gold_v1.2.1_probe_results.json`; the scored
+epoch 40 results (raw output + per-dimension scores + capability checks) in
+`training/gold_v1.2.1_benchmark_results_epoch40.json`, machine-readable via
+`training/report_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl
+training/gold_v1.2.1_benchmark_results_epoch40.json`.
+
+**Update (post-migration)**: running the strict pass rule this later
+tooling introduced (a probe passes only if every scored dimension is
+exactly 2/2 and every capability check is true — no partial credit)
+against the epoch 40 scores above reclassifies two probes this document's
+narrative called clean passes: **`14`** and **`16`** each produce a minor,
+ungrounded filler bullet (`"Morning fan"`, `"Reply to this question"`) that
+doesn't affect `action_items` but is a real `Unsupported Addition` by a
+release gate's standard. Overall: **9/16 (56%) pass**, **9/11 (82%)
+regression guards hold**, **0/5 negative examples resolved yet**. See
+`datasets/benchmark/gold_v1.2.1_probes.md` for the full report and whether
+`14`/`16` get reclassified from `regression_guard` to `negative_example`.
 
 ## 1. Training configuration
 
@@ -121,11 +135,13 @@ rather than the current `final/` (epoch 2).
 
 Done — all 16 probes moved to `datasets/benchmark/gold_v1.2.1_probes.jsonl`
 (with a companion `gold_v1.2.1_probes.md`), the first real entries in that
-directory. Classified against `checkpoint-520`'s actual results: 11 as
-`regression_guard` (currently passing — protect against future backsliding)
-and 5 as `negative_example` (`02`, `03`, `08`, `12`, `15` — currently
-revealing a real limitation, tracked for future improvement rather than
-silently accepted).
+directory. Classified against `checkpoint-520`'s actual results (at the
+time): 11 as `regression_guard` (currently passing — protect against
+future backsliding) and 5 as `negative_example` (`02`, `03`, `08`, `12`,
+`15` — currently revealing a real limitation, tracked for future
+improvement rather than silently accepted). **See the "Update" note above**
+— the later strict scoring tooling found `14`/`16` also fail under a
+release-gate-strength pass rule, pending a decision on reclassifying them.
 
 ## 9. Is a populated `real_holdout.jsonl` now required before the next training run?
 
