@@ -594,20 +594,13 @@ Independent review should verify:
 
 ## Release Acceptance Criteria
 
-Gold v1.2.1 is accepted when:
+Passes [`docs/datasets/REVIEW_GUIDE.md`](../../docs/datasets/REVIEW_GUIDE.md)'s
+"Release Checklist," plus what's specific to this release:
 
-* all training examples pass schema validation
-* the planned coverage distribution is satisfied
-* design notes are complete
-* Boundary Evidence is documented
-* category-reference updates are approved
-* review-guide updates are approved, if required
-* benchmark and holdout cases are identified
-* independent review passes
-* training compatibility is confirmed
-* evaluation shows no unacceptable regression
-* the Gold dataset changelog is updated
-* lessons learned are recorded after training
+* the planned coverage distribution (5 / 3 / 3 / 3, see "Coverage
+  Distribution" above) is satisfied
+* review-guide updates are approved, if the reinforcement categories below
+  turn out to need one
 
 ---
 

@@ -148,3 +148,31 @@ Three of these ask genuinely different questions, not overlapping ones:
 
 Reuses the existing `gold_vX.Y` version number for every file in the
 bundle — one identifier per release, not a separate numbering scheme.
+
+## Release Checklist
+
+The reusable acceptance-criteria core every `gold_vX.Y_curriculum.md` should
+link to instead of restating (a `gold_v1.2_curriculum.md`/
+`gold_v1.2.1_curriculum.md`-style "Release Acceptance Criteria" section
+becomes: "passes the standard release checklist, plus: `<anything specific
+to this release>`"):
+
+- [ ] Schema validation passes (§1)
+- [ ] Design notes complete, including Boundary Evidence (§7, per
+      [`DESIGN_NOTES_TEMPLATE.md`](DESIGN_NOTES_TEMPLATE.md))
+- [ ] Review report complete (this checklist, filled in)
+- [ ] Category reference updated (§6)
+- [ ] `CHANGELOG.md` updated
+- [ ] Benchmark and holdout cases identified (not blocking pre-benchmark-
+      suite — see [`docs/benchmarks/benchmark_suite.md`](../benchmarks/benchmark_suite.md))
+- [ ] Independent review passes (or, if the curator is unavailable, an
+      explicit self-review caveat per `gold_v1.2_review_report.md`'s
+      precedent — provisional acceptance, not silently treated as equivalent)
+- [ ] Training compatibility confirmed (`prepare_data.py` reads it cleanly)
+- [ ] Evaluation shows no unacceptable regression against prior releases
+      (once a benchmark suite exists to measure this)
+- [ ] Lessons learned recorded after training + evaluation
+
+A release-specific curriculum doc adds only what's genuinely unique to that
+release on top of this (e.g. "the planned coverage distribution is
+satisfied") — not a parallel restatement of the items above.

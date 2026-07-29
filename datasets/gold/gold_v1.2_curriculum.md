@@ -197,13 +197,9 @@ Independent review verifies:
 
 ## Release Acceptance Criteria
 
-- Schema validation passes
-- Design notes complete
-- Review report complete
-- CHANGELOG updated
-- Category reference updated
-- Benchmark cases identified
-- Independent review passes
+Passes [`docs/datasets/REVIEW_GUIDE.md`](../../docs/datasets/REVIEW_GUIDE.md)'s
+"Release Checklist" — nothing specific to this release beyond that standard
+bar.
 
 ## Future Curriculum
 
