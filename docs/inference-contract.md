@@ -65,8 +65,9 @@ showing broken output.
   for why the internal format is what it is; that reasoning can evolve
   independently of this contract.
 - **Maximum input/output length** is intentionally not fixed here yet — the
-  current implementation's chunking behavior (`src/utils/tokenization.ts`)
-  is an application-side concern, not a model guarantee. Worth adding to a
+  current implementation's chunking behavior
+  (`thought-organizer-app`'s `src/utils/tokenization.ts`) is an
+  application-side concern, not a model guarantee. Worth adding to a
   future contract version if a model release needs to declare a hard limit.
 - **Confidence/uncertainty fields** — not part of v1. `training/ROADMAP.md`'s
   v1.5 plan proposes a `confidence` field; that would be a new minor (or
