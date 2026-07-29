@@ -7,7 +7,7 @@ Checks the top-level repo-root entries and docs/'s immediate subdirectories
 (the granularity migration-manifest.yaml actually classifies at) against
 every path listed under destinations.*.{keep,rewrite,copy,new} and
 special_cases -- fails loudly if anything is unclassified, or classified
-under both intent-recovery-model and thought-organizer without being an
+under both intent-recovery-model and thought-organizer-app without being an
 explicit special case.
 """
 import subprocess
@@ -47,10 +47,12 @@ def main() -> None:
     model_paths = normalize(
         dests["intent-recovery-model"].get("keep", [])
         + dests["intent-recovery-model"].get("rewrite", [])
+        + dests["intent-recovery-model"].get("new", [])
     )
     app_paths = normalize(
-        dests["thought-organizer"].get("copy", [])
-        + dests["thought-organizer"].get("rewrite", [])
+        dests["thought-organizer-app"].get("copy", [])
+        + dests["thought-organizer-app"].get("rewrite", [])
+        + dests["thought-organizer-app"].get("new", [])
     )
     special = {p.rstrip("/") for p in manifest.get("special_cases", {})}
 

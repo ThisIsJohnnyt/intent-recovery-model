@@ -4,8 +4,8 @@ Companion to [`PDR-003.md`](PDR-003.md) — the actual step sequence, kept as
 a permanent record since the split happens across two GitHub repositories
 and a tool-local plan file doesn't survive that boundary.
 
-**Status as of this writing**: steps 1-3 complete. Steps 4 onward are
-prepared but not yet executed — see each step's status note.
+**Status as of this writing**: steps 1-7 complete. Steps 8 onward are
+in progress — see each step's status note.
 
 ## Sequence
 
@@ -13,20 +13,22 @@ prepared but not yet executed — see each step's status note.
 2. ✅ Tag and push `pre-repository-split`.
 3. ✅ Add `docs/decisions/PDR-003.md` (this decision) before the split
    happens, so it exists in the preserved history.
-4. Write and verify `migration-manifest.yaml` — a `keep`/`copy`/
+4. ✅ Write and verify `migration-manifest.yaml` — a `keep`/`copy`/
    `special_case` classification of every currently-tracked path, checked
    by script against `git ls-tree -r --name-only HEAD` so nothing is
    silently omitted or double-assigned.
-5. Write `docs/inference-contract.md` — the versioned, behavioral contract
-   the application will depend on instead of the model's internal format.
-6. Cut the first checksummed model release
+5. ✅ Write `docs/inference-contract.md` — the versioned, behavioral
+   contract the application will depend on instead of the model's
+   internal format.
+6. ✅ Cut the first checksummed model release
    (`intent-recovery-model-v0.1.0`) with a release manifest (release name,
    contract version, each file's SHA-256 and size).
-7. Create the new, empty `thought-organizer` GitHub repository.
+7. ✅ Create the new, empty `thought-organizer-app` GitHub repository
+   (github.com/ThisIsJohnnyt/thought-organizer-app).
 8. Copy the application-only paths into it (commit message references
    `pre-repository-split` for traceability), add `scripts/fetch-model.*`,
    and test it against the release from step 6.
-9. **Gate**: confirm `thought-organizer` runs end-to-end from a fresh
+9. **Gate**: confirm `thought-organizer-app` runs end-to-end from a fresh
    clone (`fetch-model` downloads + verifies + installs the release,
    `npm run dev` produces valid output) before touching the original repo
    further. Nothing is removed from the original repo before this passes.

@@ -1,7 +1,7 @@
 # Intent Recovery Inference Contract v1
 
 The versioned boundary between `intent-recovery-model` and any application
-consuming it (starting with `thought-organizer`). Formalizes behavior that
+consuming it (starting with `thought-organizer-app`). Formalizes behavior that
 already exists today — this document doesn't change anything functionally,
 it makes the existing behavior a public, depended-upon guarantee instead of
 an implementation detail an application happened to rely on.
@@ -49,7 +49,7 @@ sections out of order, an empty narrative) is a **contract violation, not
 a degraded-but-usable response**. The reference application's behavior —
 throw and surface an error to the user rather than display partial or
 malformed output — is the contract's required behavior, not an
-implementation choice specific to `thought-organizer`. This is what
+implementation choice specific to `thought-organizer-app`. This is what
 actually happened in practice already: see
 `datasets/gold/gold_v1.2_lessons_learned.md`'s "Complete generation
 failure" finding, where the app correctly surfaced an error instead of
@@ -82,5 +82,5 @@ showing broken output.
 | Internal model format change with no effect on the parsed shape | None | Changing the delimiter marker text |
 
 An application declares which major version(s) it supports; a model
-release declares which major version(s) it satisfies. `thought-organizer`
+release declares which major version(s) it satisfies. `thought-organizer-app`
 currently supports `1`.
