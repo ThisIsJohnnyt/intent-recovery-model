@@ -87,7 +87,15 @@ def main() -> None:
         eval_strategy="epoch",
         save_strategy="epoch",
         save_total_limit=2,
-        load_best_model_at_end=True,
+        # False, not True: with only a handful of val examples, eval_loss is
+        # noisy enough that "best" by loss isn't "best" semantically. The
+        # gold_v1.2.1 run's checkpoint-26 (epoch 2, lowest eval_loss) was
+        # selected over checkpoint-520 (epoch 40) and was measurably worse on
+        # every semantic dimension in gold_v1.2.1_lessons_learned.md's probe
+        # suite (missed markers, misattribution, invented answers) despite
+        # its lower loss. Revisit once real_holdout.jsonl or a larger val
+        # split makes eval_loss a trustworthy signal again.
+        load_best_model_at_end=False,
         predict_with_generate=True,
         generation_max_length=MAX_TARGET_TOKENS,
         # T5 is known to produce NaN losses under fp16 mixed precision; bf16 is stable
