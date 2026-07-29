@@ -8,6 +8,14 @@ for model training, and are distinct from the
 discoveries) — see `REVIEW_GUIDE.md`'s release bundle section for how the
 three fit together.
 
+A curator who prefers writing design notes as JSON rather than prose can
+validate against [`design_notes.schema.json`](design_notes.schema.json) —
+purely optional, same content either way. This is a different schema from
+[`training_data.schema.json`](training_data.schema.json): that one mirrors
+what `prepare_data.py` actually trains on; this one describes design-note
+metadata (boundary evidence, failure modes, etc.) that never reaches the
+trained JSONL.
+
 ## Per-example format
 
 ```
