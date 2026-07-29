@@ -83,16 +83,17 @@ The memory-safe summary is the feature most aligned with the mission above:
 recover the useful information from a note written during a hard moment,
 without forcing the person to re-read the hard moment itself.
 
-## Benchmark suite (build once categorized examples exist)
+## Benchmark suite (built)
 
-Move from "loss went down" to per-category accuracy. Categories proposed so
-far: simple lists, topic switching, repeated thoughts, incomplete
-references, emotional notes, long rambling entries, zero action items,
-longitudinal notes. Since `category`/`difficulty` tags on stored examples
-are free (prepare_data.py ignores unknown fields), the moment the data
-architect provides categorized examples, `train.py`'s
-`evaluate_format_validity` can be extended to report pass-rate per category
-instead of one aggregate number.
+Moved from "loss went down" to per-category/per-kind pass rate — see
+[`../docs/benchmarks/benchmark_suite.md`](../docs/benchmarks/benchmark_suite.md).
+`run_benchmark.py` runs any `datasets/benchmark/*.jsonl` file against a
+checkpoint; `report_benchmark.py` turns scored results into overall/
+per-category/per-kind pass rates, failure counts by taxonomy label,
+regression-guard and negative-example tracking, and format-validity rate.
+Ended up as a standalone script pair rather than an extension to
+`evaluate_format_validity`, since semantic scoring is a judgment-requiring
+pass regardless of where the aggregation logic lives.
 
 ## v2/v3 — separate project, later
 

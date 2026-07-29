@@ -1,12 +1,17 @@
-# Benchmark Suite — first categorized examples now exist
+# Benchmark Suite — categorized examples and automated reporting now exist
 
 **Status**: `datasets/benchmark/gold_v1.2.1_probes.jsonl` (16 examples) is
 the first populated benchmark set — see its companion
 [`gold_v1.2.1_probes.md`](../../datasets/benchmark/gold_v1.2.1_probes.md)
 for what it covers and current pass/fail status. The per-category
-pass-rate engineering work described below ("How this becomes real") is
-still not built — 16 examples were scored manually for the
-`gold_v1.2.1_lessons_learned.md` run, which was tractable at this size. See
+pass-rate reporting described below ("How this becomes real") **is now
+built**: `training/run_benchmark.py` generates results, semantic scoring is
+still a human (or future LLM-judge) pass since that's real judgment a
+script can't fake, and `training/report_benchmark.py` turns scored results
+into overall/per-category/per-kind pass rates, failure counts by taxonomy
+label, regression-guard and negative-example tracking, and format-validity
+rate — see `gold_v1.2.1_probes.md`'s "Automated scoring and reporting"
+section for the actual current report. See
 [`training/ROADMAP.md`](../../training/ROADMAP.md)'s "Benchmark suite"
 section for the broader plan.
 
@@ -31,29 +36,54 @@ aggregate number.
 
 ## How this becomes real
 
-`category`/`difficulty` tags on stored examples are already free —
-`prepare_data.py` ignores fields it doesn't recognize (see
-`training/DATASET_SPEC.md`). Once the dataset curator provides a set of
-examples tagged with these categories (a proper "benchmark split," held out
-from training the same way `real_holdout.jsonl` is), `train.py`'s
-`evaluate_format_validity` can be extended to report pass-rate per category
-instead of a single aggregate. That's the concrete engineering task once
-categorized data exists — not something to build speculatively against
-placeholder data now.
+`category`/`kind`/`status` tags on benchmark examples are already free —
+`prepare_data.py` never reads `datasets/benchmark/` at all (see
+`training/DATASET_SPEC.md`). `training/run_benchmark.py <benchmark.jsonl>`
+runs any such file against a checkpoint and captures raw output plus
+automatically-computed format validity; the semantic dimensions (topic
+completeness, attribution accuracy, uncertainty preservation,
+unsupported-addition resistance, plus each probe's own named checks) are
+scaffolded as `null` for a human to score, since that's real judgment, not
+something to fake with a heuristic. `training/report_benchmark.py` then
+turns a scored results file into the actual per-category/per-kind pass
+rates below — this ended up as a standalone script pair rather than an
+extension to `train.py`'s `evaluate_format_validity`, since the
+judgment-requiring scoring step has to happen as its own pass regardless
+of where the aggregation logic lives.
 
-## Example report (illustrative, not real numbers)
+## Example report (real numbers — gold_v1.2.1_probes.jsonl vs. checkpoint-520)
 
 ```
-Model 0.1
-  simple_lists          96%
-  topic_switching        83%
-  repeated_thoughts      61%
-  incomplete_references  44%
-  emotional_notes        79%
-  long_rambling          58%
-  zero_action_items      99%
-  longitudinal           N/A
+Overall pass rate: 9/16 (56%)
+Format-validity rate: 16/16 (100%)
+
+Pass rate by category:
+  buried_task_retention: 1/2 (50%)
+  dangling_reference: 0/1 (0%)
+  interrupted_thought_depth: 1/2 (50%)
+  multi_person_attribution: 3/3 (100%)
+  nested_boundary_depth: 0/1 (0%)
+  open_question_preservation: 2/3 (67%)
+  standalone_task_retention: 1/1 (100%)
+  task_plus_idea: 0/1 (0%)
+  two_unrelated_tasks: 1/1 (100%)
+  zero_action_items: 0/1 (0%)
+
+Pass rate by probe kind:
+  adversarial: 2/4 (50%)   direct: 4/4 (100%)
+  regression: 1/4 (25%)    transfer: 2/4 (50%)
+
+Failure count by taxonomy label:
+  Unsupported Addition: 3, Topic Loss: 2, Excessive Fragmentation: 1
+
+Regression guards passed: 9/11 (82%)
+Negative examples resolved: 0/5 (0%)
 ```
+
+See `datasets/benchmark/gold_v1.2.1_probes.md` for what this reveals
+(probes `14`/`16` are candidates to reclassify from `regression_guard` to
+`negative_example` under this stricter scoring) and the exact command to
+reproduce it.
 
 ## Negative examples
 
@@ -71,5 +101,7 @@ ambiguity — the opposite failure mode from under-extracting. They're
 **benchmark data, never training data**: live in `datasets/benchmark/`
 (see its `README.md`), which `training/prepare_data.py` never reads (it
 only reads `synthetic.jsonl`/`real_holdout.jsonl` for the training path).
-No negative examples are authored yet — that's a dataset curator decision,
-not something to fabricate speculatively here.
+Five now exist — `gold_v1.2.1_probes.jsonl`'s `02`, `03`, `08`, `12`, `15`
+(`status: "negative_example"`), each already revealing a specific,
+documented limitation rather than a hypothetical one. See
+`gold_v1.2.1_probes.md` for what each currently fails on.
