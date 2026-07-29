@@ -1,8 +1,14 @@
-# Benchmark Suite — not yet implemented
+# Benchmark Suite — first categorized examples now exist
 
-**Status**: planned, needs categorized examples first. See
+**Status**: `datasets/benchmark/gold_v1.2.1_probes.jsonl` (16 examples) is
+the first populated benchmark set — see its companion
+[`gold_v1.2.1_probes.md`](../../datasets/benchmark/gold_v1.2.1_probes.md)
+for what it covers and current pass/fail status. The per-category
+pass-rate engineering work described below ("How this becomes real") is
+still not built — 16 examples were scored manually for the
+`gold_v1.2.1_lessons_learned.md` run, which was tractable at this size. See
 [`training/ROADMAP.md`](../../training/ROADMAP.md)'s "Benchmark suite"
-section.
+section for the broader plan.
 
 ## Goal
 
