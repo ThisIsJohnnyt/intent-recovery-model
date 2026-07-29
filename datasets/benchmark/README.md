@@ -10,5 +10,9 @@ only reads `datasets/synthetic.jsonl` (trained on) and
 `datasets/real_holdout.jsonl` (held-out eval). Nothing here is wired into
 training, intentionally.
 
-Empty for now — no negative or benchmark examples authored yet. That's a
-dataset curator decision, not something to fabricate ahead of real content.
+First populated entries: [`gold_v1.2.1_probes.md`](gold_v1.2.1_probes.md) /
+[`gold_v1.2.1_probes.jsonl`](gold_v1.2.1_probes.jsonl) — 16 examples
+authored by the dataset curator (ChatGPT) as a live-evaluation suite for
+`gold_v1.2.1`, repurposed here as protected regression/negative-example
+benchmarks per `docs/benchmarks/benchmark_suite.md`'s "build once
+categorized examples exist" trigger.

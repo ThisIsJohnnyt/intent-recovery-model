@@ -1,0 +1,130 @@
+[
+  {
+    "id": "01",
+    "capability": "Interrupted/Nested Depth",
+    "kind": "direct",
+    "input": "Need to check whether the basement freezer—remind Kira to return the extension cord Sunday.",
+    "raw_output": "###NARRATIVE### There is an unfinished thought about checking the basement freezer. Separately, Kira needs to be reminded to return the extension cord Sunday. ###BULLETS### Unfinished thought about checking the basement freezer Remind Kira to return the extension cord Sunday ###ACTIONS### Remind Kira to return the extension cord Sunday",
+    "format_valid": true
+  },
+  {
+    "id": "02",
+    "capability": "Interrupted/Nested Depth",
+    "kind": "transfer",
+    "input": "Figure out why the tablet keeps—put the donation box by the front door—back to the tablet, the screen goes black whenever the charger moves.",
+    "raw_output": "###NARRATIVE### I'm trying to figure out why the tablet keeps going black. I need to put the donation box by the front door back to the tablet, and I've noted that the screen goes black whenever the charger moves. ###BULLETS### Investigate the tablet's history Put the donation box by the front door Back to the tablet ###ACTIONS### Investigate why the tablet keeps going black Put the donation box by the front door Back to the tablet",
+    "format_valid": true
+  },
+  {
+    "id": "03",
+    "capability": "Interrupted/Nested Depth",
+    "kind": "adversarial",
+    "input": "Ask Celia whether the replacement cable arrived before driving to the office, not ask Celia and separately check the cable, that is one question. The break-room clock is slow again.",
+    "raw_output": "###NARRATIVE### I need to ask Celia whether the replacement cable arrived before the drive to the office. This is one combined task. Separately, the break-room clock is slow again. ###BULLETS### Ask Celia whether the replacement cable arrived before driving to the office Remind Celia that the replacement cable arrived before driving to the office ###ACTIONS### Ask Celia whether the replacement cable arrived before driving to the office",
+    "format_valid": true
+  },
+  {
+    "id": "04",
+    "capability": "Multi-Person Attribution",
+    "kind": "direct",
+    "input": "Avery said Morgan moved the boxes to storage. Morgan has the inventory sheet. Ask Avery whether Morgan counted the damaged ones.",
+    "raw_output": "###NARRATIVE### Avery said that Morgan moved the boxes to storage. Morgan has the inventory sheet. Avery should be asked whether Morgan counted the damaged boxes. ###BULLETS### Avery said Morgan moved the boxes to storage Morgan has the inventory sheet Ask Avery whether Morgan counted the damaged boxes ###ACTIONS### Ask Avery whether Morgan counted the damaged boxes",
+    "format_valid": true
+  },
+  {
+    "id": "05",
+    "capability": "Multi-Person Attribution",
+    "kind": "transfer",
+    "input": "Nina said Cole left the charger with Priya, and Cole said Nina already backed up the photos. Send Priya the folder link. Did Nina back up every photo or only the edited ones?",
+    "raw_output": "###NARRATIVE### Nina said that Cole left the charger with Priya. Cole said that Nina had already backed up the photos. Priya needs to be sent the folder link. It remains unclear whether Nina backped up all the photos or only the edited ones. ###BULLETS### Nina said Cole left the charger with Priya Cole said Nina had already backed up the photos Send Priya the folder link Unresolved question about whether Nina backped up all photos or only the edited ones ###ACTIONS### Send Priya the folder link",
+    "format_valid": true
+  },
+  {
+    "id": "06",
+    "capability": "Multi-Person Attribution",
+    "kind": "adversarial",
+    "input": "Tessa told Rowan the permit was approved after she asked about it. She still needs the stamped copy, but I cannot tell whether “she” means Tessa or the inspector. Ask Rowan who needs it.",
+    "raw_output": "###NARRATIVE### Tessa told Rowan the permit was approved after she asked about it. The note does not make clear whether Tessa or the inspector still needs the stamped copy. Rowan should be asked who needs it. ###BULLETS### Tessa told Rowan the permit was approved Rowan asked about the permit It is unclear whether Tessa or the inspector needs the stamped copy Ask Rowan who needs the stamped copy ###ACTIONS### Ask Rowan who needs the stamped copy",
+    "format_valid": true
+  },
+  {
+    "id": "07",
+    "capability": "Open-Question Preservation",
+    "kind": "direct",
+    "input": "Did the refund actually reach the card? Save the confirmation page before closing the browser.",
+    "raw_output": "###NARRATIVE### It is unresolved whether the refund actually reached the card. Separately, the confirmation page needs to be saved before closing the browser. ###BULLETS### Unresolved question about whether the refund actually reached the card Save the confirmation page before closing the browser ###ACTIONS### Save the confirmation page",
+    "format_valid": true
+  },
+  {
+    "id": "08",
+    "capability": "Open-Question Preservation",
+    "kind": "transfer",
+    "input": "Was the wet spot from the window or the plant? It was dry again by lunchtime. Put the recycling outside tonight.",
+    "raw_output": "###NARRATIVE### It is unresolved whether the wet spot from the window or the plant was dry again by lunchtime. Separately, the recycling needs to be put outside tonight. ###BULLETS### Unresolved question about whether the plant was dry again By lunchtime Put the recycling outside tonight ###ACTIONS### Put the recycling outside tonight",
+    "format_valid": true
+  },
+  {
+    "id": "09",
+    "capability": "Open-Question Preservation",
+    "kind": "adversarial",
+    "input": "Did I send the revised schedule to Imani or only save the draft, check sent mail—also need to think about the volunteer list, not sure what yet.",
+    "raw_output": "###NARRATIVE### It is unresolved whether the revised schedule was sent to Imani or merely saved. The draft needs to be checked to find out. There is also an unfinished reference to the volunteer list. ###BULLETS### Unresolved question about whether the revised schedule was sent to Imani Check sent mail for clarification Unfinished thought about the volunteer list ###ACTIONS### Check sent mail to determine whether the revised schedule was sent to Imani",
+    "format_valid": true
+  },
+  {
+    "id": "10",
+    "capability": "Task Retention",
+    "kind": "direct",
+    "input": "The rehearsal felt smoother and the shorter transitions probably helped, print the shipping label, but the final scene still dragged.",
+    "raw_output": "###NARRATIVE### The rehearsal felt smoother, possibly because the transitions were shorter, but the final scene still dragged. Separately, the shipping label needs to be printed. ###BULLETS### The rehearsal felt smoother The shorter transitions may have helped The final scene still dragged Print the shipping label ###ACTIONS### Print the shipping label",
+    "format_valid": true
+  },
+  {
+    "id": "11",
+    "capability": "Task Retention",
+    "kind": "transfer",
+    "input": "Pay the registration fee, registration fee by Thursday, the garage light is flickering again and I am tired of dealing with it, do not forget the fee, text Jonah that I will call tomorrow.",
+    "raw_output": "###NARRATIVE### I have several separate things to track: pay the registration fee by Thursday, the garage light is flickering again, and I'm feeling tired of dealing with it. I also need to text Jonah that I will call tomorrow. ###BULLETS### Pay registration fee by Thursday Garage light is flickering again Text Jonah that I will call tomorrow ###ACTIONS### Pay registration fee by Thursday Text Jonah that I will call tomorrow",
+    "format_valid": true
+  },
+  {
+    "id": "12",
+    "capability": "Task Retention",
+    "kind": "adversarial",
+    "input": "The walkthrough ran late and the settings explanation was confusing, maybe the screenshots need captions, did Luca ever give Erin the account list, schedule the oil change, the room was too warm, account question still unresolved, and last thing replace the smoke-detector battery.",
+    "raw_output": "###NARRATIVE### The walkthrough ran late and the settings explanation was confusing. The screenshots may need captions. It remains unclear whether Luca gave Erin the account list. Separately, the room was too warm, and the smoke-detector battery needs to be replaced. ###BULLETS### The walkthrough ran late The settings explanation was confusing The screenshots may need captions Unresolved question about whether Luca gave Erin the account list Schedule the oil change The room was too warm Replace the smoke-detector battery ###ACTIONS### Schedule the oil change Replace the smoke-detector battery",
+    "format_valid": true
+  },
+  {
+    "id": "13",
+    "capability": "Regression: basic tasks",
+    "kind": "regression",
+    "input": "Pick up cat food after work. Email the signed form to the school.",
+    "raw_output": "###NARRATIVE### I need to pick up cat food after work. I also need to email the signed form to the school. ###BULLETS### Pick up cat food after work Email the signed form to the school ###ACTIONS### Pick up cat food Email the signed form to the school",
+    "format_valid": true
+  },
+  {
+    "id": "14",
+    "capability": "Regression: zero action items",
+    "kind": "regression",
+    "input": "The bedroom fan makes a clicking sound at the lowest setting.",
+    "raw_output": "###NARRATIVE### I noticed the bedroom fan makes a clicking sound at the lowest setting. ###BULLETS### Morning fan Quiet fan making clicking sound at the lowest setting ###ACTIONS###",
+    "format_valid": true
+  },
+  {
+    "id": "15",
+    "capability": "Regression: idea without commitment",
+    "kind": "regression",
+    "input": "Maybe build a simpler welcome screen with one large button.",
+    "raw_output": "###NARRATIVE### I might build a simpler welcome screen with one large button. Separately, I'm considering adding a small button to the bottom of the welcome screen. ###BULLETS### Building a simple welcome screen with one large button ###ACTIONS### Build a simple welcome screen with one large button",
+    "format_valid": true
+  },
+  {
+    "id": "16",
+    "capability": "Regression: dangling reference",
+    "kind": "regression",
+    "input": "Remember to ask them about the other one.",
+    "raw_output": "###NARRATIVE### I need to ask them about the other one. I also noted that they need to be asked about the other one. ###BULLETS### Ask them about the other one Reply to this question Unfinished thought about the other one ###ACTIONS### Ask them about the other one",
+    "format_valid": true
+  }
+]
