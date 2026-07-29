@@ -4,9 +4,7 @@ Companion to [`PDR-003.md`](PDR-003.md) — the actual step sequence, kept as
 a permanent record since the split happens across two GitHub repositories
 and a tool-local plan file doesn't survive that boundary.
 
-**Status as of this writing**: steps 1-12 complete, verified. Step 13
-(final independent-clone validation on both repos) is the last remaining
-step.
+**Status as of this writing**: all 13 steps complete. Migration done.
 
 ## Sequence
 
@@ -59,7 +57,15 @@ step.
     predated this project's mission reframe, and `docs/vision/PROJECT_OVERVIEW.md`
     still described a "placeholder fixture" and `gold_v1.0` as current
     status, months out of date.
-13. Final independent-clone validation on both repositories.
+13. ✅ Final independent-clone validation on both repositories.
+    `intent-recovery-model` (branch `claude/ai-note-organization-luz6rk`):
+    fresh clone contains exactly the expected files (no leftover app
+    paths), `prepare_data.py` runs and produces the same 49/5/0 split as
+    before the split, `scripts/verify_migration_manifest.py` passes (13
+    tracked paths, down from 22 once the app files were removed), and
+    every spot-checked doc cross-link resolves. `thought-organizer-app`:
+    fresh clone → `npm install --ignore-scripts` → `npm run fetch-model`
+    → `npm run build`, all clean.
 
 ## Why steps 4-6 come before repository creation
 
