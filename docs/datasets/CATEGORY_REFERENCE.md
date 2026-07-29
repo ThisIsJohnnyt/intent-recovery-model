@@ -5,6 +5,11 @@ The `category` field on a training example (see
 specific recovery skill that example teaches. This is a living document —
 add a category here the first time it's used in a batch.
 
+This tracks actual `category` values used in real data. For the
+conceptual vocabulary used *while authoring* examples (fragment types,
+boundary types, failure types), see [`TAXONOMY.md`](TAXONOMY.md) instead —
+the two are complementary, not duplicates.
+
 ## Categories in use (as of `gold_v1.2`)
 
 | Category | Teaches | Difficulty seen | Introduced in |

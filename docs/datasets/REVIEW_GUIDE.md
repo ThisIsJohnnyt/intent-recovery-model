@@ -19,7 +19,11 @@ print(f'{len(records)} records validated OK')
 ```
 
 If this throws, the batch has a schema problem (missing field, wrong type)
-— fix before anything else.
+— fix before anything else. This Python validator is authoritative (it's
+literally what gates training); [`training_data.schema.json`](training_data.schema.json)
+is a machine-checkable mirror of the same contract, useful for a curator to
+self-check a draft with any standard JSON Schema tool before sending it
+over for this step.
 
 ## 2. "No Magic Examples"
 
@@ -35,12 +39,43 @@ reading only the `input`/`output` pair understand what skill this example is
 meant to test? If an example seems to be testing two unrelated things at
 once, split it or simplify it.
 
-## 4. No invented content
+## 4. No invented content ("evidence-first" compliance)
 
-- `action_items` never contains a task that isn't implied by `input`.
-- `narrative`/`bullets` never introduce facts not present in `input`.
-- Uncertain references (e.g. "the blue folder") stay uncertain in the
-  output — the model should not guess what they mean.
+Check the model/reference output against each of these specifically —
+don't just eyeball for a general sense of accuracy:
+
+- **Preserved uncertainty**: uncertain references (e.g. "the blue folder")
+  or genuinely open questions in `input` stay uncertain/open in the
+  output — never resolved with a guessed answer.
+- **No invented chronology**: the output never asserts an order of events
+  that `input` doesn't state.
+- **No invented causality**: the output never asserts one fragment caused
+  or explains another unless `input` actually says so — adjacency in the
+  text is not evidence of a relationship.
+- **No merged unrelated intentions**: two fragments that are actually
+  unrelated stay represented as separate items, never combined into one
+  (even a superficially plausible-sounding) combined statement.
+- **No lost low-salience reminders**: every fragment in `input` — however
+  brief or seemingly minor — appears *somewhere* in the output (narrative,
+  bullets, or action_items). A short fragment being easy to drop is not a
+  reason to drop it.
+- **No over-summarization**: don't compress `input` so much that a
+  distinct fragment disappears into a vaguer, more general statement.
+- **No unsupported tasks**: `action_items` never contains a task that
+  isn't implied by `input`.
+- **No misattribution**: when a note mentions more than one person, a
+  fragment belonging to one of them is never reassigned to another.
+
+These aren't hypothetical — `datasets/gold/gold_v1.2_lessons_learned.md`'s
+"real-world usage findings" section documents actual instances of several
+of these (an invented answer to an open question, a dropped standalone
+task, an invented emotion, an invented merge between unrelated fragments,
+and cross-person misattribution) from testing the trained model against
+real notes. Use it as a reference for what these failures actually look
+like, not just an abstract checklist. See
+[`TAXONOMY.md`](TAXONOMY.md)'s "Failure categories" for short-hand names
+for each of these, useful when tagging findings in a review report or
+lessons-learned entry.
 
 ## 5. No diagnosis framing
 

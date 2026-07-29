@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ThisIsJohnnyt/thoughtorganizer/docs/datasets/training_data.schema.json",
+  "title": "ThoughtOrganizer training example",
+  "description": "One line of datasets/synthetic.jsonl, datasets/real_holdout.jsonl, or datasets/gold/gold_vX.Y.jsonl. This is a machine-checkable mirror of training/DATASET_SPEC.md's 'Data contract' section and training/prepare_data.py's validate_record() — those two are authoritative; if this schema and the Python validator ever disagree, the Python validator wins, since that's what actually gates training. Regenerate/update this file if prepare_data.py's validation logic changes.",
+  "type": "object",
+  "required": ["input", "output"],
+  "additionalProperties": true,
+  "properties": {
+    "input": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Raw scattered thoughts, as the user would actually type them."
+    },
+    "output": {
+      "type": "object",
+      "required": ["narrative", "bullets", "action_items"],
+      "additionalProperties": true,
+      "properties": {
+        "narrative": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Coherent flowing narrative covering the same content as 'input', same meaning and tone."
+        },
+        "bullets": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Short key points extracted from 'input'. Typically 3-7; may be empty."
+        },
+        "action_items": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Concrete tasks/next steps mentioned in 'input'. Empty array when input has none — never invented."
+        }
+      }
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["easy", "medium", "hard", "expert"],
+      "description": "Optional annotation, not read by prepare_data.py. Curriculum-defined difficulty tier."
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional annotation, not read by prepare_data.py. The one specific recovery skill this example teaches — see docs/datasets/CATEGORY_REFERENCE.md."
+    }
+  }
+}
