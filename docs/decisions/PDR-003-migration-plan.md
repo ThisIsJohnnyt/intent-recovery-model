@@ -4,11 +4,9 @@ Companion to [`PDR-003.md`](PDR-003.md) — the actual step sequence, kept as
 a permanent record since the split happens across two GitHub repositories
 and a tool-local plan file doesn't survive that boundary.
 
-**Status as of this writing**: steps 1-9 complete, verified. Steps 10-13
-are the remaining, higher-impact steps (renaming this repo, removing its
-now-migrated app files) — paused for explicit confirmation before
-proceeding, per this project's practice of checking in before hard-to-
-reverse or externally-visible actions.
+**Status as of this writing**: steps 1-12 complete, verified. Step 13
+(final independent-clone validation on both repos) is the last remaining
+step.
 
 ## Sequence
 
@@ -44,13 +42,23 @@ reverse or externally-visible actions.
    checksum-verifies, installs the real release) → `npm run build`
    (`tsc` + `vite build`, clean). Nothing has been removed from the
    original repo before this passed.
-10. Rename the original GitHub repository `thoughtorganizer` →
-    `intent-recovery-model` (GitHub auto-redirects the old URL; update it
-    in docs anyway).
-11. Remove the now-migrated application-only paths from
-    `intent-recovery-model`.
-12. Rewrite both repositories' `README.md`s and roadmaps; add cross-repo
-    links each direction.
+10. ✅ Rename the original GitHub repository `thoughtorganizer` →
+    `intent-recovery-model`. Verified (not assumed): the renamed repo is
+    reachable at its new URL, and the release cut in step 6 remains
+    downloadable under the new name (confirmed via a direct request to the
+    new release-asset URL, HTTP 302 to the actual asset). Local remote and
+    `thought-organizer-app`'s `fetch-model.mjs` both updated and re-tested
+    against the renamed repo.
+11. ✅ Remove the now-migrated application-only paths from
+    `intent-recovery-model` (`src/`, `public/`, `index.html`,
+    `thoughtorganizer-mobile.html`, Vite/TypeScript config, `package.json`).
+12. ✅ Rewrite both repositories' `README.md`s and roadmaps; add cross-repo
+    links each direction. Also caught and fixed two pieces of unrelated
+    staleness while rewriting: the old root `README.md` still had
+    diagnosis-framing language ("helps people with ADHD, autism...") that
+    predated this project's mission reframe, and `docs/vision/PROJECT_OVERVIEW.md`
+    still described a "placeholder fixture" and `gold_v1.0` as current
+    status, months out of date.
 13. Final independent-clone validation on both repositories.
 
 ## Why steps 4-6 come before repository creation
