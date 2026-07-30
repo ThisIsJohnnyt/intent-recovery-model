@@ -19,10 +19,12 @@ against the epoch 40 scores above reclassifies two probes this document's
 narrative called clean passes: **`14`** and **`16`** each produce a minor,
 ungrounded filler bullet (`"Morning fan"`, `"Reply to this question"`) that
 doesn't affect `action_items` but is a real `Unsupported Addition` by a
-release gate's standard. Overall: **9/16 (56%) pass**, **9/11 (82%)
-regression guards hold**, **0/5 negative examples resolved yet**. See
-`datasets/benchmark/gold_v1.2.1_probes.md` for the full report and whether
-`14`/`16` get reclassified from `regression_guard` to `negative_example`.
+release gate's standard. Overall: **9/16 (56%) pass**, **9/9 (100%)
+regression guards hold**, **0/7 negative examples resolved yet**. `14` and
+`16` have since been formally reclassified from `regression_guard` to
+`negative_example` — approved as part of the `gold_v1.2.2` curriculum
+decision. See `datasets/benchmark/gold_v1.2.1_probes.md` for the full
+report.
 
 ## 1. Training configuration
 
@@ -141,7 +143,8 @@ future backsliding) and 5 as `negative_example` (`02`, `03`, `08`, `12`,
 `15` — currently revealing a real limitation, tracked for future
 improvement rather than silently accepted). **See the "Update" note above**
 — the later strict scoring tooling found `14`/`16` also fail under a
-release-gate-strength pass rule, pending a decision on reclassifying them.
+release-gate-strength pass rule; both have since been reclassified to
+`negative_example` as part of the `gold_v1.2.2` curriculum decision.
 
 ## 9. Is a populated `real_holdout.jsonl` now required before the next training run?
 

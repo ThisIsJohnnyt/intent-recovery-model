@@ -76,14 +76,16 @@ Pass rate by probe kind:
 Failure count by taxonomy label:
   Unsupported Addition: 3, Topic Loss: 2, Excessive Fragmentation: 1
 
-Regression guards passed: 9/11 (82%)
-Negative examples resolved: 0/5 (0%)
+Regression guards passed: 9/9 (100%)
+Negative examples resolved: 0/7 (0%)
 ```
 
-See `datasets/benchmark/gold_v1.2.1_probes.md` for what this reveals
-(probes `14`/`16` are candidates to reclassify from `regression_guard` to
-`negative_example` under this stricter scoring) and the exact command to
-reproduce it.
+See `datasets/benchmark/gold_v1.2.1_probes.md` for what this reveals.
+Probes `14`/`16` were reclassified from `regression_guard` to
+`negative_example` under this stricter scoring — approved as part of the
+`gold_v1.2.2` curriculum decision (see
+`datasets/gold/gold_v1.2.2_curriculum.md`) — and the exact command to
+reproduce this report.
 
 ## Negative examples
 
@@ -101,7 +103,7 @@ ambiguity — the opposite failure mode from under-extracting. They're
 **benchmark data, never training data**: live in `datasets/benchmark/`
 (see its `README.md`), which `training/prepare_data.py` never reads (it
 only reads `synthetic.jsonl`/`real_holdout.jsonl` for the training path).
-Five now exist — `gold_v1.2.1_probes.jsonl`'s `02`, `03`, `08`, `12`, `15`
-(`status: "negative_example"`), each already revealing a specific,
-documented limitation rather than a hypothetical one. See
+Seven now exist — `gold_v1.2.1_probes.jsonl`'s `02`, `03`, `08`, `12`, `14`,
+`15`, `16` (`status: "negative_example"`), each already revealing a
+specific, documented limitation rather than a hypothetical one. See
 `gold_v1.2.1_probes.md` for what each currently fails on.

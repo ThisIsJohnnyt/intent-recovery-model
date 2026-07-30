@@ -38,22 +38,23 @@ actually deployed after `gold_v1.2.1`'s training run (see the lessons-
 learned doc for why `checkpoint-26`, an earlier epoch, was initially
 selected instead and isn't the reference point here):
 
-- **`regression_guard`** (11 of 16, currently) — should pass. Its job going
+- **`regression_guard`** (9 of 16, currently) — should pass. Its job going
   forward is to catch backsliding: if a future release makes this probe
   fail, that's a regression, not a tradeoff to shrug off.
-- **`negative_example`** (5 of 16, currently: `02`, `03`, `08`, `12`, `15`)
-  — reveals a real, current limitation on the deployed model. Not a bug in
-  the benchmark; the point of a negative example is exactly this. Tracked
-  as known limitations to close in a future release, not something to
-  silently accept as permanent.
+- **`negative_example`** (7 of 16, currently: `02`, `03`, `08`, `12`, `14`,
+  `15`, `16`) — reveals a real, current limitation on the deployed model.
+  Not a bug in the benchmark; the point of a negative example is exactly
+  this. Tracked as known limitations to close in a future release, not
+  something to silently accept as permanent.
 
 This classification is a snapshot as of this training run, not permanent —
 re-running this suite against a future checkpoint should update `status`
 and `notes` per probe rather than assuming today's classification still
-holds. **`14` and `16` are candidates to reclassify** — see "Automated
-scoring and reporting" below; a stricter pass rule than the informal read
-that first produced this classification found a real, if minor, issue in
-both.
+holds. **`14` and `16` were reclassified from `regression_guard` to
+`negative_example`** (approved as part of the `gold_v1.2.2` curriculum
+decision) — see "Automated scoring and reporting" below; a stricter pass
+rule than the informal read that first produced the original classification
+found a real, if minor, issue in both.
 
 ## Known limitations this suite currently tracks
 
@@ -73,11 +74,12 @@ both.
   Loss: the structured fields are reliable even when the prose narrative
   isn't. Worth watching whether this recurs across future releases.
 - **`14`, `16` (minor ungrounded filler bullets)** — found by the stricter
-  scoring pass below, not the original informal review: both produce one
-  vague, unsupported bullet (`"Morning fan"`, `"Reply to this question"`)
-  that doesn't affect `action_items` but is a real `Unsupported Addition`.
-  Lower severity than `15` — nothing gets promoted to a task — but still a
-  genuine gap, not currently fixed.
+  scoring pass below, not the original informal review, and now formally
+  reclassified from `regression_guard` to `negative_example`: both produce
+  one vague, unsupported bullet (`"Morning fan"`, `"Reply to this
+  question"`) that doesn't affect `action_items` but is a real
+  `Unsupported Addition`. Lower severity than `15` — nothing gets promoted
+  to a task — but still a genuine gap, not currently fixed.
 
 ## Automated scoring and reporting
 
@@ -109,8 +111,8 @@ scored results file (checkpoint-520, all 16 probes). Current report:
 ```
 Overall pass rate: 9/16 (56%)
 Format-validity rate: 16/16 (100%)
-Regression guards passed: 9/11 (82%) -- 14, 16 newly failing
-Negative examples resolved: 0/5 (0%)
+Regression guards passed: 9/9 (100%)
+Negative examples resolved: 0/7 (0%)
 Failure count by taxonomy label: Unsupported Addition: 3, Topic Loss: 2, Excessive Fragmentation: 1
 ```
 
