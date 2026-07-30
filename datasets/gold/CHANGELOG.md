@@ -1,5 +1,59 @@
 # Changelog
 
+## v1.2.2 — 2026-07-29
+
+12 examples, authored by ChatGPT (dataset and evaluation architect).
+Additive corrective release, not a new theme: targets seven protected
+benchmark failures surfaced by `gold_v1.2.1`'s strict scoring (probes `02`,
+`03`, `08`, `12`, `14`, `15`, `16`) — unsupported filler around plain
+observations and dangling references, tentative ideas promoted to
+committed tasks, interrupted-thought reconnection, nested-boundary
+completeness, open-question clarity, and cross-field completeness under
+interleaving. See [`gold_v1.2.2_curriculum.md`](gold_v1.2.2_curriculum.md)
+for the full rationale, including the "Decision Point Resolution" section
+recording what was approved.
+
+Prerequisite: benchmark probes `14` and `16` were reclassified from
+`regression_guard` to `negative_example` under the stricter pass rule
+`training/report_benchmark.py` introduced (both produced a minor, real
+`Unsupported Addition` that `gold_v1.2.1`'s original informal review
+missed) — see
+[`datasets/benchmark/gold_v1.2.1_probes.md`](../benchmark/gold_v1.2.1_probes.md).
+
+Difficulty distribution: 3 medium, 5 hard, 4 expert — no `easy` tier, since
+these are corrective lessons applied after the base capabilities were
+already introduced. 5 categories reused from `v1.1`/`v1.2.1`
+(`interrupted_thought_depth`, `nested_boundary_depth`,
+`open_question_preservation`, `buried_task_retention`,
+`dangling_reference`) rather than introducing parallel labels, plus 3
+genuinely new categories (see
+[`gold_v1.2.2_design_notes.md`](gold_v1.2.2_design_notes.md) for the
+rationale per example):
+
+- `unsupported_content_resistance` — new: resist filler labels, invented
+  context, and implied follow-up around a complete, plainly-stated
+  observation
+- `idea_action_boundary` — new: keep a tentative idea out of
+  `action_items`, including when a real task appears right next to it
+- `cross_field_completeness` — new: no supported topic disappears from
+  narrative or bullets just because it survives in another field
+
+Independent review
+([`gold_v1.2.2_review_report.md`](gold_v1.2.2_review_report.md)) initially
+found a borderline issue: 4 of the 12 examples (005, 006, 007, 012) reused
+their benchmark analogue's wording or sentence pattern closely enough to
+risk contaminating the very benchmark improvement this release is meant to
+demonstrate — including one verbatim phrase, "that is one question,"
+copied from probe `03`. All four were rewritten (same lesson, category,
+and difficulty; new surface forms with no overlap against any of the 16
+probes) and re-reviewed clean — zero remaining blocking or borderline
+findings.
+
+**Not yet trained on or evaluated** — next step is consolidating with
+`gold_v1.0`-`v1.2.1` for a training run, then evaluating against
+`datasets/benchmark/gold_v1.2.1_probes.jsonl`'s release gates and a
+`gold_v1.2.2_lessons_learned.md` entry.
+
 ## v1.2.1 — 2026-07-29
 
 14 examples, authored by ChatGPT (dataset and evaluation architect) — the

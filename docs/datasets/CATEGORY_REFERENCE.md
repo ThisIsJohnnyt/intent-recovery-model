@@ -10,7 +10,7 @@ conceptual vocabulary used *while authoring* examples (fragment types,
 boundary types, failure types), see [`TAXONOMY.md`](TAXONOMY.md) instead —
 the two are complementary, not duplicates.
 
-## Categories in use (as of `gold_v1.2.1`)
+## Categories in use (as of `gold_v1.2.2`)
 
 A category is never deleted from this table just because a later release
 stops using it — see "Category lifecycle" below.
@@ -57,6 +57,9 @@ stops using it — see "Category lifecycle" below.
 | `multi_person_attribution` | Preserve who said, did, has, needs, or receives each item when multiple people are mentioned; retain ambiguity when attribution is unresolved | medium, hard, expert | v1.2.1 | — |
 | `open_question_preservation` | Preserve a question as unresolved instead of inventing an answer, while recovering any supported checking task separately | medium, hard, expert | v1.2.1 | — |
 | `standalone_task_retention` | Preserve a brief or repeatedly emphasized task as one action item even when more salient narrative, emotion, or other tasks surround it | expert | v1.2.1 | — |
+| `unsupported_content_resistance` | Preserve only source-supported content across narrative, bullets, and actions; resist filler labels, invented context, implied follow-up, and other plausible but ungrounded additions | medium, expert | v1.2.2 | — |
+| `idea_action_boundary` | Preserve tentative ideas as possibilities rather than committed tasks, including when a real task appears nearby | medium, hard | v1.2.2 | — |
+| `cross_field_completeness` | Preserve every meaningful supported topic across narrative and bullets while limiting action_items to explicit tasks, especially under heavy interleaving | expert | v1.2.2 | — |
 
 *\*See [`gold_v1.1_review_report.md`](../../datasets/gold/gold_v1.1_review_report.md)
 — this label may not perfectly match what the example demonstrates
@@ -99,6 +102,29 @@ mode of an already-taught skill:
 
 See [`gold_v1.2.1_review_report.md`](../../datasets/gold/gold_v1.2.1_review_report.md)
 for the full review.
+
+`gold_v1.2.2` reuses five `v1.2.1` categories (`interrupted_thought_depth`,
+`nested_boundary_depth`, `open_question_preservation`,
+`buried_task_retention`, and `v1.1`'s `dangling_reference`) rather than
+introducing parallel labels, and adds only three genuinely new categories:
+
+- `unsupported_content_resistance` is broader than `zero_action_items`:
+  that category teaches that an observation isn't a task, while this one
+  targets unsupported additions in any output field — filler bullets,
+  invented labels, implied context, fabricated referents.
+- `idea_action_boundary` extends `task_plus_idea`, `observation_plus_idea`,
+  and `idea_among_tasks`, which describe particular topic combinations;
+  this category names the general recovery skill that failed across
+  contexts — preserving tentative modality and keeping ideas out of
+  `action_items`.
+- `cross_field_completeness` is not a synonym for `buried_task_retention`
+  or `long_rambling_multi_topic`. It targets consistency across the three
+  output fields: supported content must not disappear from narrative or
+  bullets merely because it survives elsewhere.
+
+See [`gold_v1.2.2_category_reference_proposals.md`](../../datasets/gold/gold_v1.2.2_category_reference_proposals.md)
+and [`gold_v1.2.2_review_report.md`](../../datasets/gold/gold_v1.2.2_review_report.md)
+for the full proposal and independent review.
 
 ## Target categories not yet represented
 
