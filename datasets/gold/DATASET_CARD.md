@@ -73,9 +73,11 @@ design principle it demonstrates.
 
 - **Synthetic by design**: all examples in `gold/` and `synthetic.jsonl` are
   synthetic — no real personal information. The project owner's actual
-  personal notes are kept in `datasets/real_holdout.jsonl`, used only as a
-  held-out evaluation set, and are excluded from version control entirely
-  (see `datasets/.gitignore`) — they are never trained on and never
+  personal notes are kept in `datasets/real_validation.jsonl` (routine
+  development-time evaluation) and `datasets/real_holdout.jsonl` (sealed,
+  release-milestone-only evaluation — see `docs/decisions/PDR-004.md` for
+  why these are two separate files), both excluded from version control
+  entirely (see `datasets/.gitignore`) — neither is ever trained on or
   published alongside this corpus.
 - **No diagnosis framing**: nothing in this corpus is generated or labeled
   with reference to a diagnosis (e.g. ADHD, autism). Examples describe

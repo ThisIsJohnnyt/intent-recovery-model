@@ -16,6 +16,8 @@ Under the following terms:
 Full license text: https://creativecommons.org/licenses/by/4.0/legalcode
 
 Note: this license applies to the synthetic examples in this directory. It
-does **not** apply to `datasets/real_holdout.jsonl`, which contains the
-project owner's real personal notes, is excluded from version control, and
-is never published.
+does **not** apply to `datasets/real_validation.jsonl` or
+`datasets/real_holdout.jsonl`, both of which contain the project owner's
+real personal notes (for routine development-time evaluation and sealed
+release-milestone evaluation, respectively — see `docs/decisions/PDR-004.md`),
+are excluded from version control, and are never published.

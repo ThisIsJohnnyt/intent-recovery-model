@@ -3,9 +3,20 @@
 Usage:
     python prepare_data.py
 
-Reads datasets/synthetic.jsonl (trained on) and datasets/real_holdout.jsonl
-(held out, eval only) and writes training/data/processed/{train,val,real_eval}.jsonl,
+Reads datasets/synthetic.jsonl (trained on), datasets/real_validation.jsonl
+(held out, routine dev-eval), and datasets/real_holdout.jsonl (held out,
+sealed release-milestone eval only), and writes
+training/data/processed/{train,val,real_validation,real_holdout_eval}.jsonl,
 each record shaped {"prompt": ..., "target": ...} ready for tokenization.
+
+real_validation.jsonl and real_holdout.jsonl serve different roles -- see
+docs/decisions/PDR-004.md. Routine development work (checkpoint comparison,
+error analysis, curriculum decisions) should use real_validation.jsonl.
+real_holdout.jsonl is reserved for declared release milestones only, is
+evaluated by the separate training/evaluate_holdout.py script (never
+automatically by train.py), and must not be consulted to guide day-to-day
+decisions -- see that PDR for why. Neither file is ever written into
+train.jsonl.
 """
 import json
 import random
@@ -100,9 +111,11 @@ def load_jsonl(path: Path) -> list[dict]:
 
 def main() -> None:
     synthetic_path = DATA_DIR / "synthetic.jsonl"
+    validation_path = DATA_DIR / "real_validation.jsonl"
     holdout_path = DATA_DIR / "real_holdout.jsonl"
 
     synthetic = load_jsonl(synthetic_path)
+    real_validation = load_jsonl(validation_path)
     real_holdout = load_jsonl(holdout_path)
 
     if not synthetic:
@@ -129,12 +142,20 @@ def main() -> None:
 
     write("train.jsonl", train_split)
     write("val.jsonl", val_split)
-    write("real_eval.jsonl", real_holdout)
+    write("real_validation.jsonl", real_validation)
+    write("real_holdout_eval.jsonl", real_holdout)
 
+    if not real_validation:
+        print(
+            f"Note: {validation_path} is empty. Add some of your real notes there "
+            "(same format) for routine development-time evaluation.",
+            file=sys.stderr,
+        )
     if not real_holdout:
         print(
-            f"Note: {holdout_path} is empty. Add some of your real notes there "
-            "(same format) to evaluate how well synthetic-only training generalizes.",
+            f"Note: {holdout_path} is empty. This is the sealed release-milestone "
+            "holdout -- populate it only when you're ready to treat it as such; "
+            "see docs/decisions/PDR-004.md.",
             file=sys.stderr,
         )
 

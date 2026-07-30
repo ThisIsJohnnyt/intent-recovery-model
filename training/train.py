@@ -7,9 +7,14 @@ Usage:
 Reads training/data/processed/{train,val}.jsonl (built by prepare_data.py),
 fine-tunes google/flan-t5-base, and saves the result to
 training/checkpoints/thoughtorganizer-flan-t5/final. Also runs the resulting
-model against val.jsonl and real_eval.jsonl and prints how many outputs
-contain all three well-formed section markers, so you can eyeball quality
-before exporting to ONNX.
+model against val.jsonl and real_validation.jsonl and prints how many
+outputs contain all three well-formed section markers, so you can eyeball
+quality before exporting to ONNX.
+
+Deliberately does NOT evaluate the sealed real_holdout.jsonl -- that's a
+separate, explicit step (see evaluate_holdout.py) reserved for declared
+release milestones, per docs/decisions/PDR-004.md. Routine runs should
+never touch it.
 """
 import json
 from pathlib import Path
@@ -123,12 +128,18 @@ def main() -> None:
 
     evaluate_format_validity(model, tokenizer, device, "val", val_ds)
 
-    real_eval_path = DATA_DIR / "real_eval.jsonl"
-    if real_eval_path.exists() and real_eval_path.read_text(encoding="utf-8").strip():
-        real_eval_ds = load_split("real_eval.jsonl")
-        evaluate_format_validity(model, tokenizer, device, "real_eval", real_eval_ds)
+    real_validation_path = DATA_DIR / "real_validation.jsonl"
+    if real_validation_path.exists() and real_validation_path.read_text(encoding="utf-8").strip():
+        real_validation_ds = load_split("real_validation.jsonl")
+        evaluate_format_validity(model, tokenizer, device, "real_validation", real_validation_ds)
     else:
-        print("\n(no real_eval.jsonl examples yet — add your real notes to see how this generalizes)")
+        print("\n(no real_validation.jsonl examples yet — add some of your real notes there for routine dev-time evaluation)")
+
+    print(
+        "\n(real_holdout.jsonl is not evaluated here -- it's sealed for "
+        "release milestones; run evaluate_holdout.py explicitly when one "
+        "is declared. See docs/decisions/PDR-004.md.)"
+    )
 
 
 def evaluate_format_validity(model, tokenizer, device, split_name: str, dataset: Dataset) -> None:
