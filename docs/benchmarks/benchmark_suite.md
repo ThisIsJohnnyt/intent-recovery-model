@@ -80,12 +80,19 @@ Regression guards passed: 9/9 (100%)
 Negative examples resolved: 0/7 (0%)
 ```
 
-See `datasets/benchmark/gold_v1.2.1_probes.md` for what this reveals.
-Probes `14`/`16` were reclassified from `regression_guard` to
-`negative_example` under this stricter scoring — approved as part of the
-`gold_v1.2.2` curriculum decision (see
-`datasets/gold/gold_v1.2.2_curriculum.md`) — and the exact command to
-reproduce this report.
+See `datasets/benchmark/gold_v1.2.1_probes.md` for what this reveals and
+the exact command to reproduce this report. This report is frozen against
+`checkpoint-520` (still the deployed model) under the classification that
+was canonical at the time (9 guards / 7 negatives) — it is intentionally
+left unchanged. The classification has since evolved: probes `14`/`16`
+were reclassified `regression_guard` → `negative_example` under this
+stricter scoring, then `12`/`14`/`15` were promoted back to
+`regression_guard` after a `gold_v1.2.2` candidate checkpoint
+(`checkpoint-600`, not deployed) resolved them cleanly — see
+`datasets/gold/gold_v1.2.2_lessons_learned.md` and
+`datasets/benchmark/gold_v1.2.1_probes.md`'s "Status classification" for
+the current state (12 guards / 4 negatives) and why `checkpoint-600`
+hasn't replaced `checkpoint-520` in production yet.
 
 ## Negative examples
 
@@ -103,7 +110,9 @@ ambiguity — the opposite failure mode from under-extracting. They're
 **benchmark data, never training data**: live in `datasets/benchmark/`
 (see its `README.md`), which `training/prepare_data.py` never reads (it
 only reads `synthetic.jsonl`/`real_holdout.jsonl` for the training path).
-Seven now exist — `gold_v1.2.1_probes.jsonl`'s `02`, `03`, `08`, `12`, `14`,
-`15`, `16` (`status: "negative_example"`), each already revealing a
-specific, documented limitation rather than a hypothetical one. See
-`gold_v1.2.1_probes.md` for what each currently fails on.
+Four now exist — `gold_v1.2.1_probes.jsonl`'s `02`, `03`, `08`, `16`
+(`status: "negative_example"`; `12`, `14`, `15` were promoted to
+`regression_guard` after resolving on a `gold_v1.2.2` candidate
+checkpoint), each already revealing a specific, documented limitation
+rather than a hypothetical one. See `gold_v1.2.1_probes.md` for what each
+currently fails on.

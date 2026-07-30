@@ -49,10 +49,24 @@ and difficulty; new surface forms with no overlap against any of the 16
 probes) and re-reviewed clean — zero remaining blocking or borderline
 findings.
 
-**Not yet trained on or evaluated** — next step is consolidating with
-`gold_v1.0`-`v1.2.1` for a training run, then evaluating against
-`datasets/benchmark/gold_v1.2.1_probes.jsonl`'s release gates and a
-`gold_v1.2.2_lessons_learned.md` entry.
+**Trained and evaluated** — consolidated into `datasets/synthetic.jsonl`
+(66 examples) and trained, producing candidate `checkpoint-600` (epoch
+40). Benchmark result: overall pass rate rose from 9/16 to 13/16 (56% →
+81%); probe `15` (the highest-priority known regression) fully resolved,
+along with probes `03`, `12`, and `14`. Probes `12`, `14`, and `15` were
+promoted from `negative_example` back to `regression_guard`; `03` held at
+`negative_example` pending one more clean run. One new problem surfaced:
+probe `02` regressed to a different, more confused failure — see
+[`gold_v1.2.2_lessons_learned.md`](gold_v1.2.2_lessons_learned.md)'s
+"surprising finding" section for why this may be a direct side effect of
+the wording-reuse fix above (probe `02`'s analogue example was rewritten
+away from probe `02`'s literal template, which may have cost the model
+reinforcement on that exact phrasing).
+
+**Not cut into a production release.** `checkpoint-600` is kept as a
+candidate/comparison baseline only; the deployed model remains
+`checkpoint-520` (`gold_v1.2.1`). Next: a compact `gold_v1.2.3` corrective
+release targeting the three probes still unresolved (`02`, `08`, `16`).
 
 ## v1.2.1 — 2026-07-29
 

@@ -33,53 +33,70 @@ on both checkpoints tested so far).
 
 ## Status classification
 
-Classified against **`checkpoint-520` (epoch 40)** — the checkpoint
-actually deployed after `gold_v1.2.1`'s training run (see the lessons-
-learned doc for why `checkpoint-26`, an earlier epoch, was initially
-selected instead and isn't the reference point here):
+**Current classification** (12 `regression_guard` / 4 `negative_example`:
+`02`, `03`, `08`, `16`), updated after `gold_v1.2.2`'s training run
+against a candidate checkpoint (`checkpoint-600`, epoch 40 — see
+[`gold_v1.2.2_lessons_learned.md`](../gold/gold_v1.2.2_lessons_learned.md)).
+Probes `12`, `14`, and `15` were promoted from `negative_example` back to
+`regression_guard` after that run resolved all three cleanly. Probe `03`
+also resolved on that run but is deliberately being held at
+`negative_example` for one additional clean run before promotion, given
+the same run also surfaced a new regression on probe `02` — a reminder
+that resolutions on this checkpoint aren't uniformly stable yet.
 
-- **`regression_guard`** (9 of 16, currently) — should pass. Its job going
+**Important**: this reclassification is based on `checkpoint-600`, a
+*candidate* checkpoint that has **not** been cut into a production
+release — the deployed model is still `checkpoint-520` (`gold_v1.2.1`).
+The "Example report" below, computed against `checkpoint-520`, still
+correctly shows `12`/`14`/`15` failing under the classification that was
+canonical *at that time* (9 guards / 7 negatives) — that historical report
+is intentionally left unchanged; it documents what was actually deployed,
+not the current benchmark-suite classification. See
+`training/gold_v1.2.2_benchmark_results_checkpoint600.json` for the
+candidate checkpoint's full report.
+
+- **`regression_guard`** (12 of 16, currently) — should pass. Its job going
   forward is to catch backsliding: if a future release makes this probe
   fail, that's a regression, not a tradeoff to shrug off.
-- **`negative_example`** (7 of 16, currently: `02`, `03`, `08`, `12`, `14`,
-  `15`, `16`) — reveals a real, current limitation on the deployed model.
-  Not a bug in the benchmark; the point of a negative example is exactly
-  this. Tracked as known limitations to close in a future release, not
-  something to silently accept as permanent.
+- **`negative_example`** (4 of 16, currently: `02`, `03`, `08`, `16`) —
+  reveals a real, current limitation not yet resolved on a stable,
+  released checkpoint. Not a bug in the benchmark; the point of a negative
+  example is exactly this. Tracked as known limitations to close in a
+  future release, not something to silently accept as permanent.
 
-This classification is a snapshot as of this training run, not permanent —
-re-running this suite against a future checkpoint should update `status`
-and `notes` per probe rather than assuming today's classification still
-holds. **`14` and `16` were reclassified from `regression_guard` to
-`negative_example`** (approved as part of the `gold_v1.2.2` curriculum
-decision) — see "Automated scoring and reporting" below; a stricter pass
-rule than the informal read that first produced the original classification
-found a real, if minor, issue in both.
+This classification is a snapshot, not permanent — re-running this suite
+against a future checkpoint should update `status` and `notes` per probe
+rather than assuming today's classification still holds. Note `14`'s
+history: `regression_guard` → `negative_example` (when the stricter pass
+rule found its filler bullet) → `regression_guard` again (once
+`checkpoint-600` produced no filler at all) — a round trip, not an error.
 
 ## Known limitations this suite currently tracks
 
-- **`15` (idea promoted to a committed action item)** — a confirmed
-  regression against established `gold_v1.2` policy
-  (`task_plus_idea`/`observation_plus_idea`), present on both checkpoints
-  tested. Highest-priority item to close.
-- **`02`, `03` (excessive fragmentation / dropped bullet content on
-  adversarial nested/interrupted cases)** — narrower quality issues, not
-  regressions against prior policy, but real gaps in the specific
-  reinforcement `gold_v1.2.1` targeted.
-- **`08` (confusingly worded open question)** — no invented answer (the
-  core test), but the question's actual content doesn't come through
-  clearly. A phrasing-quality gap, not an evidence-first violation.
-- **`12` (task dropped from narrative specifically, while surviving in
-  bullets/actions)** — a narrower, more specific failure than general Topic
-  Loss: the structured fields are reliable even when the prose narrative
-  isn't. Worth watching whether this recurs across future releases.
-- **`14`, `16` (minor ungrounded filler bullets)** — found by the stricter
-  scoring pass below, not the original informal review, and now formally
-  reclassified from `regression_guard` to `negative_example`: both produce
-  one vague, unsupported bullet (`"Morning fan"`, `"Reply to this
-  question"`) that doesn't affect `action_items` but is a real
-  `Unsupported Addition`. Lower severity than `15` — nothing gets promoted
-  to a task — but still a genuine gap, not currently fixed.
+- **`02` (interrupted-thought reconnection)** — newly regressed on
+  `checkpoint-600`: produces a garbled, near-nonsensical reconnection
+  clause and drops the causal reason out of the action item entirely.
+  Worse than `gold_v1.2.1`'s baseline failure (which only added one
+  spurious extra action). Suspected cause: this probe's analogue training
+  example was deliberately rewritten away from probe `02`'s literal
+  wording template after `gold_v1.2.2`'s independent review flagged
+  wording reuse — see `gold_v1.2.2_lessons_learned.md`'s "surprising
+  finding" section. Targeted by the planned `gold_v1.2.3` release.
+- **`03` (dropped bullet content on adversarial nested case)** — resolved
+  on `checkpoint-600`, held at `negative_example` pending one more clean
+  run before promotion to `regression_guard`.
+- **`08` (confusingly worded open question)** — unresolved across three
+  consecutive releases now (`gold_v1.2.1` and `gold_v1.2.2` both score it
+  partial for the same reason: correct non-answer, unclear phrasing).
+  `checkpoint-600` also shows a new, milder issue: attributing a later
+  observation to one specific candidate ("the plant") rather than
+  preserving the input's ambiguous "it." Targeted by the planned
+  `gold_v1.2.3` release.
+- **`16` (minor ungrounded filler)** — `checkpoint-600` no longer produces
+  the original filler bullet ("Reply to this question") but fabricates a
+  different one instead ("both are unrelated"), so this remains a real,
+  if changed, `Unsupported Addition`. Targeted by the planned
+  `gold_v1.2.3` release.
 
 ## Automated scoring and reporting
 
