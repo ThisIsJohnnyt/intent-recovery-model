@@ -32,7 +32,9 @@ Each gold release teaches one new capability, not just more volume — see
 | `gold_v1.0` | Basic recovery (schema validation, pipeline proof) | ✅ Complete |
 | `gold_v1.1` | Realistic note styles, authentic messiness | ✅ Complete |
 | `gold_v1.2` | Multiple interleaved topics (many unrelated topics at once — segmentation, not summarization) | ✅ Complete |
-| `gold_v1.2.1` | Segmentation reinforcement (additive corrective release — deeper Level 3 structures, multi-person attribution, open-question preservation, task retention; see [`gold_v1.2_lessons_learned.md`](../datasets/gold/gold_v1.2_lessons_learned.md)'s recommendations) | Next |
+| `gold_v1.2.1` | Segmentation reinforcement (additive corrective release — deeper Level 3 structures, multi-person attribution, open-question preservation, task retention; see [`gold_v1.2_lessons_learned.md`](../datasets/gold/gold_v1.2_lessons_learned.md)'s recommendations) | ✅ Complete |
+| `gold_v1.2.2` | Intent Fidelity and Evidence-Boundary Reinforcement (additive corrective release — unsupported-content resistance, idea/task boundary, cross-field completeness; see [`gold_v1.2.2_lessons_learned.md`](../datasets/gold/gold_v1.2.2_lessons_learned.md)) | ✅ Complete — trained as candidate `checkpoint-600`, **not yet released to production** (still `checkpoint-520`/`gold_v1.2.1`); resolved probes 12/14/15, regressed probe 02 |
+| `gold_v1.2.3` | Compact corrective release targeting the 3 benchmark probes `gold_v1.2.2` didn't resolve (`02`'s new reconnection regression, `08`'s persistent wording-clarity gap, `16`'s different fabricated filler) | Next |
 | `gold_v1.3` | Sensory overwhelm | Planned |
 | `gold_v1.4` | Emotional journaling | Planned |
 | `gold_v1.5` | Burnout (follows emotional journaling — enough overlap that it shouldn't lead) | Planned |
