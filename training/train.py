@@ -65,6 +65,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=str, default=None, help="Overrides the default checkpoints output dir")
     parser.add_argument("--data-dir", type=str, default=None, help="Overrides the default processed-data dir (for control studies against a different consolidated dataset)")
     parser.add_argument("--force", action="store_true", help="Allow writing into a non-empty --output-dir (overwrites/prunes existing checkpoints there). Off by default after checkpoint-520 and the original checkpoint-600 were both silently lost to save_total_limit pruning via output-dir reuse.")
+    parser.add_argument("--max-steps", type=int, default=None, help="Overrides num_train_epochs with an exact optimizer-step budget (Seq2SeqTrainingArguments.max_steps), including the default linear LR scheduler's total-steps count. Exists to run step-matched controls against a differently-sized train set that would otherwise land on a different steps-per-epoch count -- see gold_v1.2.3_groupscreen_seed17_scoring.md's optimizer-step confound. Omit for normal epoch-based runs.")
     return parser.parse_args()
 
 
@@ -85,7 +86,10 @@ def main() -> None:
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
-    print(f"Seed: {cli_args.seed}, output dir: {output_dir}, data dir: {data_dir}")
+    print(
+        f"Seed: {cli_args.seed}, output dir: {output_dir}, data dir: {data_dir}, "
+        f"max_steps: {cli_args.max_steps if cli_args.max_steps is not None else '(unset, epoch-based)'}"
+    )
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
     model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL).to(device)
@@ -123,6 +127,10 @@ def main() -> None:
         # much larger real dataset, lower substantially further (8-15) and
         # watch eval_loss instead of holding step count constant.
         num_train_epochs=40,
+        # -1 (HF's default) leaves epoch-based length untouched; a positive
+        # value overrides num_train_epochs with an exact step budget,
+        # including the default linear LR scheduler's total-steps count.
+        max_steps=cli_args.max_steps if cli_args.max_steps is not None else -1,
         learning_rate=3e-4,
         weight_decay=0.01,
         eval_strategy="epoch",
