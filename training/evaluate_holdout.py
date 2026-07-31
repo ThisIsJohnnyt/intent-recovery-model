@@ -22,12 +22,12 @@ from pathlib import Path
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
-from train import DATA_DIR, OUTPUT_DIR, evaluate_format_validity, load_split
+from train import DEFAULT_DATA_DIR, DEFAULT_OUTPUT_DIR, evaluate_format_validity, load_split
 
 
 def main() -> None:
-    checkpoint_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else OUTPUT_DIR / "final"
-    holdout_path = DATA_DIR / "real_holdout_eval.jsonl"
+    checkpoint_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUTPUT_DIR / "final"
+    holdout_path = DEFAULT_DATA_DIR / "real_holdout_eval.jsonl"
 
     if not holdout_path.exists() or not holdout_path.read_text(encoding="utf-8").strip():
         print(
@@ -51,7 +51,7 @@ def main() -> None:
     tokenizer = AutoTokenizer.from_pretrained(str(checkpoint_dir))
     model = AutoModelForSeq2SeqLM.from_pretrained(str(checkpoint_dir)).to(device)
 
-    holdout_ds = load_split("real_holdout_eval.jsonl")
+    holdout_ds = load_split(DEFAULT_DATA_DIR, "real_holdout_eval.jsonl")
     evaluate_format_validity(model, tokenizer, device, "real_holdout", holdout_ds)
 
 

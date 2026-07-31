@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "description": "Frozen train/val split membership for datasets/synthetic.jsonl. Every example is keyed by sha256 of its exact 'input' text. Anything listed under 'val' is pinned to validation; every other example -- including any new ones appended to synthetic.jsonl in future Gold releases -- defaults to train automatically. This replaces the previous random.Random(42).shuffle()-over-the-whole-file split in prepare_data.py, which silently reassigned 9 of 66 examples between train and val the moment gold_v1.2.3's 6 new examples were appended (see training/gold_v1.2.3_split_delta_report.md). Val membership now only ever changes by an explicit, reviewed edit to this file.",
+  "frozen_at": "gold_v1.2.2 (66-example corpus). Reproduced directly from the original random.Random(42).shuffle(range(66))[:6] split and verified byte-identical against training/data/processed_gold_v1.2.3_fixedsplit/val.jsonl before being frozen here.",
+  "val": [
+    {
+      "input_sha256": "3a12e3ed7b61136309b845cf5c1b2eb01a23861bc11fcf9210e4198ba4aa2b5d",
+      "input": "thinking about that old zesto commercial today. taste so good it will blow your mind. funny how things like that stick in your head from years ago. just a random memory.",
+      "category": "zero_action_items"
+    },
+    {
+      "input_sha256": "6c05201ab7f0117f9ec6ed6eee270a0ace37be7a92d8f82078223a804c7c2bfe",
+      "input": "Return the rental car by noon. The bakery started selling sourdough again. Update the team on the launch date. Buy batteries for the smoke detector.",
+      "category": "four_independent_topics"
+    },
+    {
+      "input_sha256": "f508df9e008cff666ee10c870e215ded31c41642ad1268e9e066da3fcc328d23",
+      "input": "Order more filing folders. What if we color-coded the folders by client instead of by month? Follow up with the vendor about the late shipment.",
+      "category": "idea_among_tasks"
+    },
+    {
+      "input_sha256": "d4794414e21add7f8efcc486e1fe06ff77ad3feef3103253912c3a271ae3c693",
+      "input": "I keep thinking the workshop outline is too crowded and maybe the opening should breathe more because everyone looked lost last time, print the return label, and the examples probably need to come earlier.",
+      "category": "buried_task_retention"
+    },
+    {
+      "input_sha256": "1371a98a912ad6e8fef1d76e02cd170dd06efb211bd58363cbb722d2c96cd76d",
+      "input": "Was the strange noise coming from the vent or outside? It stopped after a minute. Move the laundry before bed.",
+      "category": "open_question_preservation"
+    },
+    {
+      "input_sha256": "d9ff0edcec5cc28d2227c3cd7d90ad12b3630f46d79a59865423bd33fa648444",
+      "input": "The supply cabinet smells damp. Leave that note as-is; not sure which one she meant. Send the room count to Mateo.",
+      "category": "unsupported_content_resistance"
+    }
+  ]
+}

@@ -9,6 +9,11 @@ sealed release-milestone eval only), and writes
 training/data/processed/{train,val,real_validation,real_holdout_eval}.jsonl,
 each record shaped {"prompt": ..., "target": ...} ready for tokenization.
 
+Train/val membership for synthetic.jsonl comes from split_manifest.json, not a
+random shuffle -- see that file's own description for why. Every example not
+listed there defaults to train, so appending new Gold examples can never
+silently move an existing example between train and val.
+
 real_validation.jsonl and real_holdout.jsonl serve different roles -- see
 docs/decisions/PDR-004.md. Routine development work (checkpoint comparison,
 error analysis, curriculum decisions) should use real_validation.jsonl.
@@ -18,15 +23,14 @@ automatically by train.py), and must not be consulted to guide day-to-day
 decisions -- see that PDR for why. Neither file is ever written into
 train.jsonl.
 """
+import hashlib
 import json
-import random
 import sys
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "datasets"
 PROCESSED_DIR = Path(__file__).parent / "data" / "processed"
-VAL_FRACTION = 0.1
-SEED = 42
+SPLIT_MANIFEST_PATH = Path(__file__).parent / "split_manifest.json"
 
 # Mirrors src/services/noteOrganizer.ts SYSTEM_PROMPT / USER_PROMPT_TEMPLATE
 # exactly, so the model trains on the identical prompt shape it sees in
@@ -89,6 +93,7 @@ def validate_record(record: dict, source: str, line_no: int) -> dict:
     return {
         "prompt": build_prompt(record["input"]),
         "target": "\n".join(target_lines),
+        "_input": record["input"],
     }
 
 
@@ -109,6 +114,45 @@ def load_jsonl(path: Path) -> list[dict]:
     return records
 
 
+def input_hash(raw_input: str) -> str:
+    return hashlib.sha256(raw_input.encode("utf-8")).hexdigest()
+
+
+def load_val_hashes(path: Path) -> set[str]:
+    if not path.exists():
+        raise SystemExit(
+            f"Missing split manifest: {path}. Train/val membership for "
+            "synthetic.jsonl is no longer computed by a random shuffle -- it "
+            "must come from this file. See split_manifest.json's own "
+            "description if it needs to be recreated."
+        )
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    return {entry["input_sha256"] for entry in manifest["val"]}
+
+
+def split_by_manifest(records: list[dict], val_hashes: set[str]) -> tuple[list[dict], list[dict]]:
+    train_split, val_split = [], []
+    seen_hashes = set()
+    for record in records:
+        h = input_hash(record["_input"])
+        seen_hashes.add(h)
+        (val_split if h in val_hashes else train_split).append(
+            {k: v for k, v in record.items() if k != "_input"}
+        )
+
+    missing = val_hashes - seen_hashes
+    if missing:
+        raise SystemExit(
+            f"split_manifest.json pins {len(missing)} val example(s) whose "
+            f"input text no longer matches anything in datasets/synthetic.jsonl "
+            f"(hash(es): {sorted(missing)}). An example was edited, renamed, or "
+            "removed without updating the manifest -- val-set membership must "
+            "stay frozen and explicit, not silently shrink. Fix the manifest or "
+            "restore the example before proceeding."
+        )
+    return train_split, val_split
+
+
 def main() -> None:
     synthetic_path = DATA_DIR / "synthetic.jsonl"
     validation_path = DATA_DIR / "real_validation.jsonl"
@@ -126,10 +170,12 @@ def main() -> None:
         )
         sys.exit(1)
 
-    random.Random(SEED).shuffle(synthetic)
-    val_size = max(1, int(len(synthetic) * VAL_FRACTION))
-    val_split = synthetic[:val_size]
-    train_split = synthetic[val_size:]
+    val_hashes = load_val_hashes(SPLIT_MANIFEST_PATH)
+    train_split, val_split = split_by_manifest(synthetic, val_hashes)
+    print(
+        f"Split manifest ({SPLIT_MANIFEST_PATH.name}): {len(val_split)} example(s) "
+        f"pinned to val, {len(train_split)} default to train."
+    )
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -142,8 +188,8 @@ def main() -> None:
 
     write("train.jsonl", train_split)
     write("val.jsonl", val_split)
-    write("real_validation.jsonl", real_validation)
-    write("real_holdout_eval.jsonl", real_holdout)
+    write("real_validation.jsonl", [{k: v for k, v in r.items() if k != "_input"} for r in real_validation])
+    write("real_holdout_eval.jsonl", [{k: v for k, v in r.items() if k != "_input"} for r in real_holdout])
 
     if not real_validation:
         print(
