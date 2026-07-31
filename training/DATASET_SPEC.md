@@ -52,9 +52,20 @@ else, so adding them costs nothing and pays off later when we want to measure
 accuracy per category instead of one aggregate number (see ROADMAP.md's
 benchmark suite section).
 
-Two files:
+Three files:
 - `datasets/synthetic.jsonl` — ChatGPT-generated examples (see prompt below).
-- `datasets/real_holdout.jsonl` — your real notes, same format. Written by hand (you write the `input` from a real note, and either write the `output` yourself or have ChatGPT help draft it and you correct it). These are **not** trained on in round 1 — they're the eval set that tells us whether synthetic-only training generalizes to how you actually write.
+- `datasets/real_validation.jsonl` — your real notes, same format, for
+  **routine development-time evaluation**. Written by hand (you write the
+  `input` from a real note, and either write the `output` yourself or have
+  ChatGPT help draft it and you correct it). Evaluated automatically by
+  `train.py` after every run. **Not** trained on.
+- `datasets/real_holdout.jsonl` — your real notes, same format, but
+  **sealed for declared release milestones only** — never consulted for
+  routine development, curriculum authoring, seed selection, or checkpoint
+  tuning. Evaluated only by the separate, explicit
+  `training/evaluate_holdout.py`. **Not** trained on. See
+  `docs/decisions/PDR-004.md` for why these two are kept separate rather
+  than being one file.
 
 ## Two rules for every example
 
@@ -153,7 +164,8 @@ should be long and rambling.
 
 ```
 datasets/synthetic.jsonl              <- ChatGPT output, appended across batches
-datasets/real_holdout.jsonl           <- your real notes, held out from training (gitignored)
+datasets/real_validation.jsonl        <- your real notes, routine dev-eval, held out from training (gitignored)
+datasets/real_holdout.jsonl           <- your real notes, sealed release-milestone eval only, held out from training (gitignored)
 datasets/gold/gold_v1.0.jsonl         <- hand-curated gold-tier examples, one file per batch
                                           (gold_v1.1.jsonl, gold_v1.2.jsonl, ... as more arrive)
                                           — not trained on until the gold tier is consolidated
