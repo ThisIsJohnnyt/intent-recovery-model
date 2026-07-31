@@ -2,15 +2,25 @@
 
 Usage:
     python prepare_data.py   # if you haven't already
-    python train.py
+    python train.py [--seed N] [--output-dir DIR] [--data-dir DIR]
 
-Reads training/data/processed/{train,val}.jsonl (built by prepare_data.py),
-fine-tunes google/flan-t5-base, and saves the result to
-training/checkpoints/thoughtorganizer-flan-t5/final. Also runs the resulting
-model against val.jsonl and real_eval.jsonl and prints how many outputs
-contain all three well-formed section markers, so you can eyeball quality
-before exporting to ONNX.
+Reads training/data/processed/{train,val}.jsonl (built by prepare_data.py,
+or --data-dir/{train,val}.jsonl if given), fine-tunes google/flan-t5-base,
+and saves the result to training/checkpoints/thoughtorganizer-flan-t5/final
+(or --output-dir/final if given). Also runs the resulting model against
+val.jsonl and real_eval.jsonl and prints how many outputs contain all
+three well-formed section markers, so you can eyeball quality before
+exporting to ONNX.
+
+--seed/--output-dir/--data-dir exist only to support the gold_v1.2.3
+multi-seed stability study and its gold_v1.2.2-only control runs (see
+gold_v1.2.3_seed_study_manifest.md) -- they change nothing about the
+model or hyperparameters, only which Seq2SeqTrainingArguments.seed/
+data_seed is used, where checkpoints are written, and which processed
+dataset is read, so multiple seed/control runs don't overwrite each
+other or the frozen gold_v1.2.3 splits.
 """
+import argparse
 import json
 from pathlib import Path
 
@@ -27,8 +37,8 @@ from transformers import (
 from prepare_data import ACTIONS_MARKER, BULLETS_MARKER, NARRATIVE_MARKER
 
 BASE_MODEL = "google/flan-t5-base"
-DATA_DIR = Path(__file__).parent / "data" / "processed"
-OUTPUT_DIR = Path(__file__).parent / "checkpoints" / "thoughtorganizer-flan-t5"
+DEFAULT_DATA_DIR = Path(__file__).parent / "data" / "processed"
+DEFAULT_OUTPUT_DIR = Path(__file__).parent / "checkpoints" / "thoughtorganizer-flan-t5"
 MAX_INPUT_TOKENS = 512
 MAX_TARGET_TOKENS = 512
 # Mirrors src/services/modelLoader.ts's streamFromModel default: bounds
@@ -38,21 +48,45 @@ MAX_TARGET_TOKENS = 512
 GENERATION_MAX_NEW_TOKENS = 300
 
 
-def load_split(name: str) -> Dataset:
-    path = DATA_DIR / name
+def load_split(data_dir: Path, name: str) -> Dataset:
+    path = data_dir / name
     records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     return Dataset.from_list(records)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=42, help="Seed for Seq2SeqTrainingArguments.seed/data_seed")
+    parser.add_argument("--output-dir", type=str, default=None, help="Overrides the default checkpoints output dir")
+    parser.add_argument("--data-dir", type=str, default=None, help="Overrides the default processed-data dir (for control studies against a different consolidated dataset)")
+    parser.add_argument("--force", action="store_true", help="Allow writing into a non-empty --output-dir (overwrites/prunes existing checkpoints there). Off by default after checkpoint-520 and the original checkpoint-600 were both silently lost to save_total_limit pruning via output-dir reuse.")
+    return parser.parse_args()
+
+
 def main() -> None:
+    cli_args = parse_args()
+    output_dir = Path(cli_args.output_dir) if cli_args.output_dir else DEFAULT_OUTPUT_DIR
+    data_dir = Path(cli_args.data_dir) if cli_args.data_dir else DEFAULT_DATA_DIR
+
+    if output_dir.exists() and any(output_dir.iterdir()) and not cli_args.force:
+        raise SystemExit(
+            f"Refusing to run: {output_dir} already exists and is non-empty. "
+            "Reusing an output-dir with existing checkpoints risks silently "
+            "pruning them via save_total_limit (this happened twice already "
+            "in this project -- checkpoint-520 and the original checkpoint-600 "
+            "are both gone as a result). Pick a new --output-dir, or pass "
+            "--force if you've verified nothing valuable would be lost."
+        )
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
+    print(f"Seed: {cli_args.seed}, output dir: {output_dir}, data dir: {data_dir}")
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
     model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL).to(device)
 
-    train_ds = load_split("train.jsonl")
-    val_ds = load_split("val.jsonl")
+    train_ds = load_split(data_dir, "train.jsonl")
+    val_ds = load_split(data_dir, "val.jsonl")
     print(f"train examples: {len(train_ds)}, val examples: {len(val_ds)}")
 
     def tokenize(batch):
@@ -71,7 +105,9 @@ def main() -> None:
     collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
     args = Seq2SeqTrainingArguments(
-        output_dir=str(OUTPUT_DIR),
+        output_dir=str(output_dir),
+        seed=cli_args.seed,
+        data_seed=cli_args.seed,
         per_device_train_batch_size=4,
         per_device_eval_batch_size=4,
         # Scaled down from 100 (tuned for the ~15-example placeholder fixture)
@@ -116,16 +152,16 @@ def main() -> None:
 
     trainer.train()
 
-    final_dir = OUTPUT_DIR / "final"
+    final_dir = output_dir / "final"
     trainer.save_model(str(final_dir))
     tokenizer.save_pretrained(str(final_dir))
     print(f"Saved fine-tuned model to {final_dir}")
 
     evaluate_format_validity(model, tokenizer, device, "val", val_ds)
 
-    real_eval_path = DATA_DIR / "real_eval.jsonl"
+    real_eval_path = data_dir / "real_eval.jsonl"
     if real_eval_path.exists() and real_eval_path.read_text(encoding="utf-8").strip():
-        real_eval_ds = load_split("real_eval.jsonl")
+        real_eval_ds = load_split(data_dir, "real_eval.jsonl")
         evaluate_format_validity(model, tokenizer, device, "real_eval", real_eval_ds)
     else:
         print("\n(no real_eval.jsonl examples yet — add your real notes to see how this generalizes)")
