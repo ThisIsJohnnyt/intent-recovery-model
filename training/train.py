@@ -178,11 +178,13 @@ def main() -> None:
         model=model,
         tokenizer=tokenizer,
         device=device,
-        checkpoint_dir=final_dir,
-        checkpoint_fingerprint_value=checkpoint_fingerprint(final_dir),
+        checkpoint={
+            "path": str(final_dir),
+            "fingerprint": checkpoint_fingerprint(final_dir),
+            "training_seed": cli_args.seed,
+            "run_id": output_dir.name,
+        },
         git_commit=git_commit(),
-        seed=cli_args.seed,
-        run_id=output_dir.name,
         generation_max_new_tokens=GENERATION_MAX_NEW_TOKENS,
     )
 

@@ -23,10 +23,14 @@ from real_data_eval_logging import build_generation_artifact, new_generation_rec
 from real_data_private import dataset_fingerprint
 
 
-def run_real_validation_evaluation(*, model, tokenizer, device, checkpoint_dir, checkpoint_fingerprint_value: str, git_commit: str, seed: int, run_id: str, generation_max_new_tokens: int) -> dict | None:
-    """Returns the saved generation artifact, or None if
-    real_validation.jsonl is empty (routine and expected until the
-    validation-only pilot is approved and populated)."""
+def run_real_validation_evaluation(*, model, tokenizer, device, checkpoint: dict, git_commit: str, generation_max_new_tokens: int) -> dict | None:
+    """checkpoint: {"path", "fingerprint", "training_seed", "run_id"} --
+    same shape build_generation_artifact expects, grouped for the same
+    reason (see its own max-parameter-count exception note).
+
+    Returns the saved generation artifact, or None if real_validation.jsonl
+    is empty (routine and expected until the validation-only pilot is
+    approved and populated)."""
     validation_path = DATA_DIR / "real_validation.jsonl"
     if not validation_path.exists() or not validation_path.read_text(encoding="utf-8").strip():
         print(
@@ -73,12 +77,7 @@ def run_real_validation_evaluation(*, model, tokenizer, device, checkpoint_dir, 
         split="real_validation",
         evaluation_reason="routine post-training real_validation evaluation",
         git_commit=git_commit,
-        checkpoint={
-            "path": str(checkpoint_dir),
-            "fingerprint": checkpoint_fingerprint_value,
-            "training_seed": seed,
-            "run_id": run_id,
-        },
+        checkpoint=checkpoint,
         dataset={
             "fingerprint": ds_fp,
             "record_count": len(linked),

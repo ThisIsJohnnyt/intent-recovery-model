@@ -632,25 +632,6 @@ def validate_transition(old_entry: dict | None, new_entry: dict) -> None:
                 )
 
 
-# Approved holdout-seal declaration
-#
-# ChatGPT's Tier 3 review correctly rejected treating a caller-supplied
-# --milestone/--reason CLI string as sufficient proof that the
-# validation-only pilot's holdout restriction has actually been lifted for
-# a given dataset/checkpoint. pilot_mode describes the project's actual
-# governance phase, not merely whether an operation is a read or a write --
-# so evaluate_holdout.py must not decide for itself that the pilot is over.
-#
-# The seal schema itself (binding sealed record IDs, dataset fingerprint,
-# checkpoint fingerprint, rubric version, prompt-contract version and
-# fingerprint, repository commit, and approval timestamps) has not been
-# jointly designed yet -- no PDR or schema decision defines it. Rather than
-# invent that schema unilaterally, this fails closed unconditionally until
-# it exists: evaluate_holdout.py calls load_approved_seal() before opening
-# any holdout content or loading a model, and it always raises today. Once
-# the seal format is agreed and a real declaration mechanism is built, only
-# this function needs a real implementation -- callers don't change.
-
 SEAL_SCHEMA_VERSION = "real-holdout-seal-v1"  # placeholder identifier; format not yet designed
 SEAL_DECLARATIONS_PATH = rdp.PRIVATE_DIR / "real_data_holdout_seals.jsonl"
 
@@ -660,10 +641,18 @@ class SealNotApprovedError(ValueError):
 
 
 def load_approved_seal(milestone: str) -> dict:
-    """Always raises today -- see the module-level note above. Dummy unit
-    tests may exercise the lower-level validated functions with
-    pilot_mode=False directly; this function is the one thing the
-    production entry point (evaluate_holdout.py) is not allowed to bypass."""
+    """A caller-supplied --milestone/--reason string is not proof the
+    validation-only pilot's holdout restriction has been lifted for a
+    given dataset/checkpoint (per ChatGPT's Tier 3 review), so
+    evaluate_holdout.py calls this before opening any holdout content or
+    loading a model, instead of deciding for itself. The seal schema
+    (sealed record IDs, dataset/checkpoint/prompt-contract fingerprints,
+    rubric version, commit, approval timestamps) hasn't been jointly
+    designed yet, so this always raises today; once it is, only this
+    function needs a real implementation. Dummy unit tests may exercise
+    the lower-level validated functions with pilot_mode=False directly --
+    this function is the one thing the production entry point is not
+    allowed to bypass."""
     raise SealNotApprovedError(
         f"no approved holdout-seal declaration exists for milestone {milestone!r} -- the seal schema "
         "(sealed record IDs, dataset/checkpoint/prompt-contract fingerprints, rubric version, repository "
