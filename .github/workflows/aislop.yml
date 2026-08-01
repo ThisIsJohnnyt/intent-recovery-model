@@ -1,0 +1,30 @@
+name: aislop (AI code-quality scan)
+
+# Scans PR content for common AI-generated code smells (see repo discussion
+# for the plain-English rule list). Runs fully local/deterministic -- no
+# LLM calls, no external account, source never leaves this runner.
+#
+# Currently WARN-ONLY by design: this check can show red on a PR, but
+# nothing in this workflow or the repo blocks merging on that -- no
+# branch-protection rule requires it to pass. That's an intentional,
+# separate decision to make later if this proves useful.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  aislop-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+
+      - name: Run aislop scan
+        uses: scanaislop/aislop@v1
+        with:
+          directory: .
+          format: human
