@@ -114,6 +114,23 @@ def _parse_utc(value, field: str, record_id: str) -> datetime:
     return parsed
 
 
+def validate_record_id_format(record_id) -> str:
+    """Public validator for a bare record_id string, for any caller (e.g.
+    real_data_withdrawal.py) that needs to confirm a caller-supplied
+    record_id is safe to use in a path or lookup before doing either --
+    not just entries already known to be manifest dict keys."""
+    if not isinstance(record_id, str) or not _RECORD_ID_RE.match(record_id):
+        raise ManifestValidationError(f"record_id must match {_RECORD_ID_RE.pattern}, got {record_id!r}")
+    return record_id
+
+
+def validate_utc_timestamp(value, field_name: str) -> datetime:
+    """Public wrapper around the same RFC 3339 UTC parsing validate_entry
+    uses internally, for callers outside this module that need identical
+    strictness without a third copy of the parsing logic."""
+    return _parse_utc(value, field_name, "<external timestamp validation>")
+
+
 def _require_id(value, pattern: re.Pattern, field: str, record_id: str) -> None:
     if not isinstance(value, str) or not pattern.match(value):
         _fail(record_id, f"{field!r} does not match {pattern.pattern}: {value!r}")
@@ -394,7 +411,36 @@ def upsert_manifest_entry_validated(entry: dict, *, pilot_mode: bool = True) -> 
 
 RUBRIC_STATUS_ADJUDICATED = "adjudicated"
 
-_RUBRIC_TOP_LEVEL_REQUIRED = frozenset({"record_id", "rubric_status"})
+# Exact field set per datasets/REAL_DATA_ANNOTATION_GUIDE.md's "Private
+# rubric sidecar" section -- that document already defines the rubric
+# content schema; this validator was previously wrong to claim it hadn't
+# been jointly designed (see the Phase E lineage/withdrawal implementation
+# review, finding 2 -- real_data_lineage.py invented a nonexistent
+# 'expected_capability_checks' field instead of reading this).
+_RUBRIC_TOP_LEVEL_FIELDS = frozenset(
+    {
+        "record_id",
+        "must_preserve",
+        "must_not_infer",
+        "explicit_actions",
+        "unresolved_questions",
+        "attribution_map",
+        "allowed_surface_variants",
+        "capability_checks",
+        "adjudication_notes",
+        "rubric_status",
+        "rubric_fingerprint",
+    }
+)
+# List fields whose element type the guide doesn't show an example of
+# (attribution_map, allowed_surface_variants, etc.) are checked only for
+# "is a list" -- not guessing an element shape the guide doesn't document,
+# the same mistake finding 2 was about in the first place.
+_RUBRIC_LIST_FIELDS = ("must_preserve", "must_not_infer", "explicit_actions", "unresolved_questions", "attribution_map", "allowed_surface_variants", "capability_checks")
+# capability_checks is the one list field this codebase actually consumes
+# programmatically (real_data_lineage.build_review_score_record), so it
+# alone gets element-level strictness: unique, non-empty check-name strings.
+_RUBRIC_STRICT_STRING_LIST_FIELDS = ("capability_checks",)
 
 
 class RubricValidationError(ManifestValidationError):
@@ -402,28 +448,45 @@ class RubricValidationError(ManifestValidationError):
 
 
 def _validate_rubric_entry(rubric: dict, expected_record_id: str) -> None:
-    """Structural/security validation only -- the rubric's own content
-    schema (what fields describe the rubric beyond record_id/status/
-    fingerprint) hasn't been jointly designed, so this doesn't invent one.
-    It enforces exactly what evaluate_holdout.py's trust boundary needs:
-    the entry is unambiguous, matches the record it's keyed/looked-up
-    under, has a well-formed fingerprint if present, and is actually
-    adjudicated -- a draft or in-review rubric must never be usable to
-    score or link an evaluation."""
+    """Validates the exact rubric content schema from
+    REAL_DATA_ANNOTATION_GUIDE.md, plus the same identity/status/
+    fingerprint checks as before: the entry is unambiguous, matches the
+    record it's keyed/looked-up under, has a well-formed fingerprint, and
+    is actually adjudicated -- a draft or in-review rubric must never be
+    usable to score or link an evaluation."""
     record_id = rubric.get("record_id")
     if not isinstance(record_id, str) or not _RECORD_ID_RE.match(record_id):
         raise RubricValidationError(f"rubric entry has a missing/malformed record_id: {record_id!r}")
     if record_id != expected_record_id:
         raise RubricValidationError(f"rubric entry's own record_id {record_id!r} does not match the key {expected_record_id!r} it was loaded under")
-    missing = _RUBRIC_TOP_LEVEL_REQUIRED - set(rubric.keys())
+
+    extra = set(rubric.keys()) - _RUBRIC_TOP_LEVEL_FIELDS
+    if extra:
+        raise RubricValidationError(f"{record_id}: unknown rubric field(s) not permitted: {sorted(extra)}")
+    missing = _RUBRIC_TOP_LEVEL_FIELDS - set(rubric.keys())
     if missing:
         raise RubricValidationError(f"{record_id}: rubric entry missing required field(s): {sorted(missing)}")
+
+    for field in _RUBRIC_LIST_FIELDS:
+        value = rubric[field]
+        if not isinstance(value, list):
+            raise RubricValidationError(f"{record_id}: rubric[{field!r}] must be a list")
+        if field in _RUBRIC_STRICT_STRING_LIST_FIELDS:
+            if not all(isinstance(v, str) and v for v in value):
+                raise RubricValidationError(f"{record_id}: rubric[{field!r}] must contain only non-empty strings")
+            if len(set(value)) != len(value):
+                raise RubricValidationError(f"{record_id}: rubric[{field!r}] contains a duplicate entry")
+
+    if not isinstance(rubric.get("adjudication_notes"), str):
+        raise RubricValidationError(f"{record_id}: rubric['adjudication_notes'] must be a string")
+
     status = rubric.get("rubric_status")
     if status != RUBRIC_STATUS_ADJUDICATED:
         raise RubricValidationError(f"{record_id}: rubric_status must be {RUBRIC_STATUS_ADJUDICATED!r} to be usable in evaluation, got {status!r}")
     fp = rubric.get("rubric_fingerprint")
-    if fp is not None:
-        _require_fingerprint_or_none(fp, "rubric_fingerprint", record_id)
+    _require_fingerprint_or_none(fp, "rubric_fingerprint", record_id)
+    if fp is None:
+        raise RubricValidationError(f"{record_id}: rubric_fingerprint is required once rubric_status is {RUBRIC_STATUS_ADJUDICATED!r}")
 
 
 def load_rubrics_strict(path: Path | None = None) -> dict[str, dict]:

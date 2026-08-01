@@ -588,14 +588,38 @@ def test_production_write_path_rejects_pilot_forbidden_entry():
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+def _full_rubric(record_id: str, **overrides) -> dict:
+    """Exact field set per datasets/REAL_DATA_ANNOTATION_GUIDE.md's
+    private rubric sidecar schema."""
+    rubric = {
+        "record_id": record_id,
+        "must_preserve": ["x"],
+        "must_not_infer": [],
+        "explicit_actions": [],
+        "unresolved_questions": [],
+        "attribution_map": [],
+        "allowed_surface_variants": [],
+        "capability_checks": [],
+        "adjudication_notes": "",
+        "rubric_status": "adjudicated",
+        "rubric_fingerprint": f"sha256:{'a' * 64}",
+    }
+    rubric.update(overrides)
+    return rubric
+
+
 def test_strict_rubric_loader():
     """Review test 6: duplicate rubric record_ids and duplicate rubric
-    object keys both fail, and a non-adjudicated rubric_status fails too."""
+    object keys both fail, and a non-adjudicated rubric_status fails too.
+    Also covers the Phase E lineage/withdrawal implementation review's
+    finding 2 follow-through: the rubric content schema from
+    REAL_DATA_ANNOTATION_GUIDE.md is now fully enforced (unknown/missing
+    fields, not just record_id/status/fingerprint)."""
     tmp_dir = Path(tempfile.mkdtemp())
     try:
         dup_id_path = tmp_dir / "dup_id_rubrics.jsonl"
-        r1 = {"record_id": RECORD(1), "must_preserve": ["x"], "rubric_status": "adjudicated"}
-        r2 = {"record_id": RECORD(1), "must_preserve": ["y"], "rubric_status": "adjudicated"}
+        r1 = _full_rubric(RECORD(1))
+        r2 = _full_rubric(RECORD(1))
         dup_id_path.write_text(json.dumps(r1) + "\n" + json.dumps(r2) + "\n", encoding="utf-8")
         err = _expect_manifest_error(rdm.load_rubrics_strict, dup_id_path)
         check("load_rubrics_strict: duplicate record_id rejected", err is not None and "duplicate record_id" in err, err)
@@ -607,16 +631,35 @@ def test_strict_rubric_loader():
         check("load_rubrics_strict: duplicate key inside one rubric object rejected", err is not None, err)
 
         not_adjudicated_path = tmp_dir / "draft_rubric.jsonl"
-        draft = {"record_id": RECORD(4), "must_preserve": ["z"], "rubric_status": "draft"}
+        draft = _full_rubric(RECORD(4), rubric_status="draft")
         not_adjudicated_path.write_text(json.dumps(draft) + "\n", encoding="utf-8")
         err = _expect_manifest_error(rdm.load_rubrics_strict, not_adjudicated_path)
         check("load_rubrics_strict: non-adjudicated rubric_status rejected", err is not None, err)
 
         good_path = tmp_dir / "good_rubrics.jsonl"
-        good = {"record_id": RECORD(5), "must_preserve": ["ok"], "rubric_status": "adjudicated"}
+        good = _full_rubric(RECORD(5))
         good_path.write_text(json.dumps(good) + "\n", encoding="utf-8")
         loaded = rdm.load_rubrics_strict(good_path)
         check("load_rubrics_strict: a well-formed adjudicated rubric loads cleanly", loaded.get(RECORD(5)) == good)
+
+        missing_field_path = tmp_dir / "missing_field_rubric.jsonl"
+        missing_field = _full_rubric(RECORD(6))
+        del missing_field["capability_checks"]
+        missing_field_path.write_text(json.dumps(missing_field) + "\n", encoding="utf-8")
+        err = _expect_manifest_error(rdm.load_rubrics_strict, missing_field_path)
+        check("load_rubrics_strict: rubric missing a documented required field rejected", err is not None, err)
+
+        unknown_field_path = tmp_dir / "unknown_field_rubric.jsonl"
+        unknown_field = {**_full_rubric(RECORD(7)), "expected_capability_checks": ["not_the_real_field_name"]}
+        unknown_field_path.write_text(json.dumps(unknown_field) + "\n", encoding="utf-8")
+        err = _expect_manifest_error(rdm.load_rubrics_strict, unknown_field_path)
+        check("load_rubrics_strict: rubric with an unknown field (e.g. the old invented name) rejected", err is not None, err)
+
+        dup_check_path = tmp_dir / "dup_check_rubric.jsonl"
+        dup_check = _full_rubric(RECORD(8), capability_checks=["explicit_task_survived", "explicit_task_survived"])
+        dup_check_path.write_text(json.dumps(dup_check) + "\n", encoding="utf-8")
+        err = _expect_manifest_error(rdm.load_rubrics_strict, dup_check_path)
+        check("load_rubrics_strict: duplicate capability_checks entry rejected", err is not None, err)
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 

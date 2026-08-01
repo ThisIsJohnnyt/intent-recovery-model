@@ -116,11 +116,31 @@ def _manifest_entry(record_id, *, split=None, source_fp=None, pair_fp=None, rubr
     }
 
 
+def _full_rubric(record_id: str, *, capability_checks: list[str] | None = None, **overrides) -> dict:
+    """Exact field set per datasets/REAL_DATA_ANNOTATION_GUIDE.md's
+    private rubric sidecar schema -- load_rubrics_strict now enforces all
+    of this, not just record_id/status/fingerprint."""
+    rubric = {
+        "record_id": record_id,
+        "must_preserve": ["x"],
+        "must_not_infer": [],
+        "explicit_actions": [],
+        "unresolved_questions": [],
+        "attribution_map": [],
+        "allowed_surface_variants": [],
+        "capability_checks": capability_checks if capability_checks is not None else [],
+        "adjudication_notes": "",
+        "rubric_status": "adjudicated",
+    }
+    rubric.update(overrides)
+    return rubric
+
+
 def _setup_validation_record(sandbox: Sandbox, suffix: str = "1", *, input_text: str = None):
     record_id = f"rv_{suffix.rjust(32, '0')}"
     inp = input_text or f"TESTMARKER_WITHDRAWAL_DRILL_{suffix} water the plants tomorrow"
     out = {"narrative": f"Water the plants {suffix}.", "bullets": [f"Water plants {suffix}"], "action_items": [f"Water plants {suffix}"]}
-    rubric = {"record_id": record_id, "must_preserve": [suffix], "rubric_status": "adjudicated"}
+    rubric = _full_rubric(record_id, must_preserve=[suffix])
 
     sfp = rdp.source_fingerprint(inp)
     pfp = rdp.pair_fingerprint(inp, out)
@@ -151,7 +171,7 @@ def _build_generation_for(record_id, sfp, pfp, rfp, *, split="real_validation"):
 
 
 def _build_full_lineage(generation):
-    rubric = {"record_id": generation["results"][0]["record_id"], "must_preserve": ["x"], "expected_capability_checks": []}
+    rubric = {"record_id": generation["results"][0]["record_id"], "must_preserve": ["x"], "capability_checks": []}
     scores = [lin.build_review_score_record(generation_record=generation["results"][0], rubric=rubric, scores={dim: True for dim in __import__("real_data_scoring").SEMANTIC_DIMENSIONS}, capability_checks={}, failure_labels=[])]
     chatgpt_review = lin.build_review_artifact(generation=generation, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_A, independent_review_attestation=True, scores=scores)
     claude_review = lin.build_review_artifact(generation=generation, reviewer_role="claude", reviewer_actor_id=ACTOR_B, independent_review_attestation=True, scores=scores)
@@ -164,6 +184,53 @@ def _build_full_lineage(generation):
     decision = lin.build_decision_record(decision_type="curriculum", deciding_actor_id=ACTOR_OWNER, adjudications=[adjudication], outcome="dummy decision for withdrawal test")
     lin.save_decision_record(decision)
     return chatgpt_review, claude_review, comparison, adjudication, decision
+
+
+# --- ChatGPT implementation review finding 1: record_id path escape ---
+
+
+def _no_files_created_anywhere(sb: "Sandbox") -> bool:
+    """Scans the whole sandbox tmp tree (not just the expected results
+    root) for any file at all -- a path-escape bug could land a file
+    outside the intended root entirely, so checking only the expected
+    location would miss exactly the failure mode being tested."""
+    return not any(p.is_file() for p in sb.tmp.rglob("*"))
+
+
+def test_record_id_and_timestamp_validated_before_any_write():
+    """ChatGPT review finding 1: a malformed record_id must be rejected
+    before _lock_path_for is ever reached, and must not be able to
+    traverse outside LOCKS_DIR even as defense in depth. No file may be
+    created anywhere for a rejected request."""
+    malicious_record_ids = [
+        "../../../escaped",
+        "../escaped_outside_results",
+        "/etc/passwd",
+        "rv_short",  # wrong length
+        "rv_" + "g" * 32,  # non-hex
+        "not_even_the_right_prefix",
+        "",
+    ]
+    for bad_id in malicious_record_ids:
+        with Sandbox() as sb:
+            raised = False
+            try:
+                wd.withdraw_record_validated(bad_id, ACTOR_OWNER, "contributor_request", T2)
+            except wd.WithdrawalValidationError:
+                raised = True
+            check(f"withdraw_record_validated: malformed record_id {bad_id!r} rejected", raised)
+            check(f"withdraw_record_validated: no file created anywhere for record_id {bad_id!r}", _no_files_created_anywhere(sb))
+
+    for bad_timestamp in ("not-a-timestamp", "2026-08-01T17:00:00+05:00", "2026-08-01", 12345, None):
+        with Sandbox() as sb:
+            record_id, *_ = _setup_validation_record(sb, "9")
+            raised = False
+            try:
+                wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", bad_timestamp)
+            except wd.WithdrawalValidationError:
+                raised = True
+            check(f"withdraw_record_validated: malformed requested_at_utc {bad_timestamp!r} rejected", raised)
+            check(f"withdraw_record_validated: no lock file created for malformed timestamp {bad_timestamp!r}", not list(wd.LOCKS_DIR.glob("*")) if wd.LOCKS_DIR.exists() else True)
 
 
 # --- Group 16: every lifecycle stage withdraws correctly ---
@@ -271,9 +338,9 @@ def test_invalidation_events_written():
         chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation)
 
         wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", T2)
-        check("withdrawal: generation status resolves to invalidated", lin.resolve_active_status(generation["evaluation_id"]) == "invalidated")
-        check("withdrawal: adjudication status resolves to invalidated", lin.resolve_active_status(adjudication["adjudication_id"]) == "invalidated")
-        check("withdrawal: decision status resolves to invalidated", lin.resolve_active_status(decision["decision_id"]) == "invalidated")
+        check("withdrawal: generation status resolves to invalidated", lin.resolve_active_status(lin._artifact_ref(generation, "evaluation_id")) == "invalidated")
+        check("withdrawal: adjudication status resolves to invalidated", lin.resolve_active_status(lin._artifact_ref(adjudication, "adjudication_id")) == "invalidated")
+        check("withdrawal: decision status resolves to invalidated", lin.resolve_active_status(lin._artifact_ref(decision, "decision_id")) == "invalidated")
 
 
 # --- Group 21: affected holdout seals retired ---
@@ -328,12 +395,46 @@ def test_no_private_content_in_audit_artifacts():
         check("withdrawal: no audit artifact (plan/status/snapshot/completion) contains the source marker text", leaked == [], str(leaked))
 
 
+# --- ChatGPT implementation review finding 6: plan-creation race ---
+
+
+def test_concurrent_plan_creation_race_resolves_to_persisted_plan():
+    """Two callers racing to create the same withdrawal_id's plan (both
+    legitimately resuming the same lock) must both end up using the one
+    persisted, verified plan -- not the loser's own in-memory copy, which
+    could differ subtly (e.g. active_records computed a moment apart)
+    from what was actually committed."""
+    with Sandbox() as sb:
+        record_id, *_ = _setup_validation_record(sb, "8")
+        withdrawal_id, existing_completion = wd._acquire_or_inspect_lock(record_id)
+        check("race setup: no completion exists yet for a fresh withdrawal", existing_completion is None)
+
+        first_plan = wd._build_and_save_plan(record_id=record_id, withdrawal_id=withdrawal_id, requested_by_actor_id=ACTOR_OWNER, reason_code="contributor_request", requested_at_utc=T2)
+        # Simulate a second, "racing" caller computing the same plan again --
+        # it must lose the exclusive-create race and load the winner instead.
+        second_plan = wd._build_and_save_plan(record_id=record_id, withdrawal_id=withdrawal_id, requested_by_actor_id=ACTOR_OWNER, reason_code="contributor_request", requested_at_utc=T2)
+        check("plan race: both callers converge on the identical persisted plan", first_plan == second_plan)
+        check("plan race: only one plan file exists on disk", len(list((wd.WITHDRAWALS_DIR / withdrawal_id).glob("*.json"))) == 1)
+
+
 # --- Group 24: crash injection -- resumable after failure at each stage ---
 
 
 def test_crash_injection_resumes_correctly():
-    """Group 24."""
-    injection_points = ["_step_mark_manifest_withdrawn", "_step_invalidate_descendants", "_step_delete_generation_and_lineage_files", "_step_recompute_dataset_snapshot"]
+    """Group 24. Per the Phase E lineage/withdrawal implementation review's
+    finding 6, crash coverage previously stopped at the four 'middle'
+    execution steps -- plan creation, completion creation, and lock
+    completion are now covered too."""
+    runs_before_manifest_update = {"_build_and_save_plan"}
+    injection_points = [
+        "_build_and_save_plan",
+        "_step_mark_manifest_withdrawn",
+        "_step_invalidate_descendants",
+        "_step_delete_generation_and_lineage_files",
+        "_step_recompute_dataset_snapshot",
+        "_build_and_save_completion",
+        "_mark_lock_completed",
+    ]
     for injection_point in injection_points:
         with Sandbox() as sb:
             record_id, _, _, _, sfp, pfp, rfp = _setup_validation_record(sb, "1", input_text=f"TESTMARKER_CRASH_{injection_point} water the plants")
@@ -356,8 +457,8 @@ def test_crash_injection_resumes_correctly():
             check(f"crash at {injection_point}: raised as expected", crashed)
 
             manifest_mid_crash = rdm.load_manifest_strict(pilot_mode=True)
-            if injection_point == "_step_mark_manifest_withdrawn":
-                # The crash IS the manifest-update step itself -- it never ran, so nothing committed yet.
+            if injection_point in runs_before_manifest_update or injection_point == "_step_mark_manifest_withdrawn":
+                # The crash happens at or before the manifest-update step -- it never ran, so nothing committed yet.
                 # Still a safe state: no partial mutation, and resuming below applies it correctly.
                 check(f"crash at {injection_point}: manifest still active (the crashed step never ran)", manifest_mid_crash[record_id]["withdrawal_status"] == "active")
             else:
@@ -479,11 +580,12 @@ def test_invalidated_decision_not_current_evidence():
         chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation)
 
         wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", T2)
-        check("withdrawal: decision's status resolves to invalidated, not active", lin.resolve_active_status(decision["decision_id"]) == "invalidated")
+        check("withdrawal: decision's status resolves to invalidated, not active", lin.resolve_active_status(lin._artifact_ref(decision, "decision_id")) == "invalidated")
 
 
 def main() -> None:
     tests = [
+        test_record_id_and_timestamp_validated_before_any_write,
         test_withdrawal_at_every_lifecycle_stage,
         test_ambiguous_source_rows_fail_before_mutation,
         test_multi_record_generation_wholly_invalidated,
@@ -492,6 +594,7 @@ def main() -> None:
         test_affected_seals_always_empty_no_mechanism_yet,
         test_dataset_fingerprint_changes_and_empty_is_deterministic,
         test_no_private_content_in_audit_artifacts,
+        test_concurrent_plan_creation_race_resolves_to_persisted_plan,
         test_crash_injection_resumes_correctly,
         test_repeat_completed_withdrawal_is_noop,
         test_withdrawn_record_cannot_reactivate,

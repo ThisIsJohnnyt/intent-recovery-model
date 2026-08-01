@@ -37,8 +37,8 @@ ACTOR_CHATGPT = "actor_" + "1" * 32
 ACTOR_CLAUDE = "actor_" + "2" * 32
 ACTOR_OWNER = "actor_" + "3" * 32
 
-RUBRIC_A = {"record_id": "rv_a", "must_preserve": ["x"], "expected_capability_checks": ["explicit_task_survived"]}
-RUBRIC_B = {"record_id": "rv_b", "must_preserve": ["y"], "expected_capability_checks": []}
+RUBRIC_A = {"record_id": "rv_a", "must_preserve": ["x"], "capability_checks": ["explicit_task_survived"]}
+RUBRIC_B = {"record_id": "rv_b", "must_preserve": ["y"], "capability_checks": []}
 
 
 def _dummy_generation(n_records: int = 2) -> dict:
@@ -70,7 +70,7 @@ def _score_all(generation: dict, *, all_pass: bool = True) -> list[dict]:
     scores = []
     for gen_record in generation["results"]:
         rubric = rubrics[gen_record["record_id"]]
-        capability_checks = {k: all_pass for k in rubric.get("expected_capability_checks", [])}
+        capability_checks = {k: all_pass for k in rubric["capability_checks"]}
         scores.append(
             lin.build_review_score_record(
                 generation_record=gen_record,
@@ -348,8 +348,49 @@ def test_product_owner_resolution_required_for_disagreement():
         resolution_mode="product_owner_resolution",
         resolved_by_actor_id=ACTOR_OWNER,
         final_scores=chatgpt_review["scores"],
+        rubrics={"rv_a": RUBRIC_A, "rv_b": RUBRIC_B},
     )
     check("build_adjudication_artifact: product_owner_resolution with proper arguments succeeds", adjudication["resolved_by_actor_id"] == ACTOR_OWNER)
+
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.build_adjudication_artifact,
+        comparison=disagree_comparison,
+        chatgpt_review=chatgpt_review,
+        claude_review=claude_review_disagree,
+        resolution_mode="product_owner_resolution",
+        resolved_by_actor_id=ACTOR_OWNER,
+        final_scores=chatgpt_review["scores"],
+    )
+    check("build_adjudication_artifact: product_owner_resolution without rubrics rejected", err is not None, err)
+
+    tampered_final_scores = [{**s, "generation_raw_output_fingerprint": "sha256:" + "9" * 64} for s in chatgpt_review["scores"]]
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.build_adjudication_artifact,
+        comparison=disagree_comparison,
+        chatgpt_review=chatgpt_review,
+        claude_review=claude_review_disagree,
+        resolution_mode="product_owner_resolution",
+        resolved_by_actor_id=ACTOR_OWNER,
+        final_scores=tampered_final_scores,
+        rubrics={"rv_a": RUBRIC_A, "rv_b": RUBRIC_B},
+    )
+    check("build_adjudication_artifact: product_owner_resolution cannot change generation_raw_output_fingerprint", err is not None, err)
+
+    duplicate_final_scores = chatgpt_review["scores"] + [chatgpt_review["scores"][0]]
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.build_adjudication_artifact,
+        comparison=disagree_comparison,
+        chatgpt_review=chatgpt_review,
+        claude_review=claude_review_disagree,
+        resolution_mode="product_owner_resolution",
+        resolved_by_actor_id=ACTOR_OWNER,
+        final_scores=duplicate_final_scores,
+        rubrics={"rv_a": RUBRIC_A, "rv_b": RUBRIC_B},
+    )
+    check("build_adjudication_artifact: duplicate record_id in final_scores rejected", err is not None, err)
 
 
 # --- Group 13: strict passes are recomputed, not trusted ---
@@ -374,22 +415,56 @@ def test_adjudication_recomputes_strict_pass():
 
 
 def test_status_resolution_and_superseded_parent_blocking():
-    """Group 14."""
+    """Group 14. Per the Phase E lineage/withdrawal implementation
+    review: this test previously only checked resolve_active_status's own
+    return value and never actually attempted to build a descendant from
+    a superseded/invalidated parent -- the title overclaimed what the
+    body verified. Now it does both."""
     tmp_dir = Path(tempfile.mkdtemp())
     original_status_dir = lin.STATUS_EVENTS_DIR
     lin.STATUS_EVENTS_DIR = tmp_dir / "status_events"
     try:
         generation = _dummy_generation()
-        review = _build_review(generation, "chatgpt", ACTOR_CHATGPT)
-        check("resolve_active_status: a fresh artifact with no status events is 'active'", lin.resolve_active_status(review["review_id"]) == "active")
+        chatgpt_review = _build_review(generation, "chatgpt", ACTOR_CHATGPT)
+        claude_review = _build_review(generation, "claude", ACTOR_CLAUDE)
+        review_ref = lin._artifact_ref(chatgpt_review, "review_id")
+        check("resolve_active_status: a fresh artifact with no status events is 'active'", lin.resolve_active_status(review_ref) == "active")
 
-        event = lin.build_status_event(target_artifact=review, target_id_field="review_id", new_status="superseded", reason_code="correction", actor_id=ACTOR_CHATGPT)
+        event = lin.build_status_event(target_artifact=chatgpt_review, target_id_field="review_id", new_status="superseded", reason_code="correction", actor_id=ACTOR_CHATGPT)
         lin.save_status_event(event)
-        check("resolve_active_status: reflects a superseded status event", lin.resolve_active_status(review["review_id"]) == "superseded")
+        check("resolve_active_status: reflects a superseded status event", lin.resolve_active_status(review_ref) == "superseded")
 
-        invalidate_event = lin.build_status_event(target_artifact=review, target_id_field="review_id", new_status="invalidated", reason_code="withdrawal", actor_id=ACTOR_CHATGPT)
+        err = _expect_error(lin.ParentNotActiveError, lin.build_comparison_artifact, chatgpt_review=chatgpt_review, claude_review=claude_review)
+        check("build_comparison_artifact: refuses to build from a superseded review parent", err is not None, err)
+
+        invalidate_event = lin.build_status_event(target_artifact=chatgpt_review, target_id_field="review_id", new_status="invalidated", reason_code="withdrawal", actor_id=ACTOR_CHATGPT)
         lin.save_status_event(invalidate_event)
-        check("resolve_active_status: invalidated beats superseded when both exist", lin.resolve_active_status(review["review_id"]) == "invalidated")
+        check("resolve_active_status: invalidated beats superseded when both exist", lin.resolve_active_status(review_ref) == "invalidated")
+
+        err = _expect_error(lin.ParentNotActiveError, lin.build_comparison_artifact, chatgpt_review=chatgpt_review, claude_review=claude_review)
+        check("build_comparison_artifact: refuses to build from an invalidated review parent", err is not None, err)
+
+        # A comparison/adjudication built while both reviews were still
+        # active, then invalidated afterward, must also block a *later*
+        # adjudication/decision -- not just block re-deriving from the
+        # review directly.
+        aligned_chatgpt = _build_review(generation, "chatgpt", ACTOR_CHATGPT, all_pass=True)
+        aligned_claude = _build_review(generation, "claude", ACTOR_CLAUDE, all_pass=True)
+        comparison = lin.build_comparison_artifact(chatgpt_review=aligned_chatgpt, claude_review=aligned_claude)
+        comparison_event = lin.build_status_event(target_artifact=comparison, target_id_field="comparison_id", new_status="invalidated", reason_code="withdrawal", actor_id=ACTOR_CHATGPT)
+        lin.save_status_event(comparison_event)
+        err = _expect_error(lin.ParentNotActiveError, lin.build_adjudication_artifact, comparison=comparison, chatgpt_review=aligned_chatgpt, claude_review=aligned_claude, resolution_mode="reviewer_agreement")
+        check("build_adjudication_artifact: refuses to build from an invalidated comparison parent", err is not None, err)
+
+        # And an invalidated adjudication must block a decision citing it.
+        fresh_chatgpt = _build_review(generation, "chatgpt", ACTOR_CHATGPT, all_pass=True)
+        fresh_claude = _build_review(generation, "claude", ACTOR_CLAUDE, all_pass=True)
+        fresh_comparison = lin.build_comparison_artifact(chatgpt_review=fresh_chatgpt, claude_review=fresh_claude)
+        fresh_adjudication = lin.build_adjudication_artifact(comparison=fresh_comparison, chatgpt_review=fresh_chatgpt, claude_review=fresh_claude, resolution_mode="reviewer_agreement")
+        adjudication_event = lin.build_status_event(target_artifact=fresh_adjudication, target_id_field="adjudication_id", new_status="invalidated", reason_code="withdrawal", actor_id=ACTOR_CHATGPT)
+        lin.save_status_event(adjudication_event)
+        err = _expect_error(lin.ParentNotActiveError, lin.build_decision_record, decision_type="curriculum", deciding_actor_id=ACTOR_OWNER, adjudications=[fresh_adjudication], outcome="should be blocked")
+        check("build_decision_record: refuses to cite an invalidated adjudication", err is not None, err)
     finally:
         lin.STATUS_EVENTS_DIR = original_status_dir
         shutil.rmtree(tmp_dir, ignore_errors=True)

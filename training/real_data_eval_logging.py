@@ -25,6 +25,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+import real_data_manifest as rdm
 import real_data_private as rdp
 
 RESULTS_PRIVATE_DIR = Path(__file__).parent / "results" / "private"
@@ -35,6 +36,31 @@ SCHEMA_VERSION = "real-eval-generation-v1"
 ARTIFACT_KIND = "generation"
 
 _SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+_GENERATION_ID_RE = re.compile(r"^eval_[0-9a-f]{32}$")
+
+# Exact top-level field set -- reject unknown/missing fields on every
+# load, not just on build (see the Phase E lineage/withdrawal
+# implementation review's finding 4).
+_GENERATION_FIELDS = frozenset(
+    {
+        "schema_version",
+        "artifact_kind",
+        "evaluation_id",
+        "created_at_utc",
+        "split",
+        "release_milestone",
+        "evaluation_reason",
+        "git_commit",
+        "checkpoint",
+        "dataset",
+        "prompt_contract",
+        "generation_config",
+        "results",
+        "aggregate",
+        "artifact_fingerprint",
+    }
+)
+_GENERATION_RECORD_FIELDS = frozenset({"record_id", "source_fingerprint", "pair_fingerprint", "rubric_fingerprint", "raw_output", "raw_output_fingerprint", "format_valid"})
 
 
 class ApprovedRootError(ValueError):
@@ -54,7 +80,7 @@ class GenerationValidationError(ValueError):
 
 
 def new_evaluation_id() -> str:
-    return f"eval_{uuid.uuid4().hex[:12]}"
+    return f"eval_{uuid.uuid4().hex}"
 
 
 def _validate_identifier(value: str, field_name: str) -> str:
@@ -205,7 +231,27 @@ def build_generation_artifact(
         "aggregate": {"format_valid": f"{format_valid_count}/{len(results)}"},
     }
     artifact["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(artifact)}"
+    _assert_generation_fields(artifact, evaluation_id)
     return artifact
+
+
+def _assert_generation_fields(artifact: dict, context_id) -> None:
+    extra = set(artifact.keys()) - _GENERATION_FIELDS
+    if extra:
+        raise GenerationValidationError(f"{context_id}: unknown generation field(s) not permitted: {sorted(extra)}")
+    missing = _GENERATION_FIELDS - set(artifact.keys())
+    if missing:
+        raise GenerationValidationError(f"{context_id}: generation missing required field(s): {sorted(missing)}")
+    own_id = artifact.get("evaluation_id")
+    if not isinstance(own_id, str) or not _GENERATION_ID_RE.match(own_id):
+        raise GenerationValidationError(f"{context_id}: evaluation_id is malformed: {own_id!r}")
+    for record in artifact.get("results", []):
+        extra_r = set(record.keys()) - _GENERATION_RECORD_FIELDS
+        if extra_r:
+            raise GenerationValidationError(f"{context_id}: unknown generation result field(s) not permitted: {sorted(extra_r)}")
+        missing_r = _GENERATION_RECORD_FIELDS - set(record.keys())
+        if missing_r:
+            raise GenerationValidationError(f"{context_id}: generation result missing required field(s): {sorted(missing_r)}")
 
 
 def save_generation_artifact(artifact: dict) -> Path:
@@ -230,17 +276,24 @@ def save_generation_artifact(artifact: dict) -> Path:
 
 
 def load_generation_artifact(path: Path) -> dict:
-    """Loads and verifies: schema/kind match, and the recomputed
-    artifact_fingerprint matches the stored one -- a generation artifact
-    that has been tampered with on disk must never be trusted just
-    because it parses as JSON."""
+    """Loads and verifies: duplicate-key-free JSON, schema/kind match,
+    exact field set (reject unknown or missing top-level/result fields),
+    and that the recomputed artifact_fingerprint matches the stored one --
+    a generation artifact that has been tampered with on disk must never
+    be trusted just because it parses as JSON."""
     path = Path(path)
     _validate_any_approved_root(path)
-    artifact = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=rdm.reject_duplicate_keys)
+    except (json.JSONDecodeError, rdm.DuplicateJSONKeyError) as e:
+        raise GenerationValidationError(f"{path}: invalid JSON ({e})") from e
+    if not isinstance(artifact, dict):
+        raise GenerationValidationError(f"{path}: artifact is not a JSON object")
     if artifact.get("schema_version") != SCHEMA_VERSION:
         raise GenerationValidationError(f"{path}: schema_version is {artifact.get('schema_version')!r}, expected {SCHEMA_VERSION!r}")
     if artifact.get("artifact_kind") != ARTIFACT_KIND:
         raise GenerationValidationError(f"{path}: artifact_kind is {artifact.get('artifact_kind')!r}, expected {ARTIFACT_KIND!r}")
+    _assert_generation_fields(artifact, path)
     declared_fp = artifact.get("artifact_fingerprint", "")
     computed_fp = f"sha256:{rdp.artifact_fingerprint(artifact)}"
     if declared_fp != computed_fp:

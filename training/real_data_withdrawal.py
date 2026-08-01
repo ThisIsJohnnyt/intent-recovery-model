@@ -13,6 +13,7 @@ labels, or reviewer notes into a plan/status/snapshot/completion artifact
 -- only IDs, kinds, fingerprints, and relative paths.
 """
 import json
+import os
 import re
 import shutil
 import sys
@@ -64,10 +65,38 @@ def _require_actor_id(value, field_name: str) -> None:
         raise WithdrawalValidationError(f"{field_name} must match {_ACTOR_ID_RE.pattern}, got {value!r}")
 
 
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
 
 
 def _lock_path_for(record_id: str) -> Path:
-    return LOCKS_DIR / f"{record_id}.json"
+    """Caller must validate record_id (rdm.validate_record_id_format)
+    before this is ever reached -- that's what actually prevents a
+    crafted record_id from traversing out of LOCKS_DIR. The containment
+    assertion below is defense in depth on top of that, not the only
+    safeguard, matching the pattern established in
+    real_data_eval_logging.py's _validate_split_root."""
+    path = LOCKS_DIR / f"{record_id}.json"
+    if not _is_relative_to(path.resolve(), LOCKS_DIR.resolve()):
+        raise WithdrawalValidationError(f"record_id {record_id!r} produces a lock path outside LOCKS_DIR -- refusing")
+    return path
+
+
+def _parse_source_line_strict(line: str, source_name: str) -> dict:
+    """Strict single-line JSON parse for a source-split row: rejects
+    duplicate object keys, matching evaluate_holdout.py/
+    evaluate_real_validation.py's trust-boundary handling of the same
+    files -- withdrawal's own planning/removal/residual-check scans of
+    real_validation.jsonl/real_holdout.jsonl must not be less strict than
+    routine evaluation is."""
+    try:
+        return json.loads(line, object_pairs_hook=rdm.reject_duplicate_keys)
+    except (json.JSONDecodeError, rdm.DuplicateJSONKeyError) as e:
+        raise WithdrawalValidationError(f"{source_name}: invalid JSON row ({e})") from e
 
 
 def _acquire_or_inspect_lock(record_id: str) -> tuple[str, dict | None]:
@@ -94,16 +123,30 @@ def _acquire_or_inspect_lock(record_id: str) -> tuple[str, dict | None]:
     return _inspect_existing_lock(path, record_id)
 
 
+_LOCK_FIELDS = frozenset({"record_id", "withdrawal_id", "status", "created_at_utc"})
+_WITHDRAWAL_ID_RE = re.compile(r"^wd_[0-9a-f]{32}$")
+
+
 def _inspect_existing_lock(path: Path, record_id: str) -> tuple[str, dict | None]:
     try:
-        lock_content = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError) as e:
+        lock_content = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=rdm.reject_duplicate_keys)
+    except (json.JSONDecodeError, OSError, rdm.DuplicateJSONKeyError) as e:
         raise WithdrawalLockError(
             f"lock file for {record_id} is unreadable/corrupt -- a stale or ambiguous lock fails closed and "
             "requires explicit recovery, never automatic removal"
         ) from e
-    if not isinstance(lock_content, dict) or "withdrawal_id" not in lock_content or lock_content.get("status") not in ("in_progress", "completed"):
+    if not isinstance(lock_content, dict) or set(lock_content.keys()) != _LOCK_FIELDS:
+        raise WithdrawalLockError(f"lock file for {record_id} has an unexpected field set -- stale or ambiguous lock requires explicit recovery")
+    if lock_content.get("record_id") != record_id:
+        raise WithdrawalLockError(f"lock file at {path} declares record_id {lock_content.get('record_id')!r}, expected {record_id!r} -- ambiguous, requires explicit recovery")
+    if not isinstance(lock_content.get("withdrawal_id"), str) or not _WITHDRAWAL_ID_RE.match(lock_content["withdrawal_id"]):
+        raise WithdrawalLockError(f"lock file for {record_id} has a malformed withdrawal_id -- stale or ambiguous lock requires explicit recovery")
+    if lock_content.get("status") not in ("in_progress", "completed"):
         raise WithdrawalLockError(f"lock file for {record_id} is malformed -- stale or ambiguous lock requires explicit recovery")
+    try:
+        rdm.validate_utc_timestamp(lock_content.get("created_at_utc"), "created_at_utc")
+    except rdm.ManifestValidationError as e:
+        raise WithdrawalLockError(f"lock file for {record_id} has a malformed created_at_utc: {e}") from e
 
     withdrawal_id = lock_content["withdrawal_id"]
     if lock_content["status"] == "completed":
@@ -118,8 +161,16 @@ def _inspect_existing_lock(path: Path, record_id: str) -> tuple[str, dict | None
 
 
 def _mark_lock_completed(record_id: str, withdrawal_id: str) -> None:
+    """Atomic (temp file + os.replace), matching real_data_private.py's
+    _save_manifest_raw convention -- a plain write_text here would leave
+    an untested crash window where an interrupted write could corrupt or
+    truncate the lock file, the one thing every retry depends on being
+    readable."""
     path = _lock_path_for(record_id)
-    path.write_text(json.dumps({"record_id": record_id, "withdrawal_id": withdrawal_id, "status": "completed", "created_at_utc": _now()}), encoding="utf-8")
+    content = json.dumps({"record_id": record_id, "withdrawal_id": withdrawal_id, "status": "completed", "created_at_utc": _now()})
+    tmp_path = path.parent / f".{path.name}.{lin.new_withdrawal_id()}.tmp"
+    tmp_path.write_text(content, encoding="utf-8")
+    os.replace(tmp_path, path)
 
 
 
@@ -232,7 +283,7 @@ def _build_and_save_plan(*, record_id: str, withdrawal_id: str, requested_by_act
                 line = line.strip()
                 if not line:
                     continue
-                row = json.loads(line)
+                row = _parse_source_line_strict(line, source_path.name)
                 if rdp.source_fingerprint(row["input"]) == source_fp.removeprefix("sha256:"):
                     matching_rows += 1
         if matching_rows > 1:
@@ -277,9 +328,19 @@ def _build_and_save_plan(*, record_id: str, withdrawal_id: str, requested_by_act
     path = _plan_path_for(withdrawal_id)
     try:
         lin._save_artifact_exclusive(path, plan)
+        return plan
     except lin.LineageArtifactExistsError:
-        pass  # resuming: plan already written by an earlier, interrupted attempt
-    return plan
+        # Two callers racing to create the same withdrawal_id's plan (both
+        # legitimately resuming the same lock) must both proceed from the
+        # one persisted, verified plan -- not from the loser's own
+        # in-memory copy, which could differ subtly (e.g. active_records
+        # computed a moment apart) from what actually got committed.
+        persisted = _load_plan_verified(path)
+        if persisted["record_id"] != record_id or persisted["withdrawal_id"] != withdrawal_id:
+            raise WithdrawalValidationError(
+                f"plan at {path} does not match the expected record_id/withdrawal_id -- ambiguous, requires explicit recovery"
+            )
+        return persisted
 
 
 def _load_plan_verified(path: Path) -> dict:
@@ -323,7 +384,7 @@ def _step_remove_source_row(plan: dict) -> None:
         stripped = line.strip()
         if not stripped:
             continue
-        row = json.loads(stripped)
+        row = _parse_source_line_strict(stripped, source_path.name)
         if rdp.source_fingerprint(row["input"]) == target_fp:
             changed = True
             continue
@@ -332,23 +393,34 @@ def _step_remove_source_row(plan: dict) -> None:
         return  # already removed (resume case)
     tmp_path = source_path.parent / f".{source_path.name}.tmp"
     tmp_path.write_text("\n".join(kept_lines) + ("\n" if kept_lines else ""), encoding="utf-8")
-    import os
-
     os.replace(tmp_path, source_path)
 
 
 def _step_remove_rubric_entry(plan: dict) -> None:
-    rubrics = rdp.load_rubrics()
+    """Reads through the strict, schema-validated loader -- deleting an
+    entry from a rubric file we haven't verified is well-formed could
+    silently mask corruption elsewhere in the file. The write-back uses
+    the plain (already-atomic) save primitive since we're only removing
+    a key, not adding one that would need validation."""
+    rubrics = rdm.load_rubrics_strict()
     if plan["record_id"] not in rubrics:
         return
     del rubrics[plan["record_id"]]
     rdp.save_rubrics(rubrics)
 
 
+def _canonical_ref(ref: dict) -> dict:
+    """Extracts just the three artifact_ref fields from a plan entry that
+    may carry extra bookkeeping keys (relative_path, split, milestone) --
+    resolve_active_status matches all three fields exactly, so it needs
+    the canonical shape, not the plan's richer per-entry dict."""
+    return {"artifact_kind": ref["artifact_kind"], "artifact_id": ref["artifact_id"], "artifact_fingerprint": ref["artifact_fingerprint"]}
+
+
 def _step_invalidate_descendants(plan: dict) -> None:
     all_affected = plan["affected_generations"] + plan["affected_reviews"] + plan["affected_comparisons"] + plan["affected_adjudications"] + plan["affected_decisions"]
     for ref in all_affected:
-        if lin.resolve_active_status(ref["artifact_id"]) == "invalidated":
+        if lin.resolve_active_status(_canonical_ref(ref)) == "invalidated":
             continue
         id_field = f"{ref['artifact_kind']}_id"
         target_artifact = {"artifact_kind": ref["artifact_kind"], id_field: ref["artifact_id"], "artifact_fingerprint": ref["artifact_fingerprint"]}
@@ -434,11 +506,11 @@ def _run_residual_checks(plan: dict, snapshot: dict | None) -> None:
                 stripped = line.strip()
                 if not stripped:
                     continue
-                row = json.loads(stripped)
+                row = _parse_source_line_strict(stripped, source_path.name)
                 if rdp.source_fingerprint(row["input"]) == target_fp:
                     raise WithdrawalResidualCheckError(f"{plan['record_id']}: source_fingerprint still resolves to a row in {source_path.name}")
 
-    if plan["record_id"] in rdp.load_rubrics():
+    if plan["record_id"] in rdm.load_rubrics_strict():
         raise WithdrawalResidualCheckError(f"{plan['record_id']}: rubric entry still present")
 
     for ref in plan["affected_generations"]:
@@ -450,7 +522,7 @@ def _run_residual_checks(plan: dict, snapshot: dict | None) -> None:
         if path.exists():
             raise WithdrawalResidualCheckError(f"{ref['artifact_id']}: lineage artifact still present in active storage")
     for ref in plan["affected_decisions"]:
-        if lin.resolve_active_status(ref["artifact_id"]) != "invalidated":
+        if lin.resolve_active_status(_canonical_ref(ref)) != "invalidated":
             raise WithdrawalResidualCheckError(f"{ref['artifact_id']}: affected decision not invalidated")
 
     if plan["split"] is not None:
@@ -488,6 +560,18 @@ def withdraw_record_validated(record_id: str, requested_by_actor_id: str, reason
     if reason_code not in ALLOWED_REASON_CODES:
         raise WithdrawalValidationError(f"reason_code must be one of {ALLOWED_REASON_CODES}, got {reason_code!r}")
     _require_actor_id(requested_by_actor_id, "requested_by_actor_id")
+    # Both validated -- and record_id specifically -- before any path is
+    # constructed or any file touched. A malformed record_id must never
+    # reach _lock_path_for; that's what actually prevents a path escape,
+    # not the containment check inside _lock_path_for (defense in depth).
+    try:
+        rdm.validate_record_id_format(record_id)
+    except rdm.ManifestValidationError as e:
+        raise WithdrawalValidationError(str(e)) from e
+    try:
+        rdm.validate_utc_timestamp(requested_at_utc, "requested_at_utc")
+    except rdm.ManifestValidationError as e:
+        raise WithdrawalValidationError(str(e)) from e
 
     withdrawal_id, existing_completion = _acquire_or_inspect_lock(record_id)
     if existing_completion is not None:
