@@ -94,6 +94,13 @@ def validate_record(record: dict, source: str, line_no: int) -> dict:
         "prompt": build_prompt(record["input"]),
         "target": "\n".join(target_lines),
         "_input": record["input"],
+        # Retained so callers needing to recompute a pair_fingerprint (e.g.
+        # evaluate_holdout.py against the private manifest) have the exact
+        # structured output the manifest's fingerprint was computed over --
+        # "target" above is a flattened marker string, not usable for that.
+        # Always stripped before any processed file is written; see write()
+        # and split_by_manifest() below.
+        "_output": output,
     }
 
 
@@ -137,7 +144,7 @@ def split_by_manifest(records: list[dict], val_hashes: set[str]) -> tuple[list[d
         h = input_hash(record["_input"])
         seen_hashes.add(h)
         (val_split if h in val_hashes else train_split).append(
-            {k: v for k, v in record.items() if k != "_input"}
+            {k: v for k, v in record.items() if k not in ("_input", "_output")}
         )
 
     missing = val_hashes - seen_hashes
@@ -186,7 +193,7 @@ def main() -> None:
 
     write("train.jsonl", train_split)
     write("val.jsonl", val_split)
-    write("real_validation.jsonl", [{k: v for k, v in r.items() if k != "_input"} for r in real_validation])
+    write("real_validation.jsonl", [{k: v for k, v in r.items() if k not in ("_input", "_output")} for r in real_validation])
 
     if not real_validation:
         print(

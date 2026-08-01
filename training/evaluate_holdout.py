@@ -42,9 +42,10 @@ from pathlib import Path
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
+import real_data_manifest as rdm
 from prepare_data import ACTIONS_MARKER, BULLETS_MARKER, DATA_DIR, NARRATIVE_MARKER, build_prompt, load_jsonl
 from real_data_eval_logging import UnsafeIdentifierError, _validate_identifier, build_result_artifact, new_result_record, save_result_artifact
-from real_data_private import checkpoint_fingerprint, dataset_fingerprint, load_manifest, load_rubrics, source_fingerprint
+from real_data_private import checkpoint_fingerprint, dataset_fingerprint, load_rubrics, pair_fingerprint, rubric_fingerprint, source_fingerprint
 from train import GENERATION_MAX_NEW_TOKENS
 
 
@@ -91,50 +92,82 @@ def _check_format_valid(generated: str) -> bool:
 
 
 def _link_to_manifest(holdout_records: list[dict]) -> list[dict]:
-    """Fails closed: every holdout record must have an active,
-    holdout_eligible entry in the private manifest, matched by
-    source_fingerprint. Unconsented or ineligible content is never
-    evaluated, no matter how it got into real_holdout.jsonl."""
-    manifest = load_manifest()
+    """Fails closed at every step, per real_data_manifest_schema_decision.md:
+    every holdout record must have a manifest entry that (1) passes full
+    real-manifest-v1 schema validation, (2) is eligible for real_holdout
+    evaluation (active, author-confirmed, de-identification approved,
+    annotation adjudicated, holdout_eligible, split assigned to
+    real_holdout), and (3) has source/pair/rubric fingerprints that,
+    freshly recomputed from the actual holdout record and rubric, match
+    the manifest's declared values exactly. Unconsented, ineligible, or
+    tampered/stale content is never evaluated, no matter how it got into
+    real_holdout.jsonl or the manifest.
+
+    Loaded with pilot_mode=False: pilot_mode gates *assigning* new
+    holdout-eligible entries into the manifest (enforced at write time by
+    real_data_manifest.upsert_manifest_entry_validated), not evaluating
+    entries that already exist there. This script's own required
+    --milestone/--reason declaration is the gate for whether a holdout
+    evaluation may proceed at all; conflating that with the pilot's
+    write-side restriction would make this script permanently unusable
+    for a legitimately declared milestone without a source change.
+    """
+    try:
+        manifest = rdm.load_manifest_strict(pilot_mode=False)
+    except rdm.ManifestValidationError as e:
+        print(f"FAIL CLOSED: private manifest failed real-manifest-v1 schema validation: {e}", file=sys.stderr)
+        sys.exit(1)
     rubrics = load_rubrics()
-    by_source_fp = {entry.get("source_fingerprint", "").removeprefix("sha256:"): entry for entry in manifest.values()}
+    by_source_fp = {
+        entry["source_fingerprint"].removeprefix("sha256:"): entry
+        for entry in manifest.values()
+        if entry.get("source_fingerprint")
+    }
 
     linked = []
     for r in holdout_records:
-        sfp = source_fingerprint(r["_input"])
-        entry = by_source_fp.get(sfp)
+        computed_sfp = source_fingerprint(r["_input"])
+        entry = by_source_fp.get(computed_sfp)
         if entry is None:
             print(
                 f"FAIL CLOSED: a holdout record has no matching entry in the private "
-                f"consent/provenance manifest (source_fingerprint={sfp[:12]}...). "
+                f"consent/provenance manifest (source_fingerprint={computed_sfp[:12]}...). "
                 "Refusing to evaluate content with no recorded consent decision.",
                 file=sys.stderr,
             )
             sys.exit(1)
         record_id = entry["record_id"]
-        if entry.get("withdrawal_status") != "active":
-            print(f"FAIL CLOSED: manifest entry {record_id} is not active (withdrawal_status={entry.get('withdrawal_status')!r}).", file=sys.stderr)
+
+        try:
+            rdm.check_evaluation_eligibility(entry, expected_split="real_holdout")
+        except rdm.EligibilityError as e:
+            print(f"FAIL CLOSED: {e}", file=sys.stderr)
             sys.exit(1)
-        allowed_uses = entry.get("allowed_uses")
-        if not isinstance(allowed_uses, dict):
-            print(f"FAIL CLOSED: manifest entry {record_id} is missing 'allowed_uses' -- malformed manifest entry, not merely ineligible.", file=sys.stderr)
-            sys.exit(1)
-        if not allowed_uses.get("holdout_eligible"):
-            print(f"FAIL CLOSED: manifest entry {record_id} is not marked holdout_eligible.", file=sys.stderr)
-            sys.exit(1)
+
         rubric = rubrics.get(record_id)
         if rubric is None:
             print(f"FAIL CLOSED: manifest entry {record_id} has no matching private rubric entry.", file=sys.stderr)
             sys.exit(1)
+        computed_pfp = pair_fingerprint(r["_input"], r["_output"])
+        computed_rfp = rubric_fingerprint(rubric)
+
+        try:
+            rdm.verify_fingerprint(computed=computed_sfp, declared=entry["source_fingerprint"], field_name="source_fingerprint", record_id=record_id)
+            rdm.verify_fingerprint(computed=computed_pfp, declared=entry["pair_fingerprint"], field_name="pair_fingerprint", record_id=record_id)
+            rdm.verify_fingerprint(computed=computed_rfp, declared=entry["rubric_fingerprint"], field_name="rubric_fingerprint", record_id=record_id)
+        except rdm.FingerprintMismatchError as e:
+            print(f"FAIL CLOSED: {e}", file=sys.stderr)
+            sys.exit(1)
+
         linked.append(
             {
                 "record_id": record_id,
                 "prompt": r["prompt"],
                 "target": r["target"],
                 "_input": r["_input"],
-                "source_fingerprint": entry["source_fingerprint"],
-                "pair_fingerprint": entry["pair_fingerprint"],
-                "rubric_fingerprint": entry["rubric_fingerprint"],
+                "source_fingerprint": f"sha256:{computed_sfp}",
+                "pair_fingerprint": f"sha256:{computed_pfp}",
+                "rubric_fingerprint": f"sha256:{computed_rfp}",
             }
         )
     return linked

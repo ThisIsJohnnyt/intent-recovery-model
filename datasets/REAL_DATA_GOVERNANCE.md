@@ -61,22 +61,25 @@ Consent for validation does not imply consent for sealed-holdout use. Holdout el
 
 ## Consent record
 
-Consent is recorded in a private, gitignored manifest before the note is processed. A consent entry must include:
+Consent is recorded in a private, gitignored manifest before the note is processed, under schema version `manifest_schema_version: "real-manifest-v1"` (see `training/real_data_manifest_schema_decision.md`, the canonical schema Claude implements against). Consent and provenance are not separate records -- one manifest entry accumulates consent, de-identification, annotation, split assignment, fingerprints, and withdrawal state over its lifecycle. At the moment consent is recorded, an entry must include:
 
 | Field | Requirement |
 |---|---|
+| `manifest_schema_version` | Exact `real-manifest-v1` |
 | `record_id` | Random, non-semantic stable identifier |
 | `contributor_id` | Private pseudonymous contributor identifier |
 | `consent_version` | Version of the approved consent language |
-| `consented_at_utc` | Timestamp |
-| `author_confirmed` | Contributor confirms they wrote the note |
-| `private_annotation` | Explicit boolean |
-| `private_evaluation` | Explicit boolean |
-| `holdout_eligible` | Separate explicit boolean; false during pilot |
-| `training_allowed` | Must be false |
-| `publication_allowed` | Must be false |
-| `withdrawal_status` | `active`, `withdrawn`, or `expired` |
-| `reviewer` | Person who verified the record |
+| `consented_at_utc` | UTC timestamp |
+| `author_confirmed` | Must be literal `true`: contributor confirms they wrote the note |
+| `consent_reviewer_id` | Pseudonymous actor who verified the consent record |
+| `allowed_uses.private_annotation` | Explicit boolean |
+| `allowed_uses.private_evaluation` | Explicit boolean |
+| `allowed_uses.holdout_eligible` | Explicit boolean; must be `false` during the validation-only pilot |
+| `allowed_uses.training` | Must always be `false` |
+| `allowed_uses.publication` | Must always be `false` |
+| `withdrawal_status` | `active`, `withdrawn`, or `expired`; one-way once `withdrawn`/`expired` |
+
+`split` and all three fingerprints remain `null` at this stage; de-identification starts `pending` and annotation starts `not_started`, each with `null` timestamp/actor fields until that stage is reached.
 
 Silence, prior participation, general project enthusiasm, or delivery of a note without the approved consent record does not count as consent.
 
@@ -86,16 +89,17 @@ This specification is a project safeguard, not a substitute for legal or institu
 
 Provenance lives outside the model-facing `input`/`output` pair in a private, gitignored manifest. The manifest must not contain the raw original note.
 
-Each record contains:
+An evaluation-ready record contains:
 
 ```json
 {
+  "manifest_schema_version": "real-manifest-v1",
   "record_id": "rv_<random-id>",
   "contributor_id": "contributor_<random-id>",
-  "split": "real_validation",
-  "status": "active",
   "consent_version": "real-consent-v1",
   "consented_at_utc": "<timestamp>",
+  "author_confirmed": true,
+  "consent_reviewer_id": "actor_<random-id>",
   "allowed_uses": {
     "private_annotation": true,
     "private_evaluation": true,
@@ -104,20 +108,30 @@ Each record contains:
     "publication": false
   },
   "source_kind": "author_supplied_personal_note",
+  "split": "real_validation",
   "source_fingerprint": "sha256:<input-only-fingerprint>",
   "pair_fingerprint": "sha256:<input-output-fingerprint>",
   "rubric_fingerprint": "sha256:<private-rubric-fingerprint>",
   "deidentification_status": "approved",
   "deidentified_at_utc": "<timestamp>",
-  "deidentification_reviewer": "<reviewer>",
+  "deidentified_by_id": "actor_<random-id>",
+  "deidentification_reviewer_id": "actor_<random-id>",
   "annotation_status": "adjudicated",
-  "withdrawal_status": "active"
+  "adjudicated_at_utc": "<timestamp>",
+  "annotation_author_id": "actor_<random-id>",
+  "annotation_reviewer_id": "actor_<random-id>",
+  "withdrawal_status": "active",
+  "withdrawal_status_changed_at_utc": "<timestamp>"
 }
 ```
 
-The implementation may add fields, but it must preserve these semantics. `record_id` and private metadata must never appear in the prompt sent to the model.
+There is no separate generic `status` field -- `withdrawal_status` alone carries the record's active/withdrawn/expired state, and the other status fields (`deidentification_status`, `annotation_status`, `split`) together describe lifecycle stage without redundancy. Unknown top-level fields are rejected under `real-manifest-v1`; adding a field requires a schema-version change, not silent extension. `record_id` and private metadata must never appear in the prompt sent to the model.
 
-Fingerprints are computed over canonical UTF-8 JSON. `source_fingerprint` covers the de-identified input; `pair_fingerprint` covers the de-identified input and approved expected output; `rubric_fingerprint` covers the adjudicated private rubric. An edit changes the relevant fingerprint and requires manifest review. The exact canonicalization and aggregate algorithms are defined in `training/REAL_DATA_EVALUATION_PROTOCOL.md`.
+De-identification and annotation each record an independent author/reviewer pair (`deidentified_by_id` != `deidentification_reviewer_id`; `annotation_author_id` != `annotation_reviewer_id`) -- the approved consent-review step itself does not require the reviewer to be independent of the contributor.
+
+`split` is assigned at most once and never changes between `real_validation` and `real_holdout` afterward. `withdrawal_status` moves from `active` to `withdrawn` or `expired` and never returns to `active`. After split assignment, an in-place edit to the de-identified source is rejected -- a separately governed replacement record is required instead.
+
+Fingerprints are computed over canonical UTF-8 JSON. `source_fingerprint` covers the de-identified input; `pair_fingerprint` covers the de-identified input and approved expected output; `rubric_fingerprint` covers the adjudicated private rubric. An edit changes the relevant fingerprint and requires manifest review. A non-null `source_fingerprint` must be unique across the entire manifest, including withdrawn and expired rows -- a withdrawn source must not become reusable under a fresh `record_id`. The exact canonicalization and aggregate algorithms are defined in `training/REAL_DATA_EVALUATION_PROTOCOL.md`.
 
 ## Data minimization
 

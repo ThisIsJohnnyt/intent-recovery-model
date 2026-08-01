@@ -14,6 +14,8 @@ datasets/.gitignore and docs/decisions/PDR-005.md).
 """
 import hashlib
 import json
+import os
+import uuid
 from pathlib import Path
 
 DATASETS_DIR = Path(__file__).parent.parent / "datasets"
@@ -180,10 +182,16 @@ def _load_jsonl_by_record_id(path: Path) -> dict[str, dict]:
 
 
 def _save_jsonl_by_record_id(path: Path, entries: dict[str, dict]) -> None:
+    """Atomic: writes to a sibling temp file and renames it into place, so a
+    crash or failed validation mid-write can never leave the prior committed
+    file truncated or partially overwritten -- the rename is the only step
+    that touches the real path, and it's a single filesystem operation."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
+    tmp_path = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    with tmp_path.open("w", encoding="utf-8") as f:
         for record_id in sorted(entries.keys()):
             f.write(json.dumps(entries[record_id], ensure_ascii=False) + "\n")
+    os.replace(tmp_path, path)
 
 
 def load_manifest() -> dict[str, dict]:
