@@ -64,7 +64,6 @@ def _require_actor_id(value, field_name: str) -> None:
         raise WithdrawalValidationError(f"{field_name} must match {_ACTOR_ID_RE.pattern}, got {value!r}")
 
 
-# --- Lock (record-scoped, exclusive-create with explicit-recovery-on-ambiguity) ---
 
 
 def _lock_path_for(record_id: str) -> Path:
@@ -86,8 +85,16 @@ def _acquire_or_inspect_lock(record_id: str) -> tuple[str, dict | None]:
                 json.dump(lock_content, f)
             return withdrawal_id, None
         except FileExistsError:
-            pass  # lost a race with a concurrent caller -- fall through and read what's there
+            # Lost a race with a concurrent caller: another process created
+            # the lock between our exists() check and open("x"). Not
+            # swallowed -- explicitly handed to the same inspection path
+            # used for a lock that already existed, so the race resolves
+            # to identical behavior either way.
+            return _inspect_existing_lock(path, record_id)
+    return _inspect_existing_lock(path, record_id)
 
+
+def _inspect_existing_lock(path: Path, record_id: str) -> tuple[str, dict | None]:
     try:
         lock_content = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as e:
@@ -115,7 +122,6 @@ def _mark_lock_completed(record_id: str, withdrawal_id: str) -> None:
     path.write_text(json.dumps({"record_id": record_id, "withdrawal_id": withdrawal_id, "status": "completed", "created_at_utc": _now()}), encoding="utf-8")
 
 
-# --- Plan (real-withdrawal-plan-v1) ---
 
 
 def _plan_path_for(withdrawal_id: str) -> Path:
@@ -284,7 +290,6 @@ def _load_completion_verified(path: Path) -> dict:
     return lin._load_artifact_verified(path, expected_schema_version=WITHDRAWAL_COMPLETION_SCHEMA_VERSION, expected_kind="withdrawal_completion")
 
 
-# --- Execution steps (each idempotent) ---
 
 
 def _step_mark_manifest_withdrawn(plan: dict) -> None:

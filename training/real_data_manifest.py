@@ -314,8 +314,9 @@ def validate_manifest_collection(entries: dict[str, dict], *, pilot_mode: bool =
             seen_source_fps[sfp] = record_id
 
         if pilot_mode:
-            allowed_uses = entry.get("allowed_uses") or {}
-            if entry.get("split") == "real_holdout" or allowed_uses.get("holdout_eligible") is True:
+            # allowed_uses is guaranteed well-formed by validate_entry() above.
+            allowed_uses = entry["allowed_uses"]
+            if entry.get("split") == "real_holdout" or allowed_uses["holdout_eligible"] is True:
                 raise ManifestValidationError(
                     f"{record_id}: holdout assignment/eligibility is not permitted during the validation-only pilot"
                 )

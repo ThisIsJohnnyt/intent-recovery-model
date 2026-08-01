@@ -143,7 +143,6 @@ def _artifact_ref(artifact: dict, id_field: str) -> dict:
     }
 
 
-# --- Review artifact (real-eval-review-v1) ---
 
 
 def build_review_score_record(*, generation_record: dict, rubric: dict, scores: dict, capability_checks: dict, failure_labels: list[str]) -> dict:
@@ -262,10 +261,12 @@ def load_review_verified(path: Path, generation: dict) -> dict:
     rubric-schema fingerprints, and an exactly-matching record set with
     per-record raw-output/rubric-fingerprint/format-validity agreement."""
     review = _load_artifact_verified(path, expected_schema_version=REVIEW_SCHEMA_VERSION, expected_kind="review")
-    gen_ref = review.get("generation", {})
-    if gen_ref.get("artifact_kind") != "generation":
+    # review's shape (including "generation") is guaranteed by the fingerprint
+    # check above -- it's byte-identical to what build_review_artifact produced.
+    gen_ref = review["generation"]
+    if gen_ref["artifact_kind"] != "generation":
         raise LineageValidationError(f"{path}: review's parent reference is not kind 'generation'")
-    if gen_ref.get("evaluation_id") != generation["evaluation_id"] or gen_ref.get("artifact_fingerprint") != generation["artifact_fingerprint"]:
+    if gen_ref["evaluation_id"] != generation["evaluation_id"] or gen_ref["artifact_fingerprint"] != generation["artifact_fingerprint"]:
         raise LineageValidationError(f"{path}: review's generation reference does not match the verified generation artifact")
     if review.get("dataset_fingerprint") != generation["dataset"]["fingerprint"]:
         raise LineageValidationError(f"{path}: review's copied dataset_fingerprint does not match generation")
@@ -289,7 +290,6 @@ def load_review_verified(path: Path, generation: dict) -> dict:
     return review
 
 
-# --- Comparison artifact (real-eval-comparison-v1), computed not authored ---
 
 
 def build_comparison_artifact(*, chatgpt_review: dict, claude_review: dict) -> dict:
@@ -354,7 +354,6 @@ def save_comparison_artifact(comparison: dict, *, split: str, milestone: str | N
     return _save_artifact_exclusive(path, comparison)
 
 
-# --- Adjudication artifact (real-eval-adjudication-v1) ---
 
 
 def build_adjudication_artifact(
@@ -429,7 +428,6 @@ def save_adjudication_artifact(adjudication: dict, *, split: str, milestone: str
     return _save_artifact_exclusive(path, adjudication)
 
 
-# --- Decision record (real-eval-decision-v1) ---
 
 
 def build_decision_record(*, decision_type: str, deciding_actor_id: str, adjudications: list[dict], outcome: str, reference: str | None = None) -> dict:
@@ -462,7 +460,6 @@ def load_decision_verified(path: Path) -> dict:
     return _load_artifact_verified(path, expected_schema_version=DECISION_SCHEMA_VERSION, expected_kind="decision")
 
 
-# --- Status events (real-lineage-status-v1) ---
 
 
 def build_status_event(*, target_artifact: dict, target_id_field: str, new_status: str, reason_code: str, actor_id: str, replacement_artifact: dict | None = None, withdrawal_id: str | None = None) -> dict:
@@ -496,14 +493,21 @@ def resolve_active_status(artifact_id: str) -> str:
     events for the same artifact rather than assuming exactly one --
     status transitions are one-way facts, not commands to replay in
     sequence, so taking the most-terminal result is always correct
-    regardless of how many events exist or what order they were written in."""
+    regardless of how many events exist or what order they were written in.
+
+    Every candidate file is loaded through the verified loader, not a bare
+    json.loads with defensive .get(...) defaults -- a malformed or
+    tampered status event must fail this scan closed, not be silently
+    treated as "doesn't match, keep looking" (that could hide a real
+    invalidation, which is exactly the failure mode status events exist
+    to prevent)."""
     if not STATUS_EVENTS_DIR.exists():
         return "active"
     statuses = set()
     for path in STATUS_EVENTS_DIR.glob("*.json"):
-        event = json.loads(path.read_text(encoding="utf-8"))
-        if event.get("target_artifact", {}).get("artifact_id") == artifact_id:
-            statuses.add(event.get("new_status"))
+        event = _load_artifact_verified(path, expected_schema_version=STATUS_EVENT_SCHEMA_VERSION, expected_kind="status_event")
+        if event["target_artifact"]["artifact_id"] == artifact_id:
+            statuses.add(event["new_status"])
     if "invalidated" in statuses:
         return "invalidated"
     if "superseded" in statuses:
@@ -511,7 +515,6 @@ def resolve_active_status(artifact_id: str) -> str:
     return "active"
 
 
-# --- Dataset snapshots (real-dataset-snapshot-v1) ---
 
 
 def build_dataset_snapshot(*, split: str, creation_reason: str, active_records: list[dict], rubric_schema_version: str, parent_snapshot: dict | None = None) -> dict:
