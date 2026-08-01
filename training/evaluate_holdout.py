@@ -45,8 +45,6 @@ exactly the temptation this file exists to resist -- use
 real_validation.jsonl for that instead.
 """
 import argparse
-import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -54,32 +52,10 @@ import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 import real_data_manifest as rdm
-from prepare_data import ACTIONS_MARKER, BULLETS_MARKER, DATA_DIR, NARRATIVE_MARKER, build_prompt, validate_record
-from real_data_eval_logging import UnsafeIdentifierError, _validate_identifier, build_result_artifact, new_result_record, save_result_artifact
-from real_data_private import checkpoint_fingerprint, dataset_fingerprint, pair_fingerprint, rubric_fingerprint, source_fingerprint
+from prepare_data import DATA_DIR, check_format_valid, load_jsonl_strict
+from real_data_eval_logging import UnsafeIdentifierError, _validate_identifier, build_generation_artifact, new_generation_record, save_generation_artifact
+from real_data_private import checkpoint_fingerprint, dataset_fingerprint, git_commit
 from train import GENERATION_MAX_NEW_TOKENS
-
-
-def _load_holdout_source_strict(path: Path) -> list[dict]:
-    """Strict parse of the sealed holdout source: rejects duplicate JSON
-    object keys before validate_record ever sees the line -- the private
-    manifest's fingerprints were computed over one unambiguous
-    input/output pair, and a last-write-wins parse of a crafted duplicate
-    key is deterministic but not that same unambiguous value."""
-    if not path.exists():
-        return []
-    records = []
-    with path.open("r", encoding="utf-8") as f:
-        for line_no, line in enumerate(f, start=1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                raw = json.loads(line, object_pairs_hook=rdm.reject_duplicate_keys)
-            except (json.JSONDecodeError, rdm.DuplicateJSONKeyError) as e:
-                raise ValueError(f"{path.name}:{line_no}: invalid JSON ({e})") from e
-            records.append(validate_record(raw, path.name, line_no))
-    return records
 
 
 def parse_args() -> argparse.Namespace:
@@ -101,111 +77,26 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _git_commit() -> str:
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, cwd=Path(__file__).parent
-        )
-        return result.stdout.strip()
-    except Exception:
-        return "unknown"
-
-
-def _check_format_valid(generated: str) -> bool:
-    narrative_idx = generated.find(NARRATIVE_MARKER)
-    bullets_idx = generated.find(BULLETS_MARKER)
-    actions_idx = generated.find(ACTIONS_MARKER)
-    return (
-        narrative_idx != -1
-        and bullets_idx != -1
-        and actions_idx != -1
-        and narrative_idx < bullets_idx < actions_idx
-        and generated[narrative_idx + len(NARRATIVE_MARKER) : bullets_idx].strip() != ""
-    )
 
 
 def _link_to_manifest(holdout_records: list[dict]) -> list[dict]:
-    """Fails closed at every step, per real_data_manifest_schema_decision.md:
-    every holdout record must have a manifest entry that (1) passes full
-    real-manifest-v1 schema validation, (2) is eligible for real_holdout
-    evaluation (active, author-confirmed, de-identification approved,
-    annotation adjudicated, holdout_eligible, split assigned to
-    real_holdout), and (3) has source/pair/rubric fingerprints that,
-    freshly recomputed from the actual holdout record and rubric, match
-    the manifest's declared values exactly. Unconsented, ineligible, or
-    tampered/stale content is never evaluated, no matter how it got into
-    real_holdout.jsonl or the manifest.
+    """Thin wrapper around real_data_manifest.link_records_to_manifest
+    (shared with evaluate_real_validation.py, so this fail-closed linking
+    logic exists in exactly one place): translates its exceptions into
+    this script's FAIL CLOSED + exit convention.
 
     Only reached after main() has already validated an approved holdout-seal
     declaration for this milestone (rdm.load_approved_seal) -- that check,
-    not this function's own pilot_mode argument, is what authorizes reading
-    holdout-eligible manifest entries during the pilot. pilot_mode=False here
-    reflects that the seal check already did the authorizing; it does not
-    itself authorize anything.
+    not the pilot_mode=False passed below, is what authorizes reading
+    holdout-eligible manifest entries during the pilot. pilot_mode=False
+    here reflects that the seal check already did the authorizing; it does
+    not itself authorize anything.
     """
     try:
-        manifest = rdm.load_manifest_strict(pilot_mode=False)
-    except rdm.ManifestValidationError as e:
-        print(f"FAIL CLOSED: private manifest failed real-manifest-v1 schema validation: {e}", file=sys.stderr)
+        return rdm.link_records_to_manifest(holdout_records, expected_split="real_holdout", pilot_mode=False)
+    except (rdm.ManifestValidationError, rdm.EligibilityError, rdm.RubricValidationError, rdm.FingerprintMismatchError) as e:
+        print(f"FAIL CLOSED: {e}", file=sys.stderr)
         sys.exit(1)
-    try:
-        rubrics = rdm.load_rubrics_strict()
-    except rdm.RubricValidationError as e:
-        print(f"FAIL CLOSED: private rubric file failed strict validation: {e}", file=sys.stderr)
-        sys.exit(1)
-    by_source_fp = {
-        entry["source_fingerprint"].removeprefix("sha256:"): entry
-        for entry in manifest.values()
-        if entry.get("source_fingerprint")
-    }
-
-    linked = []
-    for r in holdout_records:
-        computed_sfp = source_fingerprint(r["_input"])
-        entry = by_source_fp.get(computed_sfp)
-        if entry is None:
-            print(
-                f"FAIL CLOSED: a holdout record has no matching entry in the private "
-                f"consent/provenance manifest (source_fingerprint={computed_sfp[:12]}...). "
-                "Refusing to evaluate content with no recorded consent decision.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        record_id = entry["record_id"]
-
-        try:
-            rdm.check_evaluation_eligibility(entry, expected_split="real_holdout")
-        except rdm.EligibilityError as e:
-            print(f"FAIL CLOSED: {e}", file=sys.stderr)
-            sys.exit(1)
-
-        rubric = rubrics.get(record_id)
-        if rubric is None:
-            print(f"FAIL CLOSED: manifest entry {record_id} has no matching private rubric entry.", file=sys.stderr)
-            sys.exit(1)
-        computed_pfp = pair_fingerprint(r["_input"], r["_output"])
-        computed_rfp = rubric_fingerprint(rubric)
-
-        try:
-            rdm.verify_fingerprint(computed=computed_sfp, declared=entry["source_fingerprint"], field_name="source_fingerprint", record_id=record_id)
-            rdm.verify_fingerprint(computed=computed_pfp, declared=entry["pair_fingerprint"], field_name="pair_fingerprint", record_id=record_id)
-            rdm.verify_fingerprint(computed=computed_rfp, declared=entry["rubric_fingerprint"], field_name="rubric_fingerprint", record_id=record_id)
-        except rdm.FingerprintMismatchError as e:
-            print(f"FAIL CLOSED: {e}", file=sys.stderr)
-            sys.exit(1)
-
-        linked.append(
-            {
-                "record_id": record_id,
-                "prompt": r["prompt"],
-                "target": r["target"],
-                "_input": r["_input"],
-                "source_fingerprint": f"sha256:{computed_sfp}",
-                "pair_fingerprint": f"sha256:{computed_pfp}",
-                "rubric_fingerprint": f"sha256:{computed_rfp}",
-            }
-        )
-    return linked
 
 
 def main() -> None:
@@ -248,7 +139,7 @@ def main() -> None:
     # prepare_data.py's routine processed-output path, and never written
     # back to disk as a processed copy of the sealed source.
     try:
-        holdout_records = _load_holdout_source_strict(holdout_path)
+        holdout_records = load_jsonl_strict(holdout_path)
     except (ValueError, rdm.DuplicateJSONKeyError) as e:
         print(f"FAIL CLOSED: sealed holdout source failed strict parsing: {e}", file=sys.stderr)
         sys.exit(1)
@@ -267,8 +158,17 @@ def main() -> None:
         inputs = tokenizer(r["prompt"], return_tensors="pt", truncation=True, max_length=512).to(device)
         output_ids = model.generate(**inputs, max_new_tokens=GENERATION_MAX_NEW_TOKENS, repetition_penalty=1.3)
         generated = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-        valid = _check_format_valid(generated)
-        results.append(new_result_record(r["record_id"], generated, valid))
+        valid = check_format_valid(generated)
+        results.append(
+            new_generation_record(
+                record_id=r["record_id"],
+                source_fingerprint=r["source_fingerprint"],
+                pair_fingerprint=r["pair_fingerprint"],
+                rubric_fingerprint=r["rubric_fingerprint"],
+                raw_output=generated,
+                format_valid=valid,
+            )
+        )
         print(f"[{r['record_id']}] format_valid={valid}")
 
     ckpt_fp = checkpoint_fingerprint(checkpoint_dir)
@@ -281,10 +181,10 @@ def main() -> None:
         "once a real sealing event exists.)"
     )
 
-    artifact = build_result_artifact(
+    artifact = build_generation_artifact(
         split="real_holdout",
         evaluation_reason=cli_args.reason,
-        git_commit=_git_commit(),
+        git_commit=git_commit(),
         checkpoint={
             "path": str(checkpoint_dir),
             "fingerprint": ckpt_fp,
@@ -294,16 +194,17 @@ def main() -> None:
         dataset={
             "fingerprint": ds_fp,
             "record_count": len(linked),
-            "rubric_version": "real-rubric-v1",
+            "rubric_schema_version": "real-rubric-v1",
         },
+        prompt_contract=None,  # cross-repository prompt-contract sync hasn't happened yet
         generation_config=generation_config,
         results=results,
         release_milestone=cli_args.milestone,
     )
-    saved_path = save_result_artifact(artifact)
-    print(f"\nSaved structured result: {saved_path}")
+    saved_path = save_generation_artifact(artifact)
+    print(f"\nSaved structured generation artifact: {saved_path}")
     print(f"Format validity: {artifact['aggregate']['format_valid']}")
-    print("Semantic scores are unscored -- independent Claude Code / ChatGPT review still required before this can guide any decision.")
+    print("This is a generation artifact only -- independent Claude/ChatGPT review, comparison, and adjudication artifacts are required before this can guide any decision.")
 
 
 if __name__ == "__main__":

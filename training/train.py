@@ -39,7 +39,9 @@ from transformers import (
     Seq2SeqTrainingArguments,
 )
 
-from prepare_data import ACTIONS_MARKER, BULLETS_MARKER, NARRATIVE_MARKER
+from evaluate_real_validation import run_real_validation_evaluation
+from prepare_data import check_format_valid
+from real_data_private import checkpoint_fingerprint, git_commit
 
 BASE_MODEL = "google/flan-t5-base"
 DEFAULT_DATA_DIR = Path(__file__).parent / "data" / "processed"
@@ -172,17 +174,17 @@ def main() -> None:
 
     evaluate_format_validity(model, tokenizer, device, "val", val_ds)
 
-    real_validation_path = data_dir / "real_validation.jsonl"
-    if real_validation_path.exists() and real_validation_path.read_text(encoding="utf-8").strip():
-        real_validation_ds = load_split(data_dir, "real_validation.jsonl")
-        evaluate_format_validity(model, tokenizer, device, "real_validation", real_validation_ds, log_raw_output=False)
-    else:
-        print(
-            "\n(no real_validation.jsonl examples yet -- do not populate it directly. "
-            "Real notes require consent, de-identification, and a private manifest "
-            "entry before they may be added; see docs/decisions/PDR-005.md and "
-            "datasets/REAL_DATA_GOVERNANCE.md.)"
-        )
+    run_real_validation_evaluation(
+        model=model,
+        tokenizer=tokenizer,
+        device=device,
+        checkpoint_dir=final_dir,
+        checkpoint_fingerprint_value=checkpoint_fingerprint(final_dir),
+        git_commit=git_commit(),
+        seed=cli_args.seed,
+        run_id=output_dir.name,
+        generation_max_new_tokens=GENERATION_MAX_NEW_TOKENS,
+    )
 
     print(
         "\n(real_holdout.jsonl is not evaluated here -- it's sealed for "
@@ -191,14 +193,11 @@ def main() -> None:
     )
 
 
-def evaluate_format_validity(model, tokenizer, device, split_name: str, dataset: Dataset, log_raw_output: bool = True) -> None:
-    """log_raw_output must be False for any split that may contain real
-    (non-synthetic) note content -- printing generated text derived from
-    a real note to ordinary stdout risks it landing in a terminal
-    scrollback, CI log, or captured build output. This function still
-    has no structured, private logging path of its own; real_validation
-    generation belongs in a dedicated private evaluator (tracked
-    separately), not here."""
+def evaluate_format_validity(model, tokenizer, device, split_name: str, dataset: Dataset) -> None:
+    """For synthetic splits only (val.jsonl) -- real_validation.jsonl now
+    goes through evaluate_real_validation.run_real_validation_evaluation
+    instead, which produces a structured private generation artifact and
+    never prints raw output to stdout."""
     if len(dataset) == 0:
         return
     print(f"\n=== Evaluating on {split_name} ({len(dataset)} examples) ===")
@@ -213,21 +212,9 @@ def evaluate_format_validity(model, tokenizer, device, split_name: str, dataset:
             repetition_penalty=1.3,
         )
         generated = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-        narrative_idx = generated.find(NARRATIVE_MARKER)
-        bullets_idx = generated.find(BULLETS_MARKER)
-        actions_idx = generated.find(ACTIONS_MARKER)
-        is_valid = (
-            narrative_idx != -1
-            and bullets_idx != -1
-            and actions_idx != -1
-            and narrative_idx < bullets_idx < actions_idx
-            and generated[narrative_idx + len(NARRATIVE_MARKER) : bullets_idx].strip() != ""
-        )
+        is_valid = check_format_valid(generated)
         valid_count += int(is_valid)
-        if log_raw_output:
-            print(f"[{i}] valid_format={is_valid}\n  generated: {generated[:300]}")
-        else:
-            print(f"[{i}] valid_format={is_valid} (raw output not logged -- may contain real note content)")
+        print(f"[{i}] valid_format={is_valid}\n  generated: {generated[:300]}")
     print(f"{split_name}: {valid_count}/{len(dataset)} produced well-formed marker sections")
 
 

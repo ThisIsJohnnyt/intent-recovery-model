@@ -15,6 +15,7 @@ datasets/.gitignore and docs/decisions/PDR-005.md).
 import hashlib
 import json
 import os
+import subprocess
 import uuid
 from pathlib import Path
 
@@ -24,6 +25,17 @@ MANIFEST_PATH = PRIVATE_DIR / "real_data_manifest.jsonl"
 RUBRICS_PATH = PRIVATE_DIR / "real_data_rubrics.jsonl"
 
 RUBRIC_SCHEMA_VERSION = "real-rubric-v1"
+
+
+def git_commit() -> str:
+    """Shared by evaluate_holdout.py and evaluate_real_validation.py for
+    the generation artifact's git_commit field -- best-effort, never
+    fails the evaluation just because git metadata is unavailable."""
+    try:
+        result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, cwd=Path(__file__).parent)
+        return result.stdout.strip()
+    except Exception:
+        return "unknown"
 
 
 # Canonical JSON
@@ -63,6 +75,18 @@ def rubric_fingerprint(rubric: dict) -> str:
     """SHA-256 of the canonical rubric after omitting its own
     rubric_fingerprint field (a fingerprint can't include itself)."""
     stripped = {k: v for k, v in rubric.items() if k != "rubric_fingerprint"}
+    return sha256_of_canonical(stripped)
+
+
+def artifact_fingerprint(artifact: dict, fingerprint_field: str = "artifact_fingerprint") -> str:
+    """SHA-256 of the canonical artifact after omitting its own fingerprint
+    field -- the same self-referential-omission pattern as
+    rubric_fingerprint, generalized for the lineage artifact kinds
+    (generation, review, comparison, adjudication, decision, status event,
+    withdrawal plan/completion, dataset snapshot) that each carry their
+    own artifact_fingerprint field. One shared implementation so every
+    kind computes this identically."""
+    stripped = {k: v for k, v in artifact.items() if k != fingerprint_field}
     return sha256_of_canonical(stripped)
 
 

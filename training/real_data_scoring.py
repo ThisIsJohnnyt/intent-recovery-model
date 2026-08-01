@@ -17,6 +17,26 @@ SEMANTIC_DIMENSIONS = (
 
 VALID_REVIEW_STATUSES = ("unscored", "scored", "adjudicated")
 
+# Seeded from REAL_DATA_EVALUATION_PROTOCOL.md's "Failure labels" section
+# example list, converted to identifier form. That section also says "use
+# existing labels when available" -- implying the vocabulary may need to
+# grow over time. Expanding it is a governance decision (same pattern as
+# real_data_manifest.py's SUPPORTED_CONSENT_VERSIONS/SUPPORTED_SOURCE_KINDS),
+# not something review code should silently permit by accepting any string.
+FAILURE_LABEL_VOCABULARY = frozenset(
+    {
+        "attribution_error",
+        "unsupported_action",
+        "unsupported_commentary",
+        "dropped_qualifier",
+        "unresolved_question_loss",
+        "dangling_reference_completion",
+        "task_split",
+        "task_merge",
+        "format_failure",
+    }
+)
+
 
 class ScoringStateError(ValueError):
     pass

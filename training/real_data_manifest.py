@@ -291,11 +291,15 @@ def validate_manifest_collection(entries: dict[str, dict], *, pilot_mode: bool =
     validation-only pilot), not a read-side one. upsert_manifest_entry_validated
     inherits this default deliberately, so assigning a new holdout-eligible
     entry during the pilot fails closed by default. A caller evaluating
-    entries that already legitimately exist (e.g. evaluate_holdout.py,
-    which has its own --milestone/--reason declaration gate) may pass
-    pilot_mode=False explicitly -- that's a conscious, visible opt-out at
-    the call site, not a silent default, and is about *reading* an
-    existing entry, not about whether it was proper to assign it."""
+    entries that already legitimately exist (e.g. evaluate_holdout.py) may
+    pass pilot_mode=False explicitly -- that's a conscious, visible opt-out
+    at the call site, not a silent default, and is about *reading* an
+    existing entry, not about whether it was proper to assign it. The
+    actual authorization for evaluate_holdout.py to reach that read is its
+    own load_approved_seal() check, not its --milestone/--reason CLI
+    arguments -- those declare intent but were correctly rejected as
+    sufficient proof by ChatGPT's Tier 3 review (see
+    real_data_manifest_schema_decision.md's pilot-mode review)."""
     seen_source_fps: dict[str, str] = {}
     for record_id, entry in entries.items():
         validate_entry(entry)
@@ -492,6 +496,70 @@ def check_evaluation_eligibility(entry: dict, *, expected_split: str) -> None:
         fail("allowed_uses.private_evaluation is not true")
     if expected_split == "real_holdout" and allowed_uses.get("holdout_eligible") is not True:
         fail("allowed_uses.holdout_eligible is not true")
+
+
+def link_records_to_manifest(records: list[dict], *, expected_split: str, pilot_mode: bool = False) -> list[dict]:
+    """Fails closed at every step: every record must have a manifest entry
+    that (1) passes full real-manifest-v1 schema validation, (2) is
+    eligible for expected_split's evaluation, and (3) has source/pair/
+    rubric fingerprints that, freshly recomputed from the actual record
+    and rubric, match the manifest's declared values exactly.
+
+    Shared by evaluate_holdout.py and evaluate_real_validation.py so this
+    fail-closed linking logic exists in exactly one place rather than two
+    copies that could silently drift apart -- both scripts have their own
+    milestone/pilot-mode gating on top of this, but the linking mechanics
+    are identical for both splits.
+
+    records: raw {"_input", "_output", "prompt", "target"} dicts (see
+    prepare_data.validate_record). Returns linked records shaped
+    {"record_id", "prompt", "target", "_input", "source_fingerprint",
+    "pair_fingerprint", "rubric_fingerprint"}. Raises
+    ManifestValidationError/EligibilityError/RubricValidationError/
+    FingerprintMismatchError on any failure -- callers decide how to
+    report it (e.g. evaluate_holdout.py prints FAIL CLOSED and exits)."""
+    manifest = load_manifest_strict(pilot_mode=pilot_mode)
+    rubrics = load_rubrics_strict()
+    by_source_fp = {
+        entry["source_fingerprint"].removeprefix("sha256:"): entry
+        for entry in manifest.values()
+        if entry.get("source_fingerprint")
+    }
+
+    linked = []
+    for r in records:
+        computed_sfp = rdp.source_fingerprint(r["_input"])
+        entry = by_source_fp.get(computed_sfp)
+        if entry is None:
+            raise EligibilityError(
+                f"no matching entry in the private consent/provenance manifest (source_fingerprint={computed_sfp[:12]}...) "
+                "-- refusing to evaluate content with no recorded consent decision"
+            )
+        record_id = entry["record_id"]
+        check_evaluation_eligibility(entry, expected_split=expected_split)
+
+        rubric = rubrics.get(record_id)
+        if rubric is None:
+            raise RubricValidationError(f"manifest entry {record_id} has no matching private rubric entry")
+        computed_pfp = rdp.pair_fingerprint(r["_input"], r["_output"])
+        computed_rfp = rdp.rubric_fingerprint(rubric)
+
+        verify_fingerprint(computed=computed_sfp, declared=entry["source_fingerprint"], field_name="source_fingerprint", record_id=record_id)
+        verify_fingerprint(computed=computed_pfp, declared=entry["pair_fingerprint"], field_name="pair_fingerprint", record_id=record_id)
+        verify_fingerprint(computed=computed_rfp, declared=entry["rubric_fingerprint"], field_name="rubric_fingerprint", record_id=record_id)
+
+        linked.append(
+            {
+                "record_id": record_id,
+                "prompt": r["prompt"],
+                "target": r["target"],
+                "_input": r["_input"],
+                "source_fingerprint": f"sha256:{computed_sfp}",
+                "pair_fingerprint": f"sha256:{computed_pfp}",
+                "rubric_fingerprint": f"sha256:{computed_rfp}",
+            }
+        )
+    return linked
 
 
 def validate_transition(old_entry: dict | None, new_entry: dict) -> None:

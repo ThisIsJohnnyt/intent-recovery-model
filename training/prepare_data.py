@@ -69,6 +69,21 @@ def build_prompt(raw_input: str) -> str:
     return f"{SYSTEM_PROMPT}\n\nUSER'S RAW THOUGHTS:\n{raw_input}\n\n{USER_PROMPT_TEMPLATE}"
 
 
+def check_format_valid(generated: str) -> bool:
+    """Shared by train.py, evaluate_holdout.py, and
+    evaluate_real_validation.py -- previously duplicated inline in each."""
+    narrative_idx = generated.find(NARRATIVE_MARKER)
+    bullets_idx = generated.find(BULLETS_MARKER)
+    actions_idx = generated.find(ACTIONS_MARKER)
+    return (
+        narrative_idx != -1
+        and bullets_idx != -1
+        and actions_idx != -1
+        and narrative_idx < bullets_idx < actions_idx
+        and generated[narrative_idx + len(NARRATIVE_MARKER) : bullets_idx].strip() != ""
+    )
+
+
 def validate_record(record: dict, source: str, line_no: int) -> dict:
     if "input" not in record or not isinstance(record["input"], str) or not record["input"].strip():
         raise ValueError(f"{source}:{line_no}: missing/empty 'input' string")
@@ -116,6 +131,33 @@ def load_jsonl(path: Path) -> list[dict]:
             try:
                 raw = json.loads(line)
             except json.JSONDecodeError as e:
+                raise ValueError(f"{path.name}:{line_no}: invalid JSON ({e})") from e
+            records.append(validate_record(raw, path.name, line_no))
+    return records
+
+
+def load_jsonl_strict(path: Path) -> list[dict]:
+    """Like load_jsonl, but also rejects duplicate JSON object keys within
+    a line -- for real_validation.jsonl and real_holdout.jsonl specifically,
+    where the private manifest's fingerprints were computed over one
+    unambiguous input/output pair, and a last-write-wins parse of a crafted
+    duplicate key is deterministic but not that same unambiguous value.
+    Used by evaluate_holdout.py and evaluate_real_validation.py; not needed
+    for synthetic.jsonl, which isn't part of that consent-governed trust
+    boundary."""
+    import real_data_manifest as rdm
+
+    if not path.exists():
+        return []
+    records = []
+    with path.open("r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                raw = json.loads(line, object_pairs_hook=rdm.reject_duplicate_keys)
+            except (json.JSONDecodeError, rdm.DuplicateJSONKeyError) as e:
                 raise ValueError(f"{path.name}:{line_no}: invalid JSON ({e})") from e
             records.append(validate_record(raw, path.name, line_no))
     return records
