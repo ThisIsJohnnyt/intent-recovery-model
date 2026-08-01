@@ -175,9 +175,14 @@ def main() -> None:
     real_validation_path = data_dir / "real_validation.jsonl"
     if real_validation_path.exists() and real_validation_path.read_text(encoding="utf-8").strip():
         real_validation_ds = load_split(data_dir, "real_validation.jsonl")
-        evaluate_format_validity(model, tokenizer, device, "real_validation", real_validation_ds)
+        evaluate_format_validity(model, tokenizer, device, "real_validation", real_validation_ds, log_raw_output=False)
     else:
-        print("\n(no real_validation.jsonl examples yet — add some of your real notes there for routine dev-time evaluation)")
+        print(
+            "\n(no real_validation.jsonl examples yet -- do not populate it directly. "
+            "Real notes require consent, de-identification, and a private manifest "
+            "entry before they may be added; see docs/decisions/PDR-005.md and "
+            "datasets/REAL_DATA_GOVERNANCE.md.)"
+        )
 
     print(
         "\n(real_holdout.jsonl is not evaluated here -- it's sealed for "
@@ -186,7 +191,14 @@ def main() -> None:
     )
 
 
-def evaluate_format_validity(model, tokenizer, device, split_name: str, dataset: Dataset) -> None:
+def evaluate_format_validity(model, tokenizer, device, split_name: str, dataset: Dataset, log_raw_output: bool = True) -> None:
+    """log_raw_output must be False for any split that may contain real
+    (non-synthetic) note content -- printing generated text derived from
+    a real note to ordinary stdout risks it landing in a terminal
+    scrollback, CI log, or captured build output. This function still
+    has no structured, private logging path of its own; real_validation
+    generation belongs in a dedicated private evaluator (tracked
+    separately), not here."""
     if len(dataset) == 0:
         return
     print(f"\n=== Evaluating on {split_name} ({len(dataset)} examples) ===")
@@ -212,7 +224,10 @@ def evaluate_format_validity(model, tokenizer, device, split_name: str, dataset:
             and generated[narrative_idx + len(NARRATIVE_MARKER) : bullets_idx].strip() != ""
         )
         valid_count += int(is_valid)
-        print(f"[{i}] valid_format={is_valid}\n  generated: {generated[:300]}")
+        if log_raw_output:
+            print(f"[{i}] valid_format={is_valid}\n  generated: {generated[:300]}")
+        else:
+            print(f"[{i}] valid_format={is_valid} (raw output not logged -- may contain real note content)")
     print(f"{split_name}: {valid_count}/{len(dataset)} produced well-formed marker sections")
 
 

@@ -1,7 +1,7 @@
 """Evaluate a checkpoint against the SEALED real_holdout.jsonl set.
 
 Usage:
-    python evaluate_holdout.py --milestone MILESTONE_ID [checkpoint_dir]
+    python evaluate_holdout.py --milestone MILESTONE_ID --reason REASON CHECKPOINT_DIR
 
 This is deliberately a separate, explicit script -- NOT run automatically
 by train.py or prepare_data.py. datasets/real_holdout.jsonl is reserved
@@ -43,18 +43,17 @@ import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 from prepare_data import ACTIONS_MARKER, BULLETS_MARKER, DATA_DIR, NARRATIVE_MARKER, build_prompt, load_jsonl
-from real_data_eval_logging import build_result_artifact, new_result_record, save_result_artifact
+from real_data_eval_logging import UnsafeIdentifierError, _validate_identifier, build_result_artifact, new_result_record, save_result_artifact
 from real_data_private import checkpoint_fingerprint, dataset_fingerprint, load_manifest, load_rubrics, source_fingerprint
-from train import DEFAULT_OUTPUT_DIR, GENERATION_MAX_NEW_TOKENS
+from train import GENERATION_MAX_NEW_TOKENS
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "checkpoint_dir",
-        nargs="?",
-        default=None,
-        help="Checkpoint to evaluate (default: training/checkpoints/thoughtorganizer-flan-t5/final)",
+        type=str,
+        help="Checkpoint to evaluate. Required -- a declared holdout evaluation names a single frozen candidate explicitly, never a silent default.",
     )
     parser.add_argument(
         "--milestone",
@@ -143,7 +142,15 @@ def _link_to_manifest(holdout_records: list[dict]) -> list[dict]:
 
 def main() -> None:
     cli_args = parse_args()
-    checkpoint_dir = Path(cli_args.checkpoint_dir) if cli_args.checkpoint_dir else DEFAULT_OUTPUT_DIR / "final"
+    try:
+        _validate_identifier(cli_args.milestone, "--milestone")  # fail fast, before any generation work
+    except UnsafeIdentifierError as e:
+        print(f"FAIL CLOSED: {e}", file=sys.stderr)
+        sys.exit(1)
+    checkpoint_dir = Path(cli_args.checkpoint_dir)
+    if not checkpoint_dir.is_dir():
+        print(f"FAIL CLOSED: checkpoint directory does not exist: {checkpoint_dir}", file=sys.stderr)
+        sys.exit(1)
 
     holdout_path = DATA_DIR / "real_holdout.jsonl"
     if not holdout_path.exists() or not holdout_path.read_text(encoding="utf-8").strip():

@@ -190,8 +190,9 @@ def main() -> None:
 
     if not real_validation:
         print(
-            f"Note: {validation_path} is empty. Add some of your real notes there "
-            "(same format) for routine development-time evaluation.",
+            f"Note: {validation_path} is empty. Do not populate it directly -- real "
+            "notes require consent, de-identification, and a private manifest entry "
+            "first. See docs/decisions/PDR-005.md and datasets/REAL_DATA_GOVERNANCE.md.",
             file=sys.stderr,
         )
 

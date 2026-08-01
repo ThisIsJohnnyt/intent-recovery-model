@@ -57,12 +57,36 @@ def test_approved_root_enforcement_and_roundtrip():
     rel.VALIDATION_RESULTS_DIR = rel.RESULTS_PRIVATE_DIR / "real_validation"
     rel.HOLDOUT_RESULTS_DIR = rel.RESULTS_PRIVATE_DIR / "real_holdout"
     try:
-        # Attempt to write outside the approved roots must fail closed.
+        # Attempt to read outside the approved roots must fail closed.
         try:
-            rel._validate_output_path(tmp / "not_approved" / "sneaky.json")
+            rel._validate_any_approved_root(tmp / "not_approved" / "sneaky.json")
             check("approved-root enforcement: rejects a path outside both roots", False)
         except rel.ApprovedRootError:
             check("approved-root enforcement: rejects a path outside both roots", True)
+
+        # Unsafe identifiers must be rejected before they ever reach a path.
+        for bad_id in ("../escape", "a/b", "a\\b", "..", "has spaces", ""):
+            try:
+                rel.result_path_for("real_validation", bad_id)
+                check(f"result_path_for: rejects unsafe evaluation_id {bad_id!r}", False)
+            except rel.UnsafeIdentifierError:
+                check(f"result_path_for: rejects unsafe evaluation_id {bad_id!r}", True)
+
+        for bad_milestone in ("../real_validation", "a/../../escape", "a/b"):
+            try:
+                rel.result_path_for("real_holdout", "eval_ok", milestone=bad_milestone)
+                check(f"result_path_for: rejects unsafe milestone {bad_milestone!r}", False)
+            except rel.UnsafeIdentifierError:
+                check(f"result_path_for: rejects unsafe milestone {bad_milestone!r}", True)
+
+        # Split-specific root enforcement: a holdout path must land under
+        # HOLDOUT_RESULTS_DIR specifically, not merely "some approved root".
+        holdout_path = rel.result_path_for("real_holdout", "eval_ok", milestone="milestone_ok")
+        check(
+            "result_path_for: real_holdout path lands under HOLDOUT_RESULTS_DIR, not VALIDATION_RESULTS_DIR",
+            rel._is_relative_to(holdout_path.resolve(), rel.HOLDOUT_RESULTS_DIR.resolve())
+            and not rel._is_relative_to(holdout_path.resolve(), rel.VALIDATION_RESULTS_DIR.resolve()),
+        )
 
         r = rel.new_result_record("rv_dummy0001", "###NARRATIVE### x ###BULLETS### x ###ACTIONS###", True)
         artifact = rel.build_result_artifact(
@@ -83,6 +107,17 @@ def test_approved_root_enforcement_and_roundtrip():
 
         loaded = rel.load_result_artifact(saved_path)
         check("load_result_artifact: roundtrips identically", loaded == artifact)
+
+        # Immutability: saving again with the same evaluation_id must not
+        # silently overwrite the original.
+        tampered = {**artifact, "evaluation_reason": "an attempt to overwrite the original"}
+        try:
+            rel.save_result_artifact(tampered)
+            check("save_result_artifact: refuses to overwrite an existing evaluation_id", False)
+        except rel.ArtifactExistsError:
+            check("save_result_artifact: refuses to overwrite an existing evaluation_id", True)
+        reloaded = rel.load_result_artifact(saved_path)
+        check("save_result_artifact: original artifact content survives an attempted overwrite", reloaded["evaluation_reason"] == "dummy roundtrip test")
     finally:
         rel.RESULTS_PRIVATE_DIR = original_results_dir
         rel.VALIDATION_RESULTS_DIR = original_val_dir

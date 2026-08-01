@@ -2,10 +2,16 @@
 per training/REAL_DATA_EVALUATION_PROTOCOL.md's "Structured result
 schema" and "Concrete private paths" sections.
 
-Every write is checked against the two approved private result roots and
-fails closed (raises, does not write) if asked to go anywhere else.
+Every write is checked against the *specific* approved root for its
+declared split (not "either root") and fails closed (raises, does not
+write) if asked to go anywhere else. evaluation_id/milestone are
+restricted to a safe character set before they ever reach a path, so a
+crafted identifier can't traverse out of its intended subdirectory in
+the first place -- the root check below is defense in depth on top of
+that, not the only safeguard.
 """
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,13 +22,37 @@ HOLDOUT_RESULTS_DIR = RESULTS_PRIVATE_DIR / "real_holdout"
 
 SCHEMA_VERSION = "real-eval-v1"
 
+_SAFE_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
 
 class ApprovedRootError(ValueError):
     pass
 
 
+class UnsafeIdentifierError(ValueError):
+    pass
+
+
+class ArtifactExistsError(FileExistsError):
+    pass
+
+
 def new_evaluation_id() -> str:
     return f"eval_{uuid.uuid4().hex[:12]}"
+
+
+def _validate_identifier(value: str, field_name: str) -> str:
+    """Rejects anything but [A-Za-z0-9_-] before it ever reaches a path
+    -- no '/', '\\', '..', or other path-shaped characters allowed. This
+    is what actually prevents a crafted evaluation_id/milestone from
+    traversing into a sibling directory; the root check in
+    _validate_split_root is a second layer, not the first."""
+    if not isinstance(value, str) or not _SAFE_IDENTIFIER_RE.match(value):
+        raise UnsafeIdentifierError(
+            f"{field_name} must match {_SAFE_IDENTIFIER_RE.pattern} (letters, digits, "
+            f"underscore, hyphen only) -- got {value!r}"
+        )
+    return value
 
 
 def _is_relative_to(path: Path, root: Path) -> bool:
@@ -33,24 +63,51 @@ def _is_relative_to(path: Path, root: Path) -> bool:
         return False
 
 
-def _validate_output_path(path: Path) -> None:
+def _root_for_split(split: str) -> Path:
+    if split == "real_validation":
+        return VALIDATION_RESULTS_DIR
+    if split == "real_holdout":
+        return HOLDOUT_RESULTS_DIR
+    raise ValueError(f"split must be 'real_validation' or 'real_holdout', got {split!r}")
+
+
+def _validate_split_root(path: Path, split: str) -> None:
+    """Checks the path lands under the root for *this specific* declared
+    split -- not merely "one of the two approved roots" (a holdout
+    result landing inside the validation tree, or vice versa, must be
+    rejected even though both trees are individually "approved")."""
+    expected_root = _root_for_split(split).resolve()
+    if not _is_relative_to(path.resolve(), expected_root):
+        raise ApprovedRootError(
+            f"Refusing to write a {split!r} result outside its approved root "
+            f"({expected_root}): {path}"
+        )
+
+
+def _validate_any_approved_root(path: Path) -> None:
+    """Looser check used only for loading a result whose split isn't
+    already known from context -- accepts either approved root."""
     resolved = path.resolve()
     approved_roots = [VALIDATION_RESULTS_DIR.resolve(), HOLDOUT_RESULTS_DIR.resolve()]
     if not any(_is_relative_to(resolved, root) for root in approved_roots):
         raise ApprovedRootError(
-            f"Refusing to write outside approved private result roots "
+            f"Refusing to read outside approved private result roots "
             f"({VALIDATION_RESULTS_DIR}, {HOLDOUT_RESULTS_DIR}): {path}"
         )
 
 
 def result_path_for(split: str, evaluation_id: str, milestone: str | None = None) -> Path:
+    evaluation_id = _validate_identifier(evaluation_id, "evaluation_id")
+    root = _root_for_split(split)
     if split == "real_validation":
-        return VALIDATION_RESULTS_DIR / f"{evaluation_id}.json"
-    if split == "real_holdout":
+        path = root / f"{evaluation_id}.json"
+    else:
         if not milestone:
             raise ValueError("milestone is required for real_holdout result paths")
-        return HOLDOUT_RESULTS_DIR / milestone / f"{evaluation_id}.json"
-    raise ValueError(f"split must be 'real_validation' or 'real_holdout', got {split!r}")
+        milestone = _validate_identifier(milestone, "milestone")
+        path = root / milestone / f"{evaluation_id}.json"
+    _validate_split_root(path, split)
+    return path
 
 
 def new_result_record(record_id: str, raw_output: str, format_valid: bool) -> dict:
@@ -142,14 +199,28 @@ def build_result_artifact(
 
 
 def save_result_artifact(artifact: dict) -> Path:
+    """Exclusive-create: raises ArtifactExistsError rather than silently
+    overwriting if evaluation_id has already been used. Raw generation
+    artifacts must be immutable -- a scored/adjudicated version needs a
+    new evaluation_id, not a second write to the same path. (Lineage
+    linking a scored artifact back to its raw one is a separate,
+    joint-design piece, not implemented by this function.)"""
     path = result_path_for(artifact["split"], artifact["evaluation_id"], artifact.get("release_milestone"))
-    _validate_output_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(artifact, indent=2, ensure_ascii=False), encoding="utf-8")
+    payload = json.dumps(artifact, indent=2, ensure_ascii=False)
+    try:
+        with path.open("x", encoding="utf-8") as f:
+            f.write(payload)
+    except FileExistsError as e:
+        raise ArtifactExistsError(
+            f"Refusing to overwrite an existing evaluation artifact at {path}. "
+            "Raw generation artifacts are immutable -- use a new evaluation_id "
+            "for a rescored/adjudicated version instead of reusing this one."
+        ) from e
     return path
 
 
 def load_result_artifact(path: Path) -> dict:
     path = Path(path)
-    _validate_output_path(path)
+    _validate_any_approved_root(path)
     return json.loads(path.read_text(encoding="utf-8"))
