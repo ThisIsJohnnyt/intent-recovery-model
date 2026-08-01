@@ -189,6 +189,11 @@ def validate_entry(entry: dict) -> None:
     if deid_status not in VALID_DEIDENTIFICATION_STATUSES:
         _fail(record_id, f"deidentification_status must be one of {VALID_DEIDENTIFICATION_STATUSES}, got {deid_status!r}")
 
+    deid_at = None  # bound here so a later cross-check (adjudicated_at_utc
+    # vs deidentified_at_utc) never raises NameError just because
+    # deidentification_status happens to be 'pending' -- that combination
+    # is invalid too, but must fail with a clean ManifestValidationError,
+    # not a crash, regardless of which check runs first.
     if deid_status == "pending":
         _require_null(entry.get("deidentified_at_utc"), "deidentified_at_utc", record_id, "while deidentification_status is 'pending'")
         _require_null(entry.get("deidentified_by_id"), "deidentified_by_id", record_id, "while deidentification_status is 'pending'")
@@ -230,10 +235,25 @@ def validate_entry(entry: dict) -> None:
                 _fail(record_id, "annotation_author_id and annotation_reviewer_id must be independent (different actors)")
             if adjudicated_at < consented_at:
                 _fail(record_id, "adjudicated_at_utc precedes consented_at_utc -- chronologically impossible")
+            if deid_at is not None and adjudicated_at < deid_at:
+                _fail(record_id, "adjudicated_at_utc precedes deidentified_at_utc -- chronologically impossible")
             if deid_status != "approved":
                 _fail(record_id, "annotation_status is 'adjudicated' but deidentification_status is not 'approved'")
             _require_non_null(entry.get("pair_fingerprint"), "pair_fingerprint", record_id, "once annotation_status is 'adjudicated'")
             _require_non_null(entry.get("rubric_fingerprint"), "rubric_fingerprint", record_id, "once annotation_status is 'adjudicated'")
+        else:
+            # draft, in_review, excluded: pre-adjudicated states. None of
+            # them may carry final-looking adjudication metadata -- only
+            # 'adjudicated' may. Reviewer stays null for all three: draft
+            # and excluded per the schema decision explicitly, and
+            # in_review kept null too (rather than the documented-non-null
+            # alternative the decision left open) for simplicity -- a
+            # reviewer id only means something once independent review is
+            # actually complete.
+            _require_null(entry.get("adjudicated_at_utc"), "adjudicated_at_utc", record_id, f"while annotation_status is {annotation_status!r} (not yet adjudicated)")
+            _require_null(entry.get("annotation_reviewer_id"), "annotation_reviewer_id", record_id, f"while annotation_status is {annotation_status!r} (not yet adjudicated)")
+            _require_null(entry.get("pair_fingerprint"), "pair_fingerprint", record_id, f"while annotation_status is {annotation_status!r} (not yet adjudicated)")
+            _require_null(entry.get("rubric_fingerprint"), "rubric_fingerprint", record_id, f"while annotation_status is {annotation_status!r} (not yet adjudicated)")
 
     if split is not None:
         if deid_status != "approved" or annotation_status != "adjudicated":
@@ -247,6 +267,16 @@ def validate_entry(entry: dict) -> None:
     changed_at = _parse_utc(entry.get("withdrawal_status_changed_at_utc"), "withdrawal_status_changed_at_utc", record_id)
     if changed_at < consented_at:
         _fail(record_id, "withdrawal_status_changed_at_utc precedes consented_at_utc -- chronologically impossible")
+    if withdrawal_status in ("withdrawn", "expired"):
+        # Only meaningful once an actual withdrawal/expiry event has
+        # happened -- for a still-active record this field just reflects
+        # consent time (per the schema, set at consent and updated on
+        # withdrawal-state change) and has no reason to be later than
+        # lifecycle stages reached afterward while it stayed 'active'.
+        if deid_at is not None and changed_at < deid_at:
+            _fail(record_id, "withdrawal_status_changed_at_utc precedes deidentified_at_utc -- chronologically impossible")
+        if annotation_status == "adjudicated" and changed_at < adjudicated_at:
+            _fail(record_id, "withdrawal_status_changed_at_utc precedes adjudicated_at_utc -- chronologically impossible")
 
 
 def validate_manifest_collection(entries: dict[str, dict], *, pilot_mode: bool = True) -> None:
@@ -287,11 +317,21 @@ def validate_manifest_collection(entries: dict[str, dict], *, pilot_mode: bool =
                 )
 
 
-def _no_duplicate_keys(pairs: list[tuple]) -> dict:
+class DuplicateJSONKeyError(ValueError):
+    pass
+
+
+def reject_duplicate_keys(pairs: list[tuple]) -> dict:
+    """object_pairs_hook: rejects duplicate keys inside one JSON object.
+    Shared across every private-data trust boundary in this module (the
+    manifest loader, the strict rubric loader) and reused by
+    evaluate_holdout.py's strict holdout-source loader -- a last-write-wins
+    parse of a crafted duplicate key must never silently resolve to one of
+    two ambiguous values anywhere fingerprints get computed from this data."""
     seen = set()
     for key, _ in pairs:
         if key in seen:
-            raise ManifestValidationError(f"duplicate key {key!r} in manifest JSON object")
+            raise DuplicateJSONKeyError(f"duplicate key {key!r} in JSON object")
         seen.add(key)
     return dict(pairs)
 
@@ -314,8 +354,8 @@ def load_manifest_strict(path: Path | None = None, *, pilot_mode: bool = True) -
             if not line:
                 raise ManifestValidationError(f"{path.name}:{line_no}: blank line is not permitted in a manifest file")
             try:
-                obj = json.loads(line, object_pairs_hook=_no_duplicate_keys)
-            except (json.JSONDecodeError, ManifestValidationError) as e:
+                obj = json.loads(line, object_pairs_hook=reject_duplicate_keys)
+            except (json.JSONDecodeError, DuplicateJSONKeyError) as e:
                 raise ManifestValidationError(f"{path.name}:{line_no}: invalid JSON ({e})") from e
             if not isinstance(obj, dict):
                 raise ManifestValidationError(f"{path.name}:{line_no}: record is not a JSON object")
@@ -336,13 +376,88 @@ def upsert_manifest_entry_validated(entry: dict, *, pilot_mode: bool = True) -> 
     """Validates entry, the one-way transition from any prior entry with
     the same record_id, and the resulting collection -- all before writing.
     Failed validation leaves the on-disk manifest untouched (validation
-    happens entirely before rdp.save_manifest's atomic write)."""
+    happens entirely before rdp._save_manifest_raw's atomic write). This is
+    the one production write path for the manifest -- there is no
+    unvalidated alternative in real_data_private.py anymore."""
     current = load_manifest_strict(pilot_mode=pilot_mode)
     record_id = entry.get("record_id")
     validate_transition(current.get(record_id), entry)
     updated = {**current, record_id: entry}
     validate_manifest_collection(updated, pilot_mode=pilot_mode)
-    rdp.save_manifest(updated)
+    rdp._save_manifest_raw(updated)
+
+
+RUBRIC_STATUS_ADJUDICATED = "adjudicated"
+
+_RUBRIC_TOP_LEVEL_REQUIRED = frozenset({"record_id", "rubric_status"})
+
+
+class RubricValidationError(ManifestValidationError):
+    pass
+
+
+def _validate_rubric_entry(rubric: dict, expected_record_id: str) -> None:
+    """Structural/security validation only -- the rubric's own content
+    schema (what fields describe the rubric beyond record_id/status/
+    fingerprint) hasn't been jointly designed, so this doesn't invent one.
+    It enforces exactly what evaluate_holdout.py's trust boundary needs:
+    the entry is unambiguous, matches the record it's keyed/looked-up
+    under, has a well-formed fingerprint if present, and is actually
+    adjudicated -- a draft or in-review rubric must never be usable to
+    score or link an evaluation."""
+    record_id = rubric.get("record_id")
+    if not isinstance(record_id, str) or not _RECORD_ID_RE.match(record_id):
+        raise RubricValidationError(f"rubric entry has a missing/malformed record_id: {record_id!r}")
+    if record_id != expected_record_id:
+        raise RubricValidationError(f"rubric entry's own record_id {record_id!r} does not match the key {expected_record_id!r} it was loaded under")
+    missing = _RUBRIC_TOP_LEVEL_REQUIRED - set(rubric.keys())
+    if missing:
+        raise RubricValidationError(f"{record_id}: rubric entry missing required field(s): {sorted(missing)}")
+    status = rubric.get("rubric_status")
+    if status != RUBRIC_STATUS_ADJUDICATED:
+        raise RubricValidationError(f"{record_id}: rubric_status must be {RUBRIC_STATUS_ADJUDICATED!r} to be usable in evaluation, got {status!r}")
+    fp = rubric.get("rubric_fingerprint")
+    if fp is not None:
+        _require_fingerprint_or_none(fp, "rubric_fingerprint", record_id)
+
+
+def load_rubrics_strict(path: Path | None = None) -> dict[str, dict]:
+    """Strict rubric loader: rejects invalid JSON, blank lines, non-object
+    entries, duplicate keys inside an object, and duplicate record_ids --
+    checked before any dict is built, mirroring load_manifest_strict.
+    Then validates every entry (record_id format, record-id/key match,
+    fingerprint format, adjudicated status). A private rubric is part of
+    the evaluation trust boundary just like the manifest; the old
+    real_data_private.load_rubrics() has none of these guarantees."""
+    path = path or rdp.RUBRICS_PATH
+    if not path.exists():
+        return {}
+
+    ordered: list[tuple[int, str, dict]] = []
+    seen_ids: set[str] = set()
+    with path.open("r", encoding="utf-8") as f:
+        for line_no, raw_line in enumerate(f, start=1):
+            line = raw_line.strip()
+            if not line:
+                raise RubricValidationError(f"{path.name}:{line_no}: blank line is not permitted in a rubric file")
+            try:
+                obj = json.loads(line, object_pairs_hook=reject_duplicate_keys)
+            except (json.JSONDecodeError, DuplicateJSONKeyError) as e:
+                raise RubricValidationError(f"{path.name}:{line_no}: invalid JSON ({e})") from e
+            if not isinstance(obj, dict):
+                raise RubricValidationError(f"{path.name}:{line_no}: record is not a JSON object")
+            record_id = obj.get("record_id")
+            if not isinstance(record_id, str):
+                raise RubricValidationError(f"{path.name}:{line_no}: missing or non-string 'record_id'")
+            if record_id in seen_ids:
+                raise RubricValidationError(f"{path.name}:{line_no}: duplicate record_id {record_id!r} (rejected before dictionary construction)")
+            seen_ids.add(record_id)
+            ordered.append((line_no, record_id, obj))
+
+    for _, record_id, obj in ordered:
+        _validate_rubric_entry(obj, record_id)
+
+    return {record_id: obj for _, record_id, obj in ordered}
 
 
 def check_evaluation_eligibility(entry: dict, *, expected_split: str) -> None:
@@ -371,6 +486,8 @@ def check_evaluation_eligibility(entry: dict, *, expected_split: str) -> None:
         fail("missing or malformed 'allowed_uses'")
     if allowed_uses.get("training") is not False or allowed_uses.get("publication") is not False:
         fail("allowed_uses.training/publication must always be false")
+    if allowed_uses.get("private_annotation") is not True:
+        fail("allowed_uses.private_annotation is not true")
     if allowed_uses.get("private_evaluation") is not True:
         fail("allowed_uses.private_evaluation is not true")
     if expected_split == "real_holdout" and allowed_uses.get("holdout_eligible") is not True:
@@ -378,15 +495,21 @@ def check_evaluation_eligibility(entry: dict, *, expected_split: str) -> None:
 
 
 def validate_transition(old_entry: dict | None, new_entry: dict) -> None:
-    """One-way transitions the schema decision requires. Only the
-    transitions explicitly and unambiguously specified are enforced here:
-    split is assigned at most once and never reassigned; withdrawal never
-    reactivates; a source edit (source_fingerprint change) after split
-    assignment is rejected rather than silently applied. The broader
-    "editing output/rubric resets annotation to pre-adjudicated" behavior
-    is intentionally not implemented yet -- it depends on annotation
-    tooling that doesn't exist, and a partial heuristic here would be
-    worse than an explicit gap. Flagged, not silently skipped."""
+    """One-way transitions the schema decision requires: split is assigned
+    at most once and never reassigned; withdrawal never reactivates;
+    source/pair/rubric are fully immutable in place after split assignment
+    (a correction requires a separately governed replacement record); and,
+    before split assignment, a direct fingerprint change while remaining in
+    an already-completed state (deidentification_status 'approved' with an
+    unchanged source_fingerprint, or annotation_status 'adjudicated' with
+    unchanged pair/rubric fingerprints) is rejected -- editing de-identified
+    source or expected output/rubric requires a two-step reset (back to
+    'pending'/a pre-adjudicated state with the relevant fingerprint(s) null,
+    then forward again with freshly recomputed fingerprints), never a
+    direct approved-to-approved or adjudicated-to-adjudicated fingerprint
+    swap. validate_entry's own nullability rules make the reset step itself
+    valid; this function only blocks skipping straight from one completed
+    fingerprint to another."""
     validate_entry(new_entry)
     if old_entry is None:
         return
@@ -402,10 +525,80 @@ def validate_transition(old_entry: dict | None, new_entry: dict) -> None:
     if old_withdrawal in ("withdrawn", "expired") and new_withdrawal != old_withdrawal:
         raise ManifestValidationError(f"{record_id}: withdrawal_status {old_withdrawal!r} is terminal and cannot change to {new_withdrawal!r}")
 
+    if old_split is not None:
+        # Post-assignment: source, expected output, and rubric are
+        # immutable in place, full stop -- no reset dance is permitted
+        # either, since the assigned record itself must not change under
+        # a fixed record_id.
+        for field in ("source_fingerprint", "pair_fingerprint", "rubric_fingerprint"):
+            old_val = old_entry.get(field)
+            new_val = new_entry.get(field)
+            if old_val is not None and new_val != old_val:
+                raise ManifestValidationError(
+                    f"{record_id}: {field} cannot change after split assignment -- a separately governed "
+                    "replacement record is required instead of an in-place edit"
+                )
+        return
+
+    # Pre-assignment: direct completed-to-completed fingerprint swaps are
+    # rejected; a reset through 'pending'/a pre-adjudicated null state is
+    # required first (validate_entry permits that reset state on its own).
     old_source_fp = old_entry.get("source_fingerprint")
     new_source_fp = new_entry.get("source_fingerprint")
-    if old_split is not None and old_source_fp is not None and new_source_fp != old_source_fp:
+    if old_entry.get("deidentification_status") == "approved" and new_entry.get("deidentification_status") == "approved" and old_source_fp is not None and new_source_fp != old_source_fp:
         raise ManifestValidationError(
-            f"{record_id}: source_fingerprint cannot change after split assignment -- a separately governed "
-            "replacement record is required instead of an in-place source edit"
+            f"{record_id}: source_fingerprint cannot change while deidentification_status remains 'approved' -- "
+            "reset to 'pending' first, then re-approve with a freshly recomputed fingerprint"
         )
+
+    if old_entry.get("annotation_status") == "adjudicated" and new_entry.get("annotation_status") == "adjudicated":
+        for field in ("pair_fingerprint", "rubric_fingerprint"):
+            old_val = old_entry.get(field)
+            new_val = new_entry.get(field)
+            if old_val is not None and new_val != old_val:
+                raise ManifestValidationError(
+                    f"{record_id}: {field} cannot change while annotation_status remains 'adjudicated' -- "
+                    "reset to a pre-adjudicated state (null final fingerprints) first, then re-adjudicate "
+                    "with freshly recomputed fingerprints"
+                )
+
+
+# Approved holdout-seal declaration
+#
+# ChatGPT's Tier 3 review correctly rejected treating a caller-supplied
+# --milestone/--reason CLI string as sufficient proof that the
+# validation-only pilot's holdout restriction has actually been lifted for
+# a given dataset/checkpoint. pilot_mode describes the project's actual
+# governance phase, not merely whether an operation is a read or a write --
+# so evaluate_holdout.py must not decide for itself that the pilot is over.
+#
+# The seal schema itself (binding sealed record IDs, dataset fingerprint,
+# checkpoint fingerprint, rubric version, prompt-contract version and
+# fingerprint, repository commit, and approval timestamps) has not been
+# jointly designed yet -- no PDR or schema decision defines it. Rather than
+# invent that schema unilaterally, this fails closed unconditionally until
+# it exists: evaluate_holdout.py calls load_approved_seal() before opening
+# any holdout content or loading a model, and it always raises today. Once
+# the seal format is agreed and a real declaration mechanism is built, only
+# this function needs a real implementation -- callers don't change.
+
+SEAL_SCHEMA_VERSION = "real-holdout-seal-v1"  # placeholder identifier; format not yet designed
+SEAL_DECLARATIONS_PATH = rdp.PRIVATE_DIR / "real_data_holdout_seals.jsonl"
+
+
+class SealNotApprovedError(ValueError):
+    pass
+
+
+def load_approved_seal(milestone: str) -> dict:
+    """Always raises today -- see the module-level note above. Dummy unit
+    tests may exercise the lower-level validated functions with
+    pilot_mode=False directly; this function is the one thing the
+    production entry point (evaluate_holdout.py) is not allowed to bypass."""
+    raise SealNotApprovedError(
+        f"no approved holdout-seal declaration exists for milestone {milestone!r} -- the seal schema "
+        "(sealed record IDs, dataset/checkpoint/prompt-contract fingerprints, rubric version, repository "
+        "commit, approval timestamps) has not been jointly designed yet, so no CLI-supplied milestone/reason "
+        "can authorize treating the validation-only pilot's holdout restriction as lifted. See "
+        "real_data_manifest_schema_decision.md's pilot-mode review."
+    )

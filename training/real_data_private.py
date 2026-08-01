@@ -194,11 +194,21 @@ def _save_jsonl_by_record_id(path: Path, entries: dict[str, dict]) -> None:
     os.replace(tmp_path, path)
 
 
-def load_manifest() -> dict[str, dict]:
+def _load_manifest_raw() -> dict[str, dict]:
+    """Raw, unvalidated manifest I/O -- no schema, no duplicate-fingerprint
+    check, no transition/eligibility check, no pilot-mode gate. Not a
+    production write or read path: real_data_manifest.py's
+    load_manifest_strict()/upsert_manifest_entry_validated() are the only
+    schema-validated entry points, and are what any real code (or a human)
+    should call. This function exists for that module's internal use and
+    for tests of the underlying raw-JSONL-by-record-id mechanism itself --
+    calling it directly on a real manifest bypasses every real-manifest-v1
+    guarantee."""
     return _load_jsonl_by_record_id(MANIFEST_PATH)
 
 
-def save_manifest(entries: dict[str, dict]) -> None:
+def _save_manifest_raw(entries: dict[str, dict]) -> None:
+    """See _load_manifest_raw -- same caveat, same restricted audience."""
     _save_jsonl_by_record_id(MANIFEST_PATH, entries)
 
 
@@ -210,30 +220,20 @@ def save_rubrics(entries: dict[str, dict]) -> None:
     _save_jsonl_by_record_id(RUBRICS_PATH, entries)
 
 
-def upsert_manifest_entry(entry: dict) -> None:
-    entries = load_manifest()
-    entries[entry["record_id"]] = entry
-    save_manifest(entries)
-
-
 def upsert_rubric_entry(entry: dict) -> None:
     entries = load_rubrics()
     entries[entry["record_id"]] = entry
     save_rubrics(entries)
 
 
-def withdraw_record(record_id: str) -> None:
-    """Marks a manifest entry withdrawn in place (retains the entry so
-    the withdrawal itself is auditable, but flips status rather than
-    silently deleting) and removes the rubric entry entirely, per
-    REAL_DATA_GOVERNANCE.md's withdrawal requirements. Caller is
-    responsible for removing the record from the source split and
-    deleting/invalidating derived evaluation artifacts."""
-    manifest = load_manifest()
-    if record_id in manifest:
-        manifest[record_id]["withdrawal_status"] = "withdrawn"
-        save_manifest(manifest)
-    rubrics = load_rubrics()
-    if record_id in rubrics:
-        del rubrics[record_id]
-        save_rubrics(rubrics)
+# A validated upsert_manifest_entry and a withdraw_record used to live here.
+# Both are removed: upsert_manifest_entry bypassed real-manifest-v1 schema
+# validation, duplicate-fingerprint rejection, transition rules, and the
+# pilot-mode gate entirely -- real_data_manifest.upsert_manifest_entry_validated
+# is the one production write path now. withdraw_record mutated
+# withdrawal_status without updating withdrawal_status_changed_at_utc and
+# without any of the future withdrawal-lineage behavior (invalidating
+# derived evaluation artifacts, regenerating dataset fingerprints) --
+# leaving a half-correct version in place would be worse than an explicit
+# gap. A validated withdrawal operation is pending that lineage design;
+# see real_data_manifest_schema_decision.md's "Remaining project gates."

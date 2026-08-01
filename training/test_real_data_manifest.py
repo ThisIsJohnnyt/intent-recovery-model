@@ -1,12 +1,20 @@
 """Standalone assertion tests for real_data_manifest.py -- dummy data only,
 no real notes. Run with `python test_real_data_manifest.py`. Exits 0 iff
-every test passes.
+every test passes. Deliberately has no torch/transformers dependency (see
+test_duplicate_keys_in_source_record_fail, which replicates
+evaluate_holdout.py's strict-parsing primitives directly rather than
+importing that module, to keep this file fast and dependency-light).
 
 Covers the 20 adversarial test groups required by
 training/real_data_manifest_schema_decision.md's "Required adversarial
-tests" section. Each test function's docstring names which group(s) it
-covers, so gaps are traceable back to that list.
+tests" section, plus the 9 additional groups from
+training/phase_e_tier3_chatgpt_review.md's "Additional tests required"
+(review test 10, the production holdout-invocation-without-a-seal check,
+is exercised as a live CLI drill outside this file, not here). Each test
+function's docstring names which group(s) it covers, so gaps are
+traceable back to those lists.
 """
+import json
 import shutil
 import sys
 import tempfile
@@ -500,6 +508,192 @@ def test_manifest_metadata_absent_from_prompt():
     check("build_prompt output contains no manifest record_id/contributor_id/reviewer/fingerprint values", leaked == [], str(leaked))
 
 
+# --- Additional tests from training/phase_e_tier3_chatgpt_review.md ---
+
+
+def test_private_annotation_permission_required_for_eligibility():
+    """Review test 1: private_annotation:false fails eligibility even
+    when every other field is evaluation-ready."""
+    ready = evaluation_ready_entry(split="real_validation")
+    no_annotation_perm = {**ready, "allowed_uses": {**ready["allowed_uses"], "private_annotation": False}}
+    err = _expect_eligibility_error(rdm.check_evaluation_eligibility, no_annotation_perm, expected_split="real_validation")
+    check("check_evaluation_eligibility: private_annotation=False fails despite every other field being ready", err is not None, err)
+
+
+def test_every_pre_adjudicated_status_rejects_final_only_fields():
+    """Review test 2: draft/in_review/excluded all reject adjudicated_at_utc,
+    annotation_reviewer_id, pair_fingerprint, and rubric_fingerprint."""
+    for status in ("draft", "in_review", "excluded"):
+        base = deidentified_entry(annotation_status=status, annotation_author_id=ACTOR(3))
+        for field, bad_value in (
+            ("adjudicated_at_utc", T2),
+            ("annotation_reviewer_id", ACTOR(4)),
+            ("pair_fingerprint", f"sha256:{'b' * 64}"),
+            ("rubric_fingerprint", f"sha256:{'c' * 64}"),
+        ):
+            tainted = {**base, field: bad_value}
+            err = _expect_manifest_error(rdm.validate_entry, tainted)
+            check(f"validate_entry: annotation_status={status!r} with final field {field}={bad_value!r} set rejected", err is not None, err)
+
+
+def test_adjudication_before_deidentification_chronology():
+    """Review test 3: adjudicated_at_utc before deidentified_at_utc fails,
+    even when deidentification_status is legitimately 'approved'."""
+    impossible = adjudicated_entry(deidentified_at_utc=T2, adjudicated_at_utc=T1)
+    err = _expect_manifest_error(rdm.validate_entry, impossible)
+    check("validate_entry: adjudicated_at_utc before deidentified_at_utc rejected", err is not None, err)
+
+
+def test_withdrawal_timestamp_before_completed_processing_fails():
+    """Review test 4: withdrawal_status_changed_at_utc before de-identification
+    or adjudication fails once the record is actually withdrawn/expired --
+    but not while it's merely still active (that field just reflects
+    consent time until an actual withdrawal event happens)."""
+    still_active = evaluation_ready_entry(split="real_validation")
+    err = _expect_manifest_error(rdm.validate_entry, still_active)
+    check("validate_entry: withdrawal_status_changed_at_utc == consented_at_utc is fine while still active", err is None, err)
+
+    withdrawn_too_early = {**still_active, "withdrawal_status": "withdrawn", "withdrawal_status_changed_at_utc": T0}
+    err = _expect_manifest_error(rdm.validate_entry, withdrawn_too_early)
+    check("validate_entry: withdrawal_status_changed_at_utc before adjudicated_at_utc fails once actually withdrawn", err is not None, err)
+
+    withdrawn_ok = {**still_active, "withdrawal_status": "withdrawn", "withdrawal_status_changed_at_utc": "2026-08-01T18:00:00Z"}
+    err = _expect_manifest_error(rdm.validate_entry, withdrawn_ok)
+    check("validate_entry: withdrawal_status_changed_at_utc after adjudicated_at_utc passes when actually withdrawn", err is None, err)
+
+
+def test_production_write_path_rejects_pilot_forbidden_entry():
+    """Review test 5: the one production write path
+    (upsert_manifest_entry_validated) cannot persist a pilot-forbidden
+    entry, and the unsafe legacy helpers no longer exist to bypass it."""
+    check("real_data_private: upsert_manifest_entry no longer exists (removed, not just deprecated)", not hasattr(rdp, "upsert_manifest_entry"))
+    check("real_data_private: withdraw_record no longer exists (removed, not just deprecated)", not hasattr(rdp, "withdraw_record"))
+    check("real_data_private: load_manifest no longer exists as a public name", not hasattr(rdp, "load_manifest"))
+    check("real_data_private: save_manifest no longer exists as a public name", not hasattr(rdp, "save_manifest"))
+
+    tmp_dir = Path(tempfile.mkdtemp())
+    original_manifest_path = rdp.MANIFEST_PATH
+    rdp.MANIFEST_PATH = tmp_dir / "real_data_manifest.jsonl"
+    try:
+        forbidden = evaluation_ready_entry(split="real_holdout", source_fp="f" * 64)
+        raised = False
+        try:
+            rdm.upsert_manifest_entry_validated(forbidden, pilot_mode=True)
+        except rdm.ManifestValidationError:
+            raised = True
+        check("upsert_manifest_entry_validated: pilot-forbidden holdout entry raises under pilot_mode=True", raised)
+        check("upsert_manifest_entry_validated: rejected pilot-forbidden entry left no manifest file behind", not rdp.MANIFEST_PATH.exists())
+    finally:
+        rdp.MANIFEST_PATH = original_manifest_path
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def test_strict_rubric_loader():
+    """Review test 6: duplicate rubric record_ids and duplicate rubric
+    object keys both fail, and a non-adjudicated rubric_status fails too."""
+    tmp_dir = Path(tempfile.mkdtemp())
+    try:
+        dup_id_path = tmp_dir / "dup_id_rubrics.jsonl"
+        r1 = {"record_id": RECORD(1), "must_preserve": ["x"], "rubric_status": "adjudicated"}
+        r2 = {"record_id": RECORD(1), "must_preserve": ["y"], "rubric_status": "adjudicated"}
+        dup_id_path.write_text(json.dumps(r1) + "\n" + json.dumps(r2) + "\n", encoding="utf-8")
+        err = _expect_manifest_error(rdm.load_rubrics_strict, dup_id_path)
+        check("load_rubrics_strict: duplicate record_id rejected", err is not None and "duplicate record_id" in err, err)
+
+        dup_key_path = tmp_dir / "dup_key_rubrics.jsonl"
+        dup_key_line = '{"record_id": "' + RECORD(2) + '", "record_id": "' + RECORD(3) + '", "rubric_status": "adjudicated"}'
+        dup_key_path.write_text(dup_key_line + "\n", encoding="utf-8")
+        err = _expect_manifest_error(rdm.load_rubrics_strict, dup_key_path)
+        check("load_rubrics_strict: duplicate key inside one rubric object rejected", err is not None, err)
+
+        not_adjudicated_path = tmp_dir / "draft_rubric.jsonl"
+        draft = {"record_id": RECORD(4), "must_preserve": ["z"], "rubric_status": "draft"}
+        not_adjudicated_path.write_text(json.dumps(draft) + "\n", encoding="utf-8")
+        err = _expect_manifest_error(rdm.load_rubrics_strict, not_adjudicated_path)
+        check("load_rubrics_strict: non-adjudicated rubric_status rejected", err is not None, err)
+
+        good_path = tmp_dir / "good_rubrics.jsonl"
+        good = {"record_id": RECORD(5), "must_preserve": ["ok"], "rubric_status": "adjudicated"}
+        good_path.write_text(json.dumps(good) + "\n", encoding="utf-8")
+        loaded = rdm.load_rubrics_strict(good_path)
+        check("load_rubrics_strict: a well-formed adjudicated rubric loads cleanly", loaded.get(RECORD(5)) == good)
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def test_duplicate_keys_in_source_record_fail():
+    """Review test 7: duplicate JSON keys in a real source record fail
+    before fingerprinting. Exercises the exact primitives
+    evaluate_holdout._load_holdout_source_strict uses
+    (rdm.reject_duplicate_keys as the object_pairs_hook, then
+    prepare_data.validate_record) directly, so this file doesn't need to
+    import evaluate_holdout.py's torch/transformers dependencies."""
+    import prepare_data
+
+    dup_key_line = '{"input": "TESTDUMMY a", "input": "TESTDUMMY b", "output": {"narrative": "x", "bullets": [], "action_items": []}}'
+    raised = False
+    try:
+        json.loads(dup_key_line, object_pairs_hook=rdm.reject_duplicate_keys)
+    except rdm.DuplicateJSONKeyError:
+        raised = True
+    check("reject_duplicate_keys: duplicate 'input' key in a source record raises before validate_record/fingerprinting ever runs", raised)
+
+    clean_line = '{"input": "TESTDUMMY clean", "output": {"narrative": "x", "bullets": [], "action_items": []}}'
+    parsed = json.loads(clean_line, object_pairs_hook=rdm.reject_duplicate_keys)
+    validated = prepare_data.validate_record(parsed, "test.jsonl", 1)
+    check("reject_duplicate_keys: a clean source record still parses and validates normally", validated["_input"] == "TESTDUMMY clean")
+
+
+def test_pair_rubric_edit_before_assignment_requires_reset():
+    """Review test 8: a direct adjudicated-fingerprint-A -> adjudicated-
+    fingerprint-B swap is rejected pre-assignment, but the two-step reset
+    path (adjudicated -> pre-adjudicated null state -> re-adjudicated with
+    a new fingerprint) is explicitly permitted."""
+    original = adjudicated_entry(pair_fp="1" * 64, rubric_fp="2" * 64)
+    direct_swap = {**original, "pair_fingerprint": f"sha256:{'9' * 64}"}
+    err = _expect_manifest_error(rdm.validate_transition, original, direct_swap)
+    check("validate_transition: direct adjudicated pair_fingerprint swap (no reset) rejected pre-assignment", err is not None, err)
+
+    reset_state = {
+        **original,
+        "annotation_status": "draft",
+        "adjudicated_at_utc": None,
+        "annotation_reviewer_id": None,
+        "pair_fingerprint": None,
+        "rubric_fingerprint": None,
+    }
+    err = _expect_manifest_error(rdm.validate_transition, original, reset_state)
+    check("validate_transition: resetting adjudicated -> draft with nulled final fingerprints is permitted", err is None, err)
+
+    re_adjudicated = adjudicated_entry(pair_fp="9" * 64, rubric_fp="2" * 64)
+    err = _expect_manifest_error(rdm.validate_transition, reset_state, re_adjudicated)
+    check("validate_transition: re-adjudicating from the reset state with a new pair_fingerprint is permitted", err is None, err)
+
+
+def test_pair_rubric_source_edit_after_assignment_fails():
+    """Review test 9: source/pair/rubric fingerprints are all immutable
+    in place once a split is assigned."""
+    assigned = evaluation_ready_entry(split="real_validation", source_fp="a" * 64, pair_fp="b" * 64, rubric_fp="c" * 64)
+    for field in ("source_fingerprint", "pair_fingerprint", "rubric_fingerprint"):
+        tampered = {**assigned, field: f"sha256:{'9' * 64}"}
+        err = _expect_manifest_error(rdm.validate_transition, assigned, tampered)
+        check(f"validate_transition: {field} change after split assignment rejected", err is not None, err)
+
+
+def test_approved_seal_declaration_always_fails_today():
+    """Review test 10 (unit half -- the live CLI-ordering half is a
+    separate drill outside this file): load_approved_seal has no seal
+    format or storage mechanism yet, so it must always fail closed
+    regardless of milestone name."""
+    for milestone in ("dummy_milestone", "anything_at_all"):
+        raised = False
+        try:
+            rdm.load_approved_seal(milestone)
+        except rdm.SealNotApprovedError:
+            raised = True
+        check(f"load_approved_seal({milestone!r}): always fails closed (no seal mechanism exists yet)", raised)
+
+
 def main() -> None:
     tests = [
         test_lifecycle_stages_validate,
@@ -520,6 +714,16 @@ def main() -> None:
         test_edited_output_and_rubric_change_fingerprints,
         test_invalid_update_leaves_manifest_bytes_unchanged,
         test_manifest_metadata_absent_from_prompt,
+        test_private_annotation_permission_required_for_eligibility,
+        test_every_pre_adjudicated_status_rejects_final_only_fields,
+        test_adjudication_before_deidentification_chronology,
+        test_withdrawal_timestamp_before_completed_processing_fails,
+        test_production_write_path_rejects_pilot_forbidden_entry,
+        test_strict_rubric_loader,
+        test_duplicate_keys_in_source_record_fail,
+        test_pair_rubric_edit_before_assignment_requires_reset,
+        test_pair_rubric_source_edit_after_assignment_fails,
+        test_approved_seal_declaration_always_fails_today,
     ]
     for t in tests:
         t()

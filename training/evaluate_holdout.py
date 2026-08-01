@@ -13,11 +13,21 @@ datasets/real_validation.jsonl instead, which train.py already evaluates
 automatically after every run.
 
 Least-privilege by design: loads and validates the sealed source directly
-in memory, using prepare_data.py's own load_jsonl (which in turn calls
-validate_record/build_prompt) -- never routes through a routinely
-materialized processed copy, and writes no processed holdout file.
---milestone is required; there is no default, and this refuses to run
-without one.
+in memory using a strict parser (rejects duplicate JSON object keys before
+calling prepare_data.py's validate_record/build_prompt -- a last-write-wins
+parse of a crafted duplicate key would be deterministic but not the
+unambiguous input the private manifest's fingerprint was computed over)
+-- never routes through a routinely materialized processed copy, and
+writes no processed holdout file. --milestone is required; there is no
+default, and this refuses to run without one.
+
+Also requires an approved holdout-seal declaration for the given milestone
+(real_data_manifest.load_approved_seal) before opening any holdout content
+or loading a model. That mechanism is not built yet -- see
+real_data_manifest_schema_decision.md's pilot-mode review -- so this
+currently always fails closed regardless of what --milestone/--reason say;
+a CLI string alone is not authorization to treat the validation-only
+pilot's holdout restriction as lifted.
 
 Fails closed (refuses to evaluate) if any holdout record has no matching
 active, holdout_eligible entry in the private consent/provenance
@@ -35,6 +45,7 @@ exactly the temptation this file exists to resist -- use
 real_validation.jsonl for that instead.
 """
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -43,10 +54,32 @@ import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 import real_data_manifest as rdm
-from prepare_data import ACTIONS_MARKER, BULLETS_MARKER, DATA_DIR, NARRATIVE_MARKER, build_prompt, load_jsonl
+from prepare_data import ACTIONS_MARKER, BULLETS_MARKER, DATA_DIR, NARRATIVE_MARKER, build_prompt, validate_record
 from real_data_eval_logging import UnsafeIdentifierError, _validate_identifier, build_result_artifact, new_result_record, save_result_artifact
-from real_data_private import checkpoint_fingerprint, dataset_fingerprint, load_rubrics, pair_fingerprint, rubric_fingerprint, source_fingerprint
+from real_data_private import checkpoint_fingerprint, dataset_fingerprint, pair_fingerprint, rubric_fingerprint, source_fingerprint
 from train import GENERATION_MAX_NEW_TOKENS
+
+
+def _load_holdout_source_strict(path: Path) -> list[dict]:
+    """Strict parse of the sealed holdout source: rejects duplicate JSON
+    object keys before validate_record ever sees the line -- the private
+    manifest's fingerprints were computed over one unambiguous
+    input/output pair, and a last-write-wins parse of a crafted duplicate
+    key is deterministic but not that same unambiguous value."""
+    if not path.exists():
+        return []
+    records = []
+    with path.open("r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                raw = json.loads(line, object_pairs_hook=rdm.reject_duplicate_keys)
+            except (json.JSONDecodeError, rdm.DuplicateJSONKeyError) as e:
+                raise ValueError(f"{path.name}:{line_no}: invalid JSON ({e})") from e
+            records.append(validate_record(raw, path.name, line_no))
+    return records
 
 
 def parse_args() -> argparse.Namespace:
@@ -103,21 +136,23 @@ def _link_to_manifest(holdout_records: list[dict]) -> list[dict]:
     tampered/stale content is never evaluated, no matter how it got into
     real_holdout.jsonl or the manifest.
 
-    Loaded with pilot_mode=False: pilot_mode gates *assigning* new
-    holdout-eligible entries into the manifest (enforced at write time by
-    real_data_manifest.upsert_manifest_entry_validated), not evaluating
-    entries that already exist there. This script's own required
-    --milestone/--reason declaration is the gate for whether a holdout
-    evaluation may proceed at all; conflating that with the pilot's
-    write-side restriction would make this script permanently unusable
-    for a legitimately declared milestone without a source change.
+    Only reached after main() has already validated an approved holdout-seal
+    declaration for this milestone (rdm.load_approved_seal) -- that check,
+    not this function's own pilot_mode argument, is what authorizes reading
+    holdout-eligible manifest entries during the pilot. pilot_mode=False here
+    reflects that the seal check already did the authorizing; it does not
+    itself authorize anything.
     """
     try:
         manifest = rdm.load_manifest_strict(pilot_mode=False)
     except rdm.ManifestValidationError as e:
         print(f"FAIL CLOSED: private manifest failed real-manifest-v1 schema validation: {e}", file=sys.stderr)
         sys.exit(1)
-    rubrics = load_rubrics()
+    try:
+        rubrics = rdm.load_rubrics_strict()
+    except rdm.RubricValidationError as e:
+        print(f"FAIL CLOSED: private rubric file failed strict validation: {e}", file=sys.stderr)
+        sys.exit(1)
     by_source_fp = {
         entry["source_fingerprint"].removeprefix("sha256:"): entry
         for entry in manifest.values()
@@ -180,6 +215,13 @@ def main() -> None:
     except UnsafeIdentifierError as e:
         print(f"FAIL CLOSED: {e}", file=sys.stderr)
         sys.exit(1)
+
+    try:
+        rdm.load_approved_seal(cli_args.milestone)
+    except rdm.SealNotApprovedError as e:
+        print(f"FAIL CLOSED: {e}", file=sys.stderr)
+        sys.exit(1)
+
     checkpoint_dir = Path(cli_args.checkpoint_dir)
     if not checkpoint_dir.is_dir():
         print(f"FAIL CLOSED: checkpoint directory does not exist: {checkpoint_dir}", file=sys.stderr)
@@ -205,7 +247,11 @@ def main() -> None:
     # Loaded and validated directly in memory -- never through
     # prepare_data.py's routine processed-output path, and never written
     # back to disk as a processed copy of the sealed source.
-    holdout_records = load_jsonl(holdout_path)
+    try:
+        holdout_records = _load_holdout_source_strict(holdout_path)
+    except (ValueError, rdm.DuplicateJSONKeyError) as e:
+        print(f"FAIL CLOSED: sealed holdout source failed strict parsing: {e}", file=sys.stderr)
+        sys.exit(1)
     linked = _link_to_manifest(holdout_records)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"

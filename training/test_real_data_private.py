@@ -153,38 +153,32 @@ def test_prompt_contract_fingerprint():
     check("prompt_contract_fingerprint: a trailing newline changes the hash (no implicit normalization)", fp1 != fp3)
 
 
-def test_manifest_and_rubric_roundtrip_and_withdrawal():
+def test_manifest_and_rubric_raw_io_roundtrip():
+    """Tests only the raw, unvalidated JSONL-by-record-id I/O mechanism
+    that real_data_manifest.py's schema-validated functions are built on.
+    _load_manifest_raw/_save_manifest_raw are not a production write path
+    (see their docstrings) -- schema validation, duplicate-fingerprint
+    rejection, transition rules, and the pilot-mode gate are all tested
+    against the real thing in test_real_data_manifest.py via
+    upsert_manifest_entry_validated. There is no raw withdraw_record
+    anymore: withdrawal is disabled pending the validated withdrawal
+    operation (lineage design not yet complete)."""
     tmp_dir = Path(tempfile.mkdtemp())
     original_manifest_path = rdp.MANIFEST_PATH
     original_rubrics_path = rdp.RUBRICS_PATH
     rdp.MANIFEST_PATH = tmp_dir / "real_data_manifest.jsonl"
     rdp.RUBRICS_PATH = tmp_dir / "real_data_rubrics.jsonl"
     try:
-        entry = {
-            "record_id": "rv_dummy0001",
-            "contributor_id": "contributor_dummy",
-            "split": "real_validation",
-            "status": "active",
-            "withdrawal_status": "active",
-        }
+        entry = {"record_id": "rv_dummy0001", "contributor_id": "contributor_dummy", "withdrawal_status": "active"}
         rubric = {"record_id": "rv_dummy0001", "must_preserve": ["x"], "rubric_status": "adjudicated"}
 
-        rdp.upsert_manifest_entry(entry)
+        rdp._save_manifest_raw({entry["record_id"]: entry})
         rdp.upsert_rubric_entry(rubric)
 
-        loaded_manifest = rdp.load_manifest()
+        loaded_manifest = rdp._load_manifest_raw()
         loaded_rubrics = rdp.load_rubrics()
-        check("manifest: upsert + load roundtrip preserves entry", loaded_manifest.get("rv_dummy0001") == entry)
+        check("manifest: raw save + load roundtrip preserves entry", loaded_manifest.get("rv_dummy0001") == entry)
         check("rubrics: upsert + load roundtrip preserves entry", loaded_rubrics.get("rv_dummy0001") == rubric)
-
-        rdp.withdraw_record("rv_dummy0001")
-        after_manifest = rdp.load_manifest()
-        after_rubrics = rdp.load_rubrics()
-        check(
-            "withdraw_record: manifest entry retained but marked withdrawn",
-            after_manifest["rv_dummy0001"]["withdrawal_status"] == "withdrawn",
-        )
-        check("withdraw_record: rubric entry removed", "rv_dummy0001" not in after_rubrics)
     finally:
         rdp.MANIFEST_PATH = original_manifest_path
         rdp.RUBRICS_PATH = original_rubrics_path
@@ -210,7 +204,7 @@ def main() -> None:
         test_dataset_fingerprint_order_independence_and_change_detection,
         test_checkpoint_fingerprint,
         test_prompt_contract_fingerprint,
-        test_manifest_and_rubric_roundtrip_and_withdrawal,
+        test_manifest_and_rubric_raw_io_roundtrip,
         test_no_raw_content_in_dataset_fingerprint_inputs,
     ]
     for t in tests:
