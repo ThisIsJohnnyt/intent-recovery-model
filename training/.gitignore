@@ -4,3 +4,15 @@ checkpoints/
 data/processed/
 releases/
 *.log
+
+# Private real-note evaluation results — never model-facing, never
+# published. See docs/decisions/PDR-005.md and
+# REAL_DATA_EVALUATION_PROTOCOL.md.
+results/private/
+
+# Defensive: data/processed/ above already covers these, but they're
+# listed explicitly per REAL_DATA_GOVERNANCE.md's "Storage and access"
+# so the private-holdout path stays covered even if that broader
+# pattern is ever narrowed.
+data/processed/real_validation.jsonl
+data/processed/real_holdout_eval.jsonl
