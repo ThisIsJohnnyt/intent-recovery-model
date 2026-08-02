@@ -4,9 +4,14 @@
 `intent-recovery-model` PR #13 and this manifest's original version (PR #14)
 were both merged to `main` on 2026-08-02 before joint review of the design
 completed. `thought-organizer-app` PR #4 remains open. This revision
-corrects a seed confound ChatGPT caught in the merged version (see below),
-and a second round of corrections from ChatGPT's review of that fix (see
-further below) — treat this version as current, not PR #14's.
+corrects a seed confound ChatGPT caught in the merged version, three
+further rounds of review since (a working-directory/gate-sequencing fix,
+a fail-open scoring gap in the new acceptance set, and the same fail-open
+gap found in the shared 16-probe legacy benchmark this study's Cell
+A/B/C actually run against) — see below, in order — treat this version
+as current, not PR #14's. **Not yet aligned**: the Round 4 per-probe
+`required_semantic_dimensions` mapping is an explicit proposal pending
+review, not a settled decision.
 
 **Compute waits for this design to be marked Aligned, full stop.** The
 previous wording here also said compute waits for `thought-organizer-app`
@@ -134,6 +139,43 @@ objectively checkable via the action-item count instead of a subjective
 supported "before Friday" deadline to survive (plus a `DEADLINE_SURVIVED`
 check), since the prior wording could be read as allowing that qualifier
 to quietly disappear as long as the core task remained.
+
+## Round 4 correction (2026-08-02): the same fail-open gap in the legacy 16-probe benchmark
+
+ChatGPT found a broader instance of the Round 3 gap: `datasets/benchmark/gold_v1.2.1_probes.jsonl`
+-- the actual benchmark this study's Cell A/B/C comparisons run against --
+had no `required_semantic_dimensions` on any of its 16 probes. Reproduced
+independently: an entirely-unscored scaffold (format valid, every score
+null, every declared capability check null) reported **4/16 passing**
+(probes 13-16 specifically, since those four have empty `primary_checks`
+lists -- no capability check to fail on, either). That directly
+contradicts this study's own "16/16 format validity" and "no reduction in
+overall strict passes" material-regression gates: those numbers are only
+meaningful if 0/16 is possible on an unscored run, and it wasn't.
+
+**Fixed, but flagged as a proposal, not a final decision**: added
+`required_semantic_dimensions` to all 16 probes (input/expected_behavior/
+primary_checks/likely_failures/notes untouched -- confirmed byte-identical
+except the one new field, per-probe, before committing). The per-probe
+mapping was derived from each probe's own `likely_failures` list and
+`expected_behavior` text (e.g. "Misattribution" in `likely_failures` ->
+`attribution_accuracy` required; "Invented Answer" -> `uncertainty_
+preservation`; every probe requires `topic_completeness` as a baseline,
+since every one of the 16 is fundamentally about specific content
+surviving correctly). **This mapping has not been jointly reviewed** --
+ChatGPT asked for that review before treating it as committed, and this
+revision provides a concrete draft to review against, not a final answer.
+`run_benchmark.py` already propagates `required_semantic_dimensions`
+generically (added in Round 3), so no further code change was needed
+there. `training/test_report_benchmark.py` gained three integration tests
+against the real file: all 16 probes declare at least one required
+dimension; an unscored scaffold now reports 0/16 (not 4/16); a fully and
+correctly scored scaffold still reports 16/16 (confirming the added
+requirements are satisfiable, not an over-constraint).
+
+**Alignment status carried forward from this round's review: not yet
+aligned on the complete study gate.** Compute stays held until the
+per-probe dimension mapping above is reviewed and accepted.
 
 ## Two findings that update the premise before this can be finalized
 
