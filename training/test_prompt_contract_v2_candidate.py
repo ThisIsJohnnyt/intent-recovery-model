@@ -33,13 +33,20 @@ def check(name: str, condition: bool, detail: str = "") -> None:
         FAILURES.append(name)
 
 
-def test_fixture_file_is_byte_identical_across_repos():
+def test_fixture_file_is_content_identical_across_repos():
+    # Structural (parsed JSON) comparison, not raw bytes: the training
+    # repo's committed copy gets CRLF-normalized by Windows git autocrlf on
+    # checkout while the app repo's copy (not committed through the same
+    # path) stays LF -- confirmed directly, a real line-ending difference,
+    # not a content one. Byte-identity was the wrong check for what this
+    # test actually needs to guarantee (same logical fixture cases in both
+    # repos), so it compares parsed content instead.
     if not APP_FIXTURES_PATH.exists():
-        check("fixture file byte-identical across repos", False, f"app-side copy not found at {APP_FIXTURES_PATH}")
+        check("fixture file content-identical across repos", False, f"app-side copy not found at {APP_FIXTURES_PATH}")
         return
-    training_bytes = FIXTURES_PATH.read_bytes()
-    app_bytes = APP_FIXTURES_PATH.read_bytes()
-    check("fixture file byte-identical across repos", training_bytes == app_bytes)
+    training_data = json.loads(FIXTURES_PATH.read_text(encoding="utf-8"))
+    app_data = json.loads(APP_FIXTURES_PATH.read_text(encoding="utf-8"))
+    check("fixture file content-identical across repos", training_data == app_data)
 
 
 def test_valid_fixture_cases_parse_as_expected():
@@ -124,7 +131,7 @@ def test_sanitized_input_cannot_reach_parser_as_a_real_marker():
 
 def main() -> None:
     tests = [
-        test_fixture_file_is_byte_identical_across_repos,
+        test_fixture_file_is_content_identical_across_repos,
         test_valid_fixture_cases_parse_as_expected,
         test_error_fixture_cases_fail_closed,
         test_tokenizer_round_trip_preserves_typed_markers,
