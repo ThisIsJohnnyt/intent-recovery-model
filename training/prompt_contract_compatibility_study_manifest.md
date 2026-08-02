@@ -207,6 +207,42 @@ clean.
 aligned on the complete study gate**, pending this round's corrections
 being accepted.
 
+## Round 5 (2026-08-02): seed-17 result and a runner/prompt-contract pinning fix
+
+**The seed-17 triplet ran under this manifest and does not clear the
+gate** (full record: `training/gold_v1.2.2_seed17_compatibility_study_provenance.md`,
+`training/gold_v1.2.2_seed17_compatibility_study_chatgpt_scoring_handoff.md`).
+Gate 2 (no Cell-A regression-guard pass becomes a Cell-C failure) and
+Gate 4 (all 5 acceptance gates pass) both failed; independently verified,
+not just taken on ChatGPT's word. Johnny is treating this as closed and
+directed a design-only postmortem before any further compute -- not a
+retry of this same design. See the two documents above for the full
+outcome; this manifest's comparison-cell design is not being iterated on
+directly, pending that postmortem.
+
+**A real bug was found and is fixed here for future reference**: pinning
+a whole worktree at an old commit pins *every* file in it, not just
+`prepare_data.py`. Both `8d7aa09` and `80062bc` predate the
+`required_semantic_dimensions` propagation added later to
+`run_benchmark.py` (commit `8a23316`, this same PR #15) -- so every cell
+in the seed-17 run produced result files missing that field. ChatGPT
+caught it; the raw outputs and format-validity numbers were unaffected
+(that field has no effect on generation), and the missing metadata was
+safely hydrated post-hoc without rerunning any compute. Root-caused and
+confirmed via `git log`/`git diff` against both pin points, not assumed.
+
+**Fix**: pin only `prepare_data.py` (the one file that actually
+constitutes "the prompt contract") via `sys.path` injection, and always
+run the *current* `run_benchmark.py`/`train.py` from `main` -- so future
+benchmark-runner improvements are never silently pinned away. Verified
+this mechanism works exactly as intended: the executed code is current
+`run_benchmark.py`, but the `build_prompt` it calls is provably the
+pinned worktree's object, not main's. See the `run_pinned` helper in
+Setup, below, and the updated cell commands. `train.py` happened to be
+byte-identical between `80062bc` and current `main` this time (confirmed
+by diff) -- this run wasn't actually affected there, but the same fix
+applies to it too, since that was luck, not a guarantee.
+
 ## Two findings that update the premise before this can be finalized
 
 ### 1. Resolved: production `checkpoint-520` is not lost
@@ -380,6 +416,29 @@ Remove the worktrees only after every cell below has run and all result
 files/provenance are saved: `git -C "$REPO_ROOT" worktree remove "$OLD_WT"`
 and same for `$NEW_WT`.
 
+### The corrected pinning pattern (Round 5 fix)
+
+Pins **only** `prepare_data.py` (the prompt contract) to the given
+worktree; the script that actually executes is always the *current* one
+on `main`, so future benchmark-runner/trainer improvements are never
+silently pinned away by an old worktree commit again. Verified directly
+(see Round 5, above): the executed code is current `run_benchmark.py`,
+but the `build_prompt` it resolves via `import prepare_data` is provably
+the pinned worktree's object, not main's.
+
+```bash
+"$PY" -c "
+import sys
+sys.path.insert(0, r'\$OLD_WT/training')   # or \$NEW_WT -- whichever prompt version this cell needs
+sys.argv = ['run_benchmark.py', '<benchmark.jsonl>', '<checkpoint_dir>', '<output.json>']
+exec(compile(open(r'\$REPO_ROOT/training/run_benchmark.py').read(), 'run_benchmark.py', 'exec'), {'__name__': '__main__'})
+"
+```
+
+Substitute real absolute paths for the three `sys.argv` entries. The cell
+commands below apply this pattern directly (not via a shell-function
+wrapper, to keep every command's actual arguments visible and greppable).
+
 ## Comparison cells — one same-seed triplet at a time
 
 Screen the seed-17 triplet (A/B/C) first. Only run the seed-73 triplet if
@@ -388,19 +447,26 @@ gets its own triplet in this study (no valid Cell A, see the correction
 above); its historical result is quoted for context only.
 
 Checkpoints and datasets are read from `$REPO_ROOT` throughout (not
-duplicated into the worktrees, which only hold the pinned *code*) --
-`$OLD_WT`/`$NEW_WT` supply `prepare_data.py`'s wording via whichever
-script's own directory Python resolves `import prepare_data` against.
+duplicated into the worktrees, which only hold the pinned *code*).
+`$OLD_WT`/`$NEW_WT` supply `prepare_data.py`'s wording only -- every
+`run_benchmark.py`/`train.py` invocation below runs the *current*
+`$REPO_ROOT/training/` script via the corrected pinning pattern above,
+not the worktree's own possibly-stale copy (Round 5 fix).
 
 ### Seed-17 triplet
 
 **A. old-trained + old prompt — reference**
 ```bash
 git -C "$REPO_ROOT" status --porcelain   # must be clean before every cell
-"$PY" "$OLD_WT/training/run_benchmark.py" \
-    "$REPO_ROOT/datasets/benchmark/gold_v1.2.1_probes.jsonl" \
-    "$REPO_ROOT/training/checkpoints/gold_v1.2.2-seed17-control/checkpoint-600" \
-    "$REPO_ROOT/training/gold_v1.2.2_seed17_oldprompt_reference_results.json"
+"$PY" -c "
+import sys
+sys.path.insert(0, r'$OLD_WT/training')
+sys.argv = ['run_benchmark.py',
+    r'$REPO_ROOT/datasets/benchmark/gold_v1.2.1_probes.jsonl',
+    r'$REPO_ROOT/training/checkpoints/gold_v1.2.2-seed17-control/checkpoint-600',
+    r'$REPO_ROOT/training/gold_v1.2.2_seed17_oldprompt_reference_results.json']
+exec(compile(open(r'$REPO_ROOT/training/run_benchmark.py').read(), 'run_benchmark.py', 'exec'), {'__name__': '__main__'})
+"
 ```
 
 **B. old-trained + new prompt — deployment-risk check** (two variants,
@@ -421,10 +487,15 @@ required before the seed-17 A/B2/C cells below can run.
 
 B2, the seed-17 `checkpoint-600` replica (safetensors, direct):
 ```bash
-"$PY" "$NEW_WT/training/run_benchmark.py" \
-    "$REPO_ROOT/datasets/benchmark/gold_v1.2.1_probes.jsonl" \
-    "$REPO_ROOT/training/checkpoints/gold_v1.2.2-seed17-control/checkpoint-600" \
-    "$REPO_ROOT/training/gold_v1.2.2_seed17_newprompt_deployment_risk_results.json"
+"$PY" -c "
+import sys
+sys.path.insert(0, r'$NEW_WT/training')
+sys.argv = ['run_benchmark.py',
+    r'$REPO_ROOT/datasets/benchmark/gold_v1.2.1_probes.jsonl',
+    r'$REPO_ROOT/training/checkpoints/gold_v1.2.2-seed17-control/checkpoint-600',
+    r'$REPO_ROOT/training/gold_v1.2.2_seed17_newprompt_deployment_risk_results.json']
+exec(compile(open(r'$REPO_ROOT/training/run_benchmark.py').read(), 'run_benchmark.py', 'exec'), {'__name__': '__main__'})
+"
 ```
 
 **C. new-trained + new prompt — compatibility candidate, seed 17**
@@ -460,17 +531,36 @@ PY
 "$PY" "$NEW_WT/training/_regen_gold_v1.2.2_newprompt.py"
 rm "$NEW_WT/training/_regen_gold_v1.2.2_newprompt.py"
 
-"$PY" "$NEW_WT/training/train.py" --seed 17 \
-    --output-dir "$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed17" \
-    --data-dir "$REPO_ROOT/training/data/processed_gold_v1.2.2_control_newprompt"
-"$PY" "$NEW_WT/training/run_benchmark.py" \
-    "$REPO_ROOT/datasets/benchmark/gold_v1.2.1_probes.jsonl" \
-    "$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed17/final" \
-    "$REPO_ROOT/training/gold_v1.2.2_seed17_newprompt_candidate_results.json"
-"$PY" "$NEW_WT/training/run_benchmark.py" \
-    "$REPO_ROOT/datasets/benchmark/source_determined_bullets_acceptance.jsonl" \
-    "$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed17/final" \
-    "$REPO_ROOT/training/gold_v1.2.2_seed17_newprompt_candidate_bullets_acceptance_results.json"
+# train.py: current $REPO_ROOT code, pinned prompt contract. train.py
+# happened to be byte-identical between 80062bc and main this round
+# (confirmed by diff), but pin it the same way anyway -- that was luck,
+# not a guarantee for a future run.
+"$PY" -c "
+import sys
+sys.path.insert(0, r'$NEW_WT/training')
+sys.argv = ['train.py', '--seed', '17',
+    '--output-dir', r'$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed17',
+    '--data-dir', r'$REPO_ROOT/training/data/processed_gold_v1.2.2_control_newprompt']
+exec(compile(open(r'$REPO_ROOT/training/train.py').read(), 'train.py', 'exec'), {'__name__': '__main__'})
+"
+"$PY" -c "
+import sys
+sys.path.insert(0, r'$NEW_WT/training')
+sys.argv = ['run_benchmark.py',
+    r'$REPO_ROOT/datasets/benchmark/gold_v1.2.1_probes.jsonl',
+    r'$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed17/final',
+    r'$REPO_ROOT/training/gold_v1.2.2_seed17_newprompt_candidate_results.json']
+exec(compile(open(r'$REPO_ROOT/training/run_benchmark.py').read(), 'run_benchmark.py', 'exec'), {'__name__': '__main__'})
+"
+"$PY" -c "
+import sys
+sys.path.insert(0, r'$NEW_WT/training')
+sys.argv = ['run_benchmark.py',
+    r'$REPO_ROOT/datasets/benchmark/source_determined_bullets_acceptance.jsonl',
+    r'$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed17/final',
+    r'$REPO_ROOT/training/gold_v1.2.2_seed17_newprompt_candidate_bullets_acceptance_results.json']
+exec(compile(open(r'$REPO_ROOT/training/run_benchmark.py').read(), 'run_benchmark.py', 'exec'), {'__name__': '__main__'})
+"
 ```
 
 ### Seed-73 triplet — only if the seed-17 triplet clears the bar
