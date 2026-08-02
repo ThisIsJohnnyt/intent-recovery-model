@@ -30,15 +30,39 @@ from collections import Counter
 from pathlib import Path
 
 
+KNOWN_SEMANTIC_DIMENSIONS = {
+    "topic_completeness",
+    "attribution_accuracy",
+    "uncertainty_preservation",
+    "unsupported_addition_resistance",
+}
+
+
 def load_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def probe_passes(result: dict) -> bool:
+    """A null score means "not applicable to this probe" for ordinary
+    probes -- but for a probe that declares required_semantic_dimensions,
+    null on one of those specific dimensions means "never actually
+    scored," not "not applicable," and must fail rather than pass by
+    default. Without this, an entirely-unscored result (format_valid=True,
+    every score still null, every capability_check already True) passes
+    fail-open, since "every non-null score is 2" is vacuously true when
+    every score is null."""
     if not result.get("format_valid"):
         return False
     scores = result.get("scores", {})
     if any(v is not None and v != 2 for v in scores.values()):
+        return False
+    required_dimensions = result.get("required_semantic_dimensions", [])
+    unknown = set(required_dimensions) - KNOWN_SEMANTIC_DIMENSIONS
+    if unknown:
+        raise ValueError(
+            f"{result.get('id')}: required_semantic_dimensions names not recognized: {sorted(unknown)}"
+        )
+    if any(scores.get(dimension) != 2 for dimension in required_dimensions):
         return False
     checks = result.get("capability_checks", {})
     if any(v is not True for v in checks.values()):
@@ -141,6 +165,17 @@ def main() -> None:
     if negatives_resolved:
         resolved_ids = [r["id"] for r in negative_examples if passes[r["id"]]]
         print(f"  Known limitation(s) now fixed -- reclassify to regression_guard: {resolved_ids}")
+
+    # acceptance_gate: a new capability being checked for the first time, with
+    # no established prior-passing baseline -- unlike regression_guard, a
+    # first-run failure here is not a "regression," so it gets its own count
+    # instead of being folded into either existing category.
+    acceptance_gates = [r for r in results if r.get("status") == "acceptance_gate"]
+    gates_passed = sum(passes[r["id"]] for r in acceptance_gates)
+    print(f"\nAcceptance gates passed: {pct(gates_passed, len(acceptance_gates))}")
+    if gates_passed < len(acceptance_gates):
+        failed_gates = [r["id"] for r in acceptance_gates if not passes[r["id"]]]
+        print(f"  Not yet passing: {failed_gates}")
 
     if unscored:
         print(f"\nNote: {len(unscored)} probe(s) have at least one null score/check: {unscored}")
