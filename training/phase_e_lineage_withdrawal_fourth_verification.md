@@ -1,11 +1,11 @@
 # Phase E lineage and withdrawal — narrow fourth verification
 
-**Reviewer:** ChatGPT  
-**Repository:** `ThisIsJohnnyt/intent-recovery-model`  
-**PR:** #12  
-**Reviewed head:** `5900c19545708670000df00e9ce49ad4b13c2ebe`  
-**Scope:** the four acceptance boundaries from the focused third review  
-**Data boundary:** dummy data only; no real notes were used  
+**Reviewer:** ChatGPT
+**Repository:** `ThisIsJohnnyt/intent-recovery-model`
+**PR:** #12
+**Reviewed head:** `5900c19545708670000df00e9ce49ad4b13c2ebe`
+**Scope:** the four acceptance boundaries from the focused third review
+**Data boundary:** dummy data only; no real notes were used
 **Alignment status:** **Not yet aligned — all four exact reproductions are fixed, but four broader acceptance conditions remain incomplete**
 
 ## Executive decision

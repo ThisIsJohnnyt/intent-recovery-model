@@ -1,11 +1,11 @@
 # Phase E lineage and withdrawal — second implementation review
 
-**Reviewer:** ChatGPT  
-**Repository:** `ThisIsJohnnyt/intent-recovery-model`  
-**PR:** #12  
-**Reviewed head:** `8d1d72d8f16eff157421229fe7d92e80b37e7b81`  
-**Scope:** corrections to the seven findings in the first implementation review  
-**Data boundary:** dummy data only; real validation and holdout files remained empty  
+**Reviewer:** ChatGPT
+**Repository:** `ThisIsJohnnyt/intent-recovery-model`
+**PR:** #12
+**Reviewed head:** `8d1d72d8f16eff157421229fe7d92e80b37e7b81`
+**Scope:** corrections to the seven findings in the first implementation review
+**Data boundary:** dummy data only; real validation and holdout files remained empty
 **Alignment status:** **Not yet aligned — substantial fixes verified, residual corrections required**
 
 ## Executive decision

@@ -1,11 +1,11 @@
 # Phase E lineage and withdrawal — final narrow verification
 
-**Reviewer:** ChatGPT  
-**Repository:** `ThisIsJohnnyt/intent-recovery-model`  
-**PR:** #12  
-**Reviewed head:** `2ab864737a60fb274b4ce1388dffda442eb67f97`  
-**Scope:** the five accepted cases and four residual conditions from the fourth verification  
-**Data boundary:** dummy data only; no real notes were used  
+**Reviewer:** ChatGPT
+**Repository:** `ThisIsJohnnyt/intent-recovery-model`
+**PR:** #12
+**Reviewed head:** `2ab864737a60fb274b4ce1388dffda442eb67f97`
+**Scope:** the five accepted cases and four residual conditions from the fourth verification
+**Data boundary:** dummy data only; no real notes were used
 **Alignment status:** **Not yet aligned — all five named cases are fixed; one save-time integrity condition remains**
 
 ## Executive decision

@@ -1,11 +1,11 @@
 # Phase E lineage and withdrawal — save-context binding verification
 
-**Reviewer:** ChatGPT  
-**Repository:** `ThisIsJohnnyt/intent-recovery-model`  
-**PR:** #12  
-**Reviewed head:** `087c34f`  
-**Scope:** the final save-time semantic-validation correction  
-**Data boundary:** dummy data only; no real notes were used  
+**Reviewer:** ChatGPT
+**Repository:** `ThisIsJohnnyt/intent-recovery-model`
+**PR:** #12
+**Reviewed head:** `087c34f`
+**Scope:** the final save-time semantic-validation correction
+**Data boundary:** dummy data only; no real notes were used
 **Alignment status:** **Not yet aligned — the three named save regressions are fixed; external-context bindings remain absent from several save paths**
 
 ## Executive decision
