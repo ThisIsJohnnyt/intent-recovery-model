@@ -32,6 +32,50 @@ LOCKS_DIR = WITHDRAWALS_DIR / "locks"
 WITHDRAWAL_PLAN_SCHEMA_VERSION = "real-withdrawal-plan-v1"
 WITHDRAWAL_COMPLETION_SCHEMA_VERSION = "real-withdrawal-completion-v1"
 
+_WITHDRAWAL_PLAN_FIELDS = frozenset(
+    {
+        "schema_version",
+        "artifact_kind",
+        "withdrawal_id",
+        "created_at_utc",
+        "record_id",
+        "requested_by_actor_id",
+        "reason_code",
+        "requested_at_utc",
+        "split",
+        "manifest_source_fingerprint",
+        "prior_dataset_fingerprint",
+        "affected_generations",
+        "affected_reviews",
+        "affected_comparisons",
+        "affected_adjudications",
+        "affected_decisions",
+        "affected_seals",
+        "intended_actions",
+        "artifact_fingerprint",
+    }
+)
+_WITHDRAWAL_COMPLETION_FIELDS = frozenset(
+    {
+        "schema_version",
+        "artifact_kind",
+        "withdrawal_id",
+        "created_at_utc",
+        "record_id",
+        "plan_artifact_fingerprint",
+        "post_withdrawal_snapshot",
+        "artifact_fingerprint",
+    }
+)
+# Per the Phase E lineage/withdrawal second review's finding 3:
+# withdrawal_plan/withdrawal_completion were never registered in
+# real_data_lineage._KIND_METADATA, so the strict loader silently skipped
+# exact-field-set enforcement for both kinds -- a plan/completion with an
+# unknown or missing field passed as long as its own fingerprint was
+# recomputed over the tampered content.
+lin.register_kind_metadata("withdrawal_plan", fields=_WITHDRAWAL_PLAN_FIELDS, id_field="withdrawal_id", id_pattern=lin._ID_PATTERNS["withdrawal"])
+lin.register_kind_metadata("withdrawal_completion", fields=_WITHDRAWAL_COMPLETION_FIELDS, id_field="withdrawal_id", id_pattern=lin._ID_PATTERNS["withdrawal"])
+
 ALLOWED_REASON_CODES = ("contributor_request", "consent_expired")
 _REASON_TO_WITHDRAWAL_STATUS = {"contributor_request": "withdrawn", "consent_expired": "expired"}
 
@@ -325,6 +369,7 @@ def _build_and_save_plan(*, record_id: str, withdrawal_id: str, requested_by_act
         ],
     }
     plan["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(plan)}"
+    lin._assert_exact_fields(plan, "withdrawal_plan", withdrawal_id)
     path = _plan_path_for(withdrawal_id)
     try:
         lin._save_artifact_exclusive(path, plan)
@@ -334,11 +379,20 @@ def _build_and_save_plan(*, record_id: str, withdrawal_id: str, requested_by_act
         # legitimately resuming the same lock) must both proceed from the
         # one persisted, verified plan -- not from the loser's own
         # in-memory copy, which could differ subtly (e.g. active_records
-        # computed a moment apart) from what actually got committed.
+        # computed a moment apart) from what actually got committed. Per
+        # the Phase E lineage/withdrawal second review's finding 5, this
+        # previously compared only record_id/withdrawal_id -- a
+        # differently-parameterized racing request (different actor,
+        # reason, or requested_at_utc) would silently adopt the winner's
+        # plan with no mismatch ever surfaced. The full request identity
+        # is compared now, and any mismatch fails closed.
         persisted = _load_plan_verified(path)
-        if persisted["record_id"] != record_id or persisted["withdrawal_id"] != withdrawal_id:
+        identity_fields = ("record_id", "withdrawal_id", "requested_by_actor_id", "reason_code", "requested_at_utc")
+        mismatched = [f for f in identity_fields if persisted.get(f) != plan[f]]
+        if mismatched:
             raise WithdrawalValidationError(
-                f"plan at {path} does not match the expected record_id/withdrawal_id -- ambiguous, requires explicit recovery"
+                f"plan at {path} does not match the requested withdrawal's identity -- differing field(s) {mismatched}, "
+                "ambiguous, requires explicit recovery"
             )
         return persisted
 
@@ -543,6 +597,7 @@ def _build_and_save_completion(plan: dict, snapshot: dict | None) -> dict:
         "post_withdrawal_snapshot": {"snapshot_id": snapshot["snapshot_id"], "artifact_kind": "dataset_snapshot", "artifact_fingerprint": snapshot["artifact_fingerprint"]} if snapshot else None,
     }
     completion["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(completion)}"
+    lin._assert_exact_fields(completion, "withdrawal_completion", plan["withdrawal_id"])
     path = _completion_path_for(plan["withdrawal_id"])
     try:
         lin._save_artifact_exclusive(path, completion)

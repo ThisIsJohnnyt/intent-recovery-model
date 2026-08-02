@@ -170,18 +170,24 @@ def _build_generation_for(record_id, sfp, pfp, rfp, *, split="real_validation"):
     return artifact, saved_path
 
 
-def _build_full_lineage(generation):
-    rubric = {"record_id": generation["results"][0]["record_id"], "must_preserve": ["x"], "capability_checks": []}
-    scores = [lin.build_review_score_record(generation_record=generation["results"][0], rubric=rubric, scores={dim: True for dim in __import__("real_data_scoring").SEMANTIC_DIMENSIONS}, capability_checks={}, failure_labels=[])]
-    chatgpt_review = lin.build_review_artifact(generation=generation, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_A, independent_review_attestation=True, scores=scores)
-    claude_review = lin.build_review_artifact(generation=generation, reviewer_role="claude", reviewer_actor_id=ACTOR_B, independent_review_attestation=True, scores=scores)
-    lin.save_review_artifact(chatgpt_review, split=generation["split"], milestone=generation.get("release_milestone"))
-    lin.save_review_artifact(claude_review, split=generation["split"], milestone=generation.get("release_milestone"))
-    comparison = lin.build_comparison_artifact(chatgpt_review=chatgpt_review, claude_review=claude_review)
-    lin.save_comparison_artifact(comparison, split=generation["split"], milestone=generation.get("release_milestone"))
-    adjudication = lin.build_adjudication_artifact(comparison=comparison, chatgpt_review=chatgpt_review, claude_review=claude_review, resolution_mode="reviewer_agreement")
-    lin.save_adjudication_artifact(adjudication, split=generation["split"], milestone=generation.get("release_milestone"))
-    decision = lin.build_decision_record(decision_type="curriculum", deciding_actor_id=ACTOR_OWNER, adjudications=[adjudication], outcome="dummy decision for withdrawal test")
+def _build_full_lineage(generation, gen_path, rubric, rfp):
+    """rubric/rfp: the exact rubric (and its bare fingerprint) that was
+    bound to this record's manifest/generation entry at setup time --
+    build_review_score_record now verifies a submitted rubric's own
+    recomputed fingerprint against the generation record's bound
+    rubric_fingerprint (Phase E lineage/withdrawal second review, finding
+    2), so an unrelated ad hoc rubric can no longer be substituted here."""
+    full_rubric = {**rubric, "rubric_fingerprint": f"sha256:{rfp}"}
+    scores = [lin.build_review_score_record(generation_record=generation["results"][0], rubric=full_rubric, scores={dim: True for dim in __import__("real_data_scoring").SEMANTIC_DIMENSIONS}, capability_checks={}, failure_labels=[])]
+    chatgpt_review = lin.build_review_artifact(generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_A, independent_review_attestation=True, scores=scores)
+    claude_review = lin.build_review_artifact(generation_path=gen_path, reviewer_role="claude", reviewer_actor_id=ACTOR_B, independent_review_attestation=True, scores=scores)
+    chatgpt_path = lin.save_review_artifact(chatgpt_review, split=generation["split"], milestone=generation.get("release_milestone"))
+    claude_path = lin.save_review_artifact(claude_review, split=generation["split"], milestone=generation.get("release_milestone"))
+    comparison = lin.build_comparison_artifact(chatgpt_review_path=chatgpt_path, claude_review_path=claude_path)
+    comparison_path = lin.save_comparison_artifact(comparison, split=generation["split"], milestone=generation.get("release_milestone"))
+    adjudication = lin.build_adjudication_artifact(comparison_path=comparison_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, resolution_mode="reviewer_agreement")
+    adjudication_path = lin.save_adjudication_artifact(adjudication, split=generation["split"], milestone=generation.get("release_milestone"))
+    decision = lin.build_decision_record(decision_type="curriculum", deciding_actor_id=ACTOR_OWNER, adjudication_paths=[adjudication_path], outcome="dummy decision for withdrawal test")
     lin.save_decision_record(decision)
     return chatgpt_review, claude_review, comparison, adjudication, decision
 
@@ -313,9 +319,9 @@ def test_multi_record_generation_wholly_invalidated():
 def test_all_descendants_discovered():
     """Group 19."""
     with Sandbox() as sb:
-        record_id, _, _, _, sfp, pfp, rfp = _setup_validation_record(sb, "6")
+        record_id, _, _, rubric, sfp, pfp, rfp = _setup_validation_record(sb, "6")
         generation, gen_path = _build_generation_for(record_id, sfp, pfp, rfp)
-        chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation)
+        chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation, gen_path, rubric, rfp)
 
         completion = wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", T2)
         plan = wd._load_plan_verified(wd._plan_path_for(completion["withdrawal_id"]))
@@ -333,9 +339,9 @@ def test_invalidation_events_written():
     """Group 20 (ordering enforced by the fixed execution sequence in
     withdraw_record_validated; this confirms the events actually land)."""
     with Sandbox() as sb:
-        record_id, _, _, _, sfp, pfp, rfp = _setup_validation_record(sb, "7")
+        record_id, _, _, rubric, sfp, pfp, rfp = _setup_validation_record(sb, "7")
         generation, gen_path = _build_generation_for(record_id, sfp, pfp, rfp)
-        chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation)
+        chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation, gen_path, rubric, rfp)
 
         wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", T2)
         check("withdrawal: generation status resolves to invalidated", lin.resolve_active_status(lin._artifact_ref(generation, "evaluation_id")) == "invalidated")
@@ -383,7 +389,7 @@ def test_no_private_content_in_audit_artifacts():
         marker = "TESTMARKER_SECRET_CONTENT_MUST_NOT_LEAK"
         record_id, inp, out, rubric, sfp, pfp, rfp = _setup_validation_record(sb, "10", input_text=f"{marker} water the plants")
         generation, gen_path = _build_generation_for(record_id, sfp, pfp, rfp)
-        _build_full_lineage(generation)
+        _build_full_lineage(generation, gen_path, rubric, rfp)
 
         completion = wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", T2)
 
@@ -417,6 +423,71 @@ def test_concurrent_plan_creation_race_resolves_to_persisted_plan():
         check("plan race: only one plan file exists on disk", len(list((wd.WITHDRAWALS_DIR / withdrawal_id).glob("*.json"))) == 1)
 
 
+def test_concurrent_plan_creation_race_with_conflicting_request_fails_closed():
+    """Phase E lineage/withdrawal second review, finding 5: the plan-race
+    recovery path previously compared only record_id/withdrawal_id -- a
+    second, differently-parameterized request racing for the same
+    withdrawal_id (different actor, reason, or requested_at_utc) would
+    silently adopt the winner's persisted plan with no mismatch ever
+    surfaced. It must instead fail closed on any identity mismatch."""
+    with Sandbox() as sb:
+        record_id, *_ = _setup_validation_record(sb, "9")
+        withdrawal_id, existing_completion = wd._acquire_or_inspect_lock(record_id)
+        wd._build_and_save_plan(record_id=record_id, withdrawal_id=withdrawal_id, requested_by_actor_id=ACTOR_OWNER, reason_code="contributor_request", requested_at_utc=T2)
+
+        raised = False
+        try:
+            wd._build_and_save_plan(record_id=record_id, withdrawal_id=withdrawal_id, requested_by_actor_id=ACTOR_A, reason_code="contributor_request", requested_at_utc=T2)
+        except wd.WithdrawalValidationError:
+            raised = True
+        check("plan race: a racing request with a different requested_by_actor_id fails closed instead of silently adopting the winner", raised)
+
+        raised = False
+        try:
+            wd._build_and_save_plan(record_id=record_id, withdrawal_id=withdrawal_id, requested_by_actor_id=ACTOR_OWNER, reason_code="consent_expired", requested_at_utc=T2)
+        except wd.WithdrawalValidationError:
+            raised = True
+        check("plan race: a racing request with a different reason_code fails closed", raised)
+
+        raised = False
+        try:
+            wd._build_and_save_plan(record_id=record_id, withdrawal_id=withdrawal_id, requested_by_actor_id=ACTOR_OWNER, reason_code="contributor_request", requested_at_utc=T1)
+        except wd.WithdrawalValidationError:
+            raised = True
+        check("plan race: a racing request with a different requested_at_utc fails closed", raised)
+
+
+def test_withdrawal_plan_and_completion_kinds_registered():
+    """Phase E lineage/withdrawal second review, finding 3: withdrawal_plan
+    and withdrawal_completion must be registered kinds with their own
+    exact field set (registered by this module at import time), not
+    silently skipped by _assert_exact_fields."""
+    check("withdrawal_plan is registered in lin._KIND_METADATA", "withdrawal_plan" in lin._KIND_METADATA)
+    check("withdrawal_completion is registered in lin._KIND_METADATA", "withdrawal_completion" in lin._KIND_METADATA)
+
+    with Sandbox():
+        fake_plan = {
+            "schema_version": wd.WITHDRAWAL_PLAN_SCHEMA_VERSION,
+            "artifact_kind": "withdrawal_plan",
+            "withdrawal_id": "wd_" + "1" * 32,
+            "created_at_utc": T2,
+            "unexpected_field": "smuggled",
+        }
+        fake_plan["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(fake_plan)}"
+        tmp_dir = Path(tempfile.mkdtemp())
+        try:
+            plan_path = tmp_dir / "plan.json"
+            plan_path.write_text(json.dumps(fake_plan), encoding="utf-8")
+            raised = False
+            try:
+                wd._load_plan_verified(plan_path)
+            except lin.LineageValidationError:
+                raised = True
+            check("_load_plan_verified: rejects a withdrawal_plan with an unknown field and missing required fields", raised)
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
 # --- Group 24: crash injection -- resumable after failure at each stage ---
 
 
@@ -437,9 +508,9 @@ def test_crash_injection_resumes_correctly():
     ]
     for injection_point in injection_points:
         with Sandbox() as sb:
-            record_id, _, _, _, sfp, pfp, rfp = _setup_validation_record(sb, "1", input_text=f"TESTMARKER_CRASH_{injection_point} water the plants")
+            record_id, _, _, rubric, sfp, pfp, rfp = _setup_validation_record(sb, "1", input_text=f"TESTMARKER_CRASH_{injection_point} water the plants")
             generation, gen_path = _build_generation_for(record_id, sfp, pfp, rfp)
-            _build_full_lineage(generation)
+            _build_full_lineage(generation, gen_path, rubric, rfp)
 
             original = getattr(wd, injection_point)
 
@@ -559,9 +630,9 @@ def test_residual_evaluation_attempt_fails_before_generation():
 def test_active_storage_artifacts_absent_after_completion():
     """Group 29."""
     with Sandbox() as sb:
-        record_id, _, _, _, sfp, pfp, rfp = _setup_validation_record(sb, "6")
+        record_id, _, _, rubric, sfp, pfp, rfp = _setup_validation_record(sb, "6")
         generation, gen_path = _build_generation_for(record_id, sfp, pfp, rfp)
-        chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation)
+        chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation, gen_path, rubric, rfp)
 
         wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", T2)
         check("withdrawal: generation file absent from active storage", not gen_path.exists())
@@ -575,9 +646,9 @@ def test_active_storage_artifacts_absent_after_completion():
 def test_invalidated_decision_not_current_evidence():
     """Group 30."""
     with Sandbox() as sb:
-        record_id, _, _, _, sfp, pfp, rfp = _setup_validation_record(sb, "7")
+        record_id, _, _, rubric, sfp, pfp, rfp = _setup_validation_record(sb, "7")
         generation, gen_path = _build_generation_for(record_id, sfp, pfp, rfp)
-        chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation)
+        chatgpt_review, claude_review, comparison, adjudication, decision = _build_full_lineage(generation, gen_path, rubric, rfp)
 
         wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", T2)
         check("withdrawal: decision's status resolves to invalidated, not active", lin.resolve_active_status(lin._artifact_ref(decision, "decision_id")) == "invalidated")
@@ -595,6 +666,8 @@ def main() -> None:
         test_dataset_fingerprint_changes_and_empty_is_deterministic,
         test_no_private_content_in_audit_artifacts,
         test_concurrent_plan_creation_race_resolves_to_persisted_plan,
+        test_concurrent_plan_creation_race_with_conflicting_request_fails_closed,
+        test_withdrawal_plan_and_completion_kinds_registered,
         test_crash_injection_resumes_correctly,
         test_repeat_completed_withdrawal_is_noop,
         test_withdrawn_record_cannot_reactivate,

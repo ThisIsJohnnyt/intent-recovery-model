@@ -61,6 +61,8 @@ _GENERATION_FIELDS = frozenset(
     }
 )
 _GENERATION_RECORD_FIELDS = frozenset({"record_id", "source_fingerprint", "pair_fingerprint", "rubric_fingerprint", "raw_output", "raw_output_fingerprint", "format_valid"})
+_CHECKPOINT_FIELDS = frozenset({"path", "fingerprint", "training_seed", "run_id"})
+_DATASET_FIELDS = frozenset({"fingerprint", "record_count", "rubric_schema_version"})
 
 
 class ApprovedRootError(ValueError):
@@ -201,6 +203,7 @@ def build_generation_artifact(
     """
     if split == "real_holdout" and not release_milestone:
         raise ValueError("release_milestone is required and may not be null for holdout runs")
+    _require_unique_record_ids(results, context_label="generation results")
 
     evaluation_id = evaluation_id or new_evaluation_id()
     format_valid_count = sum(1 for r in results if r["format_valid"])
@@ -235,6 +238,13 @@ def build_generation_artifact(
     return artifact
 
 
+def _require_unique_record_ids(items: list[dict], *, context_label: str) -> None:
+    try:
+        rdm.require_unique_record_ids(items, context_label=context_label)
+    except rdm.DuplicateRecordIdError as e:
+        raise GenerationValidationError(str(e)) from e
+
+
 def _assert_generation_fields(artifact: dict, context_id) -> None:
     extra = set(artifact.keys()) - _GENERATION_FIELDS
     if extra:
@@ -245,6 +255,17 @@ def _assert_generation_fields(artifact: dict, context_id) -> None:
     own_id = artifact.get("evaluation_id")
     if not isinstance(own_id, str) or not _GENERATION_ID_RE.match(own_id):
         raise GenerationValidationError(f"{context_id}: evaluation_id is malformed: {own_id!r}")
+    try:
+        rdm.validate_utc_timestamp(artifact.get("created_at_utc"), "created_at_utc")
+    except rdm.ManifestValidationError as e:
+        raise GenerationValidationError(f"{context_id}: {e}") from e
+    checkpoint = artifact.get("checkpoint")
+    if not isinstance(checkpoint, dict) or set(checkpoint.keys()) != _CHECKPOINT_FIELDS:
+        raise GenerationValidationError(f"{context_id}: checkpoint does not have the exact expected field set {sorted(_CHECKPOINT_FIELDS)}")
+    dataset = artifact.get("dataset")
+    if not isinstance(dataset, dict) or set(dataset.keys()) != _DATASET_FIELDS:
+        raise GenerationValidationError(f"{context_id}: dataset does not have the exact expected field set {sorted(_DATASET_FIELDS)}")
+    _require_unique_record_ids(artifact.get("results", []), context_label=f"{context_id}: generation results")
     for record in artifact.get("results", []):
         extra_r = set(record.keys()) - _GENERATION_RECORD_FIELDS
         if extra_r:
@@ -283,6 +304,8 @@ def load_generation_artifact(path: Path) -> dict:
     be trusted just because it parses as JSON."""
     path = Path(path)
     _validate_any_approved_root(path)
+    if not path.exists():
+        raise GenerationValidationError(f"{path}: artifact does not exist")
     try:
         artifact = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=rdm.reject_duplicate_keys)
     except (json.JSONDecodeError, rdm.DuplicateJSONKeyError) as e:

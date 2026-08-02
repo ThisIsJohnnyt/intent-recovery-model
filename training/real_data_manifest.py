@@ -358,6 +358,33 @@ def reject_duplicate_keys(pairs: list[tuple]) -> dict:
     return dict(pairs)
 
 
+class DuplicateRecordIdError(ManifestValidationError):
+    pass
+
+
+def require_unique_record_ids(items: list[dict], *, context_label: str) -> list[str]:
+    """Rejects a duplicate record_id before any set/dict construction --
+    shared by every artifact builder (generation results, review/
+    comparison/adjudication scores, decision adjudication references,
+    dataset snapshot records) across real_data_eval_logging.py and
+    real_data_lineage.py, since converting a list with a duplicate
+    record_id into a set or dict silently discards the duplicate (a set
+    dedupes; {k: v for ...} keeps only the last value), letting a
+    duplicate submission pass an 'exact record set' check or silently
+    overwrite an earlier row. Returns the ordered list of record_ids for
+    convenience."""
+    ids = [item["record_id"] for item in items]
+    if len(set(ids)) != len(ids):
+        seen_ids: set[str] = set()
+        duplicates: set[str] = set()
+        for i in ids:
+            if i in seen_ids:
+                duplicates.add(i)
+            seen_ids.add(i)
+        raise DuplicateRecordIdError(f"{context_label}: duplicate record_id(s) not permitted: {sorted(duplicates)}")
+    return ids
+
+
 def load_manifest_strict(path: Path | None = None, *, pilot_mode: bool = True) -> dict[str, dict]:
     """Strict manifest loader: rejects invalid JSON, blank lines,
     non-object records, duplicate keys inside an object, and duplicate

@@ -39,6 +39,15 @@ DECISION_SCHEMA_VERSION = "real-eval-decision-v1"
 STATUS_EVENT_SCHEMA_VERSION = "real-lineage-status-v1"
 SNAPSHOT_SCHEMA_VERSION = "real-dataset-snapshot-v1"
 
+_KIND_SCHEMA_VERSIONS = {
+    "review": REVIEW_SCHEMA_VERSION,
+    "comparison": COMPARISON_SCHEMA_VERSION,
+    "adjudication": ADJUDICATION_SCHEMA_VERSION,
+    "decision": DECISION_SCHEMA_VERSION,
+    "status_event": STATUS_EVENT_SCHEMA_VERSION,
+    "dataset_snapshot": SNAPSHOT_SCHEMA_VERSION,
+}
+
 REVIEWER_ROLES = ("chatgpt", "claude")
 RESOLUTION_MODES = ("reviewer_agreement", "product_owner_resolution")
 DECISION_TYPES = ("curriculum", "training_budget", "seed", "checkpoint", "prompt", "release")
@@ -238,6 +247,62 @@ _KIND_METADATA = {
     "dataset_snapshot": {"fields": _SNAPSHOT_FIELDS, "id_field": "snapshot_id", "id_pattern": _ID_PATTERNS["dataset_snapshot"]},
 }
 
+# Per-kind nested single-reference fields: {kind: {field_name: (expected_ref_field_set, nullable)}}.
+# Per the Phase E lineage/withdrawal second review's finding 3, a nested
+# reference (e.g. a status event's target_artifact) was never checked for
+# its own exact field set on load -- an unknown field smuggled inside a
+# nested dict passed as long as the top-level fields and self-fingerprint
+# were consistent. real_data_withdrawal.py extends both dicts below via
+# register_kind_metadata for its own withdrawal_plan/withdrawal_completion
+# kinds, which have no nested reference fields of their own.
+_NESTED_REF_FIELDS = {
+    "review": {"generation": (_GENERATION_REF_FIELDS, False)},
+    "comparison": {
+        "generation": (_GENERATION_REF_FIELDS, False),
+        "chatgpt_review": (_ARTIFACT_REF_FIELDS, False),
+        "claude_review": (_ARTIFACT_REF_FIELDS, False),
+    },
+    "adjudication": {
+        "generation": (_GENERATION_REF_FIELDS, False),
+        "comparison": (_ARTIFACT_REF_FIELDS, False),
+        "chatgpt_review": (_ARTIFACT_REF_FIELDS, False),
+        "claude_review": (_ARTIFACT_REF_FIELDS, False),
+    },
+    "status_event": {
+        "target_artifact": (_ARTIFACT_REF_FIELDS, False),
+        "replacement_artifact": (_ARTIFACT_REF_FIELDS, True),
+    },
+    "dataset_snapshot": {"parent_snapshot": (_ARTIFACT_REF_FIELDS, True)},
+}
+# Per-kind nested list-of-reference fields: {kind: {field_name: expected_ref_field_set}}.
+_NESTED_REF_LIST_FIELDS = {
+    "decision": {"adjudications": _ARTIFACT_REF_FIELDS},
+}
+
+
+def register_kind_metadata(kind: str, *, fields: frozenset, id_field: str, id_pattern: re.Pattern) -> None:
+    """Lets a sibling module (real_data_withdrawal.py, for its
+    withdrawal_plan/withdrawal_completion kinds) extend the exact-field-set
+    registry _load_artifact_verified enforces, without real_data_lineage.py
+    needing to know that module's schemas itself. Per the Phase E lineage/
+    withdrawal second review's finding 3: withdrawal_plan/withdrawal_completion
+    were never registered here, so _assert_exact_fields silently no-op'd for
+    them and a plan/completion with an unknown or missing field passed the
+    strict loader as long as its own fingerprint was recomputed over the
+    tampered content."""
+    if kind in _KIND_METADATA:
+        raise LineageValidationError(f"kind {kind!r} is already registered")
+    _KIND_METADATA[kind] = {"fields": fields, "id_field": id_field, "id_pattern": id_pattern}
+
+
+def _assert_ref_shape(ref, *, expected_fields: frozenset, field_name: str, context_id, nullable: bool) -> None:
+    if ref is None:
+        if nullable:
+            return
+        raise LineageValidationError(f"{context_id}: {field_name} must not be null")
+    if not isinstance(ref, dict) or set(ref.keys()) != expected_fields:
+        raise LineageValidationError(f"{context_id}: {field_name} does not have the exact expected reference field set {sorted(expected_fields)}")
+
 
 def _assert_exact_fields(obj: dict, kind: str, context_id) -> None:
     """Rejects unknown or missing top-level fields for a known artifact
@@ -246,7 +311,9 @@ def _assert_exact_fields(obj: dict, kind: str, context_id) -> None:
     its schema either. A kind with no registered metadata (e.g.
     'generation', validated separately in real_data_eval_logging.py) is
     skipped, not silently accepted as fine -- callers for registered
-    kinds always pass one of the keys in _KIND_METADATA."""
+    kinds always pass one of the keys in _KIND_METADATA. Also recurses
+    into every registered nested single-reference and reference-list
+    field, checking each nested dict's exact field set the same way."""
     meta = _KIND_METADATA.get(kind)
     if meta is None:
         return
@@ -259,15 +326,21 @@ def _assert_exact_fields(obj: dict, kind: str, context_id) -> None:
     own_id = obj.get(meta["id_field"])
     if not isinstance(own_id, str) or not meta["id_pattern"].match(own_id):
         raise LineageValidationError(f"{context_id}: {meta['id_field']} is malformed: {own_id!r}")
+    for field_name, (expected_fields, nullable) in _NESTED_REF_FIELDS.get(kind, {}).items():
+        _assert_ref_shape(obj.get(field_name), expected_fields=expected_fields, field_name=field_name, context_id=context_id, nullable=nullable)
+    for field_name, expected_fields in _NESTED_REF_LIST_FIELDS.get(kind, {}).items():
+        for i, item in enumerate(obj.get(field_name, [])):
+            _assert_ref_shape(item, expected_fields=expected_fields, field_name=f"{field_name}[{i}]", context_id=context_id, nullable=False)
 
 
 def _load_artifact_verified(path: Path, *, expected_schema_version: str, expected_kind: str) -> dict:
     """Loads and verifies: duplicate-key-free JSON, schema/kind match,
-    exact field set for the kind (reject unknown or missing top-level
-    fields -- a self-consistent artifact with an extra field must not
-    pass just because its own fingerprint was recomputed over that
-    tampered content), and that the recomputed artifact_fingerprint
-    matches the stored one."""
+    exact field set for the kind including nested reference shapes
+    (reject unknown or missing top-level or nested-reference fields -- a
+    self-consistent artifact with an extra field must not pass just
+    because its own fingerprint was recomputed over that tampered
+    content), a well-formed created_at_utc, and that the recomputed
+    artifact_fingerprint matches the stored one."""
     path = Path(path)
     if not path.exists():
         raise LineageValidationError(f"{path}: artifact does not exist")
@@ -282,6 +355,10 @@ def _load_artifact_verified(path: Path, *, expected_schema_version: str, expecte
     if artifact.get("artifact_kind") != expected_kind:
         raise LineageValidationError(f"{path}: artifact_kind is {artifact.get('artifact_kind')!r}, expected {expected_kind!r}")
     _assert_exact_fields(artifact, expected_kind, path)
+    try:
+        rdm.validate_utc_timestamp(artifact.get("created_at_utc"), "created_at_utc")
+    except rdm.ManifestValidationError as e:
+        raise LineageValidationError(f"{path}: {e}") from e
     declared_fp = artifact.get("artifact_fingerprint", "")
     computed_fp = f"sha256:{rdp.artifact_fingerprint(artifact)}"
     if declared_fp != computed_fp:
@@ -301,23 +378,14 @@ def _artifact_ref(artifact: dict, id_field: str) -> dict:
 
 
 def _require_unique_record_ids(items: list[dict], *, context_label: str) -> list[str]:
-    """Rejects a duplicate record_id before any set/dict construction --
-    per the Phase E lineage/withdrawal implementation review's finding 5,
-    converting a list with a duplicate record_id into a set or dict
-    silently discards the duplicate (a set dedupes; {k: v for ...} keeps
-    only the last value), letting a duplicate submission pass an 'exact
-    record set' check or silently overwrite an earlier row. Returns the
-    ordered list of record_ids for convenience."""
-    ids = [item["record_id"] for item in items]
-    if len(set(ids)) != len(ids):
-        seen = set()
-        duplicates = set()
-        for i in ids:
-            if i in seen:
-                duplicates.add(i)
-            seen.add(i)
-        raise LineageValidationError(f"{context_label}: duplicate record_id(s) not permitted: {sorted(duplicates)}")
-    return ids
+    """Thin wrapper around the shared rdm.require_unique_record_ids,
+    re-raising as this module's own error type -- see that function's
+    docstring for why this check exists everywhere a list of records is
+    about to be converted into a set or dict."""
+    try:
+        return rdm.require_unique_record_ids(items, context_label=context_label)
+    except rdm.DuplicateRecordIdError as e:
+        raise LineageValidationError(str(e)) from e
 
 
 
@@ -332,13 +400,32 @@ def build_review_score_record(*, generation_record: dict, rubric: dict, scores: 
     names; the capability_checks *parameter* here is the reviewer's
     submitted name->pass/fail dict, which must cover that list exactly."""
     record_id = generation_record["record_id"]
-    if "capability_checks" not in rubric:
-        raise LineageValidationError(f"{record_id}: rubric is missing required 'capability_checks' field")
+    # Full schema + identity validation (record_id match, adjudicated
+    # status, well-formed fingerprint, exact field set) -- the same
+    # validator load_rubrics_strict applies, re-run here as a
+    # defense-in-depth boundary check rather than trusting a caller-
+    # supplied rubric dict at face value.
+    try:
+        rdm._validate_rubric_entry(rubric, record_id)
+    except rdm.ManifestValidationError as e:
+        raise LineageValidationError(f"{record_id}: submitted rubric failed strict validation: {e}") from e
+    # The rubric's *content* must be exactly what was bound to this record
+    # at generation time -- per the Phase E lineage/withdrawal second
+    # review's finding 2, a caller could previously substitute any rubric
+    # object (even an unrelated one) as long as it had a capability_checks
+    # key, since nothing ever compared the submitted rubric's own
+    # fingerprint against generation_record["rubric_fingerprint"].
+    try:
+        rdm.verify_fingerprint(
+            computed=rdp.rubric_fingerprint(rubric),
+            declared=generation_record["rubric_fingerprint"],
+            field_name="rubric_fingerprint",
+            record_id=record_id,
+        )
+    except rdm.ManifestValidationError as e:
+        raise LineageValidationError(f"{record_id}: submitted rubric does not match the fingerprint bound at generation time: {e}") from e
+
     required_check_names = rubric["capability_checks"]
-    if not isinstance(required_check_names, list) or not all(isinstance(c, str) and c for c in required_check_names):
-        raise LineageValidationError(f"{record_id}: rubric['capability_checks'] must be a list of non-empty strings")
-    if len(set(required_check_names)) != len(required_check_names):
-        raise LineageValidationError(f"{record_id}: rubric['capability_checks'] contains a duplicate check name")
     expected_checks = set(required_check_names)
     if set(capability_checks.keys()) != expected_checks:
         raise LineageValidationError(
@@ -379,7 +466,7 @@ def build_review_score_record(*, generation_record: dict, rubric: dict, scores: 
 
 def build_review_artifact(
     *,
-    generation: dict,
+    generation_path: Path,
     reviewer_role: str,
     reviewer_actor_id: str,
     independent_review_attestation: bool,
@@ -387,16 +474,18 @@ def build_review_artifact(
     review_notes: str | None = None,
     supersedes_review: dict | None = None,
 ) -> dict:
-    """generation: an already fingerprint-verified generation artifact
-    (see real_data_eval_logging.load_generation_artifact). scores: one
-    build_review_score_record() output per generation record -- no
-    omissions, no extras."""
+    """generation_path: the actual stored path of the generation artifact
+    this review is about -- loaded, verified, and required to be 'active'
+    here (see load_and_require_active_parent), never a caller-supplied
+    in-memory dict. scores: one build_review_score_record() output per
+    generation record -- no omissions, no extras."""
     if reviewer_role not in REVIEWER_ROLES:
         raise LineageValidationError(f"reviewer_role must be one of {REVIEWER_ROLES}, got {reviewer_role!r}")
     _require_actor_id(reviewer_actor_id, "reviewer_actor_id")
     if independent_review_attestation is not True:
         raise LineageValidationError("independent_review_attestation must be literal True -- a review cannot be recorded without attesting independence")
 
+    generation = load_and_require_active_parent(generation_path, expected_kind="generation", parent_label="generation")
     _require_unique_record_ids(generation["results"], context_label="generation results")
     _require_unique_record_ids(scores, context_label="review scores")
     generation_record_ids = {r["record_id"] for r in generation["results"]}
@@ -448,6 +537,7 @@ def load_review_verified(path: Path, generation: dict) -> dict:
     rubric-schema fingerprints, and an exactly-matching record set with
     per-record raw-output/rubric-fingerprint/format-validity agreement."""
     review = _load_artifact_verified(path, expected_schema_version=REVIEW_SCHEMA_VERSION, expected_kind="review")
+    _require_unique_record_ids(review["scores"], context_label="loaded review scores")
     # review's shape (including "generation") is guaranteed by the fingerprint
     # check above -- it's byte-identical to what build_review_artifact produced.
     gen_ref = review["generation"]
@@ -479,7 +569,13 @@ def load_review_verified(path: Path, generation: dict) -> dict:
 
 
 
-def build_comparison_artifact(*, chatgpt_review: dict, claude_review: dict) -> dict:
+def build_comparison_artifact(*, chatgpt_review_path: Path, claude_review_path: Path) -> dict:
+    """chatgpt_review_path/claude_review_path: the actual stored paths of
+    both parent reviews -- each loaded, verified, and required to be
+    'active' here (see load_and_require_active_parent), never caller-
+    supplied in-memory dicts."""
+    chatgpt_review = load_and_require_active_parent(chatgpt_review_path, expected_kind="review", parent_label="chatgpt_review")
+    claude_review = load_and_require_active_parent(claude_review_path, expected_kind="review", parent_label="claude_review")
     if chatgpt_review["reviewer_role"] != "chatgpt":
         raise LineageValidationError("chatgpt_review must have reviewer_role 'chatgpt'")
     if claude_review["reviewer_role"] != "claude":
@@ -488,8 +584,6 @@ def build_comparison_artifact(*, chatgpt_review: dict, claude_review: dict) -> d
         raise LineageValidationError("chatgpt and claude reviews must use distinct reviewer actor IDs")
     if chatgpt_review["generation"] != claude_review["generation"]:
         raise LineageValidationError("both reviews must share the exact same generation parent reference -- cannot compare reviews of different generations")
-    require_parent_active(_artifact_ref(chatgpt_review, "review_id"), parent_label="chatgpt_review")
-    require_parent_active(_artifact_ref(claude_review, "review_id"), parent_label="claude_review")
 
     _require_unique_record_ids(chatgpt_review["scores"], context_label="chatgpt_review scores")
     _require_unique_record_ids(claude_review["scores"], context_label="claude_review scores")
@@ -550,30 +644,34 @@ def save_comparison_artifact(comparison: dict, *, split: str, milestone: str | N
 
 def build_adjudication_artifact(
     *,
-    comparison: dict,
-    chatgpt_review: dict,
-    claude_review: dict,
+    comparison_path: Path,
+    chatgpt_review_path: Path,
+    claude_review_path: Path,
     resolution_mode: str,
     resolved_by_actor_id: str | None = None,
     final_scores: list[dict] | None = None,
     rubrics: dict[str, dict] | None = None,
 ) -> dict:
-    """rubrics: {record_id: rubric} -- required for product_owner_resolution
-    only, used to re-validate the capability-check key contract and
-    failure-label vocabulary for each disputed record (per the Phase E
-    lineage/withdrawal implementation review's finding 5: a product-owner
-    override was previously checked only by record-ID set and a blind
-    strict_pass recompute, with no re-validation of the submitted score
-    shape or its binding to the original generation/rubric)."""
+    """comparison_path/chatgpt_review_path/claude_review_path: the actual
+    stored paths of all three parents -- each loaded, verified, and
+    required to be 'active' here (see load_and_require_active_parent),
+    never caller-supplied in-memory dicts. rubrics: {record_id: rubric} --
+    required for product_owner_resolution only, used to re-validate the
+    capability-check key contract and failure-label vocabulary for each
+    disputed record (per the Phase E lineage/withdrawal implementation
+    review's finding 5: a product-owner override was previously checked
+    only by record-ID set and a blind strict_pass recompute, with no
+    re-validation of the submitted score shape or its binding to the
+    original generation/rubric)."""
     if resolution_mode not in RESOLUTION_MODES:
         raise LineageValidationError(f"resolution_mode must be one of {RESOLUTION_MODES}, got {resolution_mode!r}")
+    comparison = load_and_require_active_parent(comparison_path, expected_kind="comparison", parent_label="comparison")
+    chatgpt_review = load_and_require_active_parent(chatgpt_review_path, expected_kind="review", parent_label="chatgpt_review")
+    claude_review = load_and_require_active_parent(claude_review_path, expected_kind="review", parent_label="claude_review")
     if comparison["chatgpt_review"] != _artifact_ref(chatgpt_review, "review_id"):
         raise LineageValidationError("comparison's chatgpt_review reference does not match the supplied chatgpt_review")
     if comparison["claude_review"] != _artifact_ref(claude_review, "review_id"):
         raise LineageValidationError("comparison's claude_review reference does not match the supplied claude_review")
-    require_parent_active(_artifact_ref(comparison, "comparison_id"), parent_label="comparison")
-    require_parent_active(_artifact_ref(chatgpt_review, "review_id"), parent_label="chatgpt_review")
-    require_parent_active(_artifact_ref(claude_review, "review_id"), parent_label="claude_review")
 
     if resolution_mode == "reviewer_agreement":
         if comparison["alignment_status"] != "aligned":
@@ -670,14 +768,21 @@ def save_adjudication_artifact(adjudication: dict, *, split: str, milestone: str
 
 
 
-def build_decision_record(*, decision_type: str, deciding_actor_id: str, adjudications: list[dict], outcome: str, reference: str | None = None) -> dict:
+def build_decision_record(*, decision_type: str, deciding_actor_id: str, adjudication_paths: list[Path], outcome: str, reference: str | None = None) -> dict:
+    """adjudication_paths: the actual stored paths of every adjudication
+    this decision cites -- each loaded, verified, and required to be
+    'active' here (see load_and_require_active_parent), never caller-
+    supplied in-memory dicts."""
     if decision_type not in DECISION_TYPES:
         raise LineageValidationError(f"decision_type must be one of {DECISION_TYPES}, got {decision_type!r}")
     _require_actor_id(deciding_actor_id, "deciding_actor_id")
-    if not adjudications:
+    if not adjudication_paths:
         raise LineageValidationError("a decision record requires at least one adjudication reference")
-    for adjudication in adjudications:
-        require_parent_active(_artifact_ref(adjudication, "adjudication_id"), parent_label="adjudication")
+    adjudications = [load_and_require_active_parent(p, expected_kind="adjudication", parent_label="adjudication") for p in adjudication_paths]
+    _require_unique_record_ids(
+        [{"record_id": a["adjudication_id"]} for a in adjudications],
+        context_label="decision adjudication references",
+    )
 
     artifact = {
         "schema_version": DECISION_SCHEMA_VERSION,
@@ -784,6 +889,31 @@ def require_parent_active(parent_ref: dict, *, parent_label: str) -> None:
         raise ParentNotActiveError(f"{parent_label} ({parent_ref['artifact_id']}) is {status!r}, not active -- refusing to build a new descendant from it")
 
 
+def load_and_require_active_parent(path: Path, *, expected_kind: str, parent_label: str) -> dict:
+    """Loads a parent artifact from its actual stored path -- never a
+    caller-supplied in-memory dict, which could describe an artifact that
+    was never actually saved anywhere, or that has silently drifted from
+    what is really on disk -- verifies it via the strict per-kind loader
+    (schema, exact field set including nested reference shapes, self-
+    fingerprint), and requires it to resolve to 'active' before returning
+    it. Every lineage builder that consumes a parent goes through this,
+    per the Phase E lineage/withdrawal second review's finding 1:
+    resolve_active_status only ever scanned status events and defaulted an
+    artifact with zero matching events -- including one that was never
+    saved at all -- to 'active', and build_review_artifact never checked
+    its generation parent's status in the first place. Callers must use
+    the dict this returns for all subsequent processing, not whatever
+    in-memory object they originally had."""
+    if expected_kind == "generation":
+        loaded = rel.load_generation_artifact(path)
+        ref = _artifact_ref(loaded, "evaluation_id")
+    else:
+        loaded = _load_artifact_verified(path, expected_schema_version=_KIND_SCHEMA_VERSIONS[expected_kind], expected_kind=expected_kind)
+        ref = _artifact_ref(loaded, _KIND_METADATA[expected_kind]["id_field"])
+    require_parent_active(ref, parent_label=parent_label)
+    return loaded
+
+
 
 
 def build_dataset_snapshot(*, split: str, creation_reason: str, active_records: list[dict], rubric_schema_version: str, parent_snapshot: dict | None = None) -> dict:
@@ -791,6 +921,7 @@ def build_dataset_snapshot(*, split: str, creation_reason: str, active_records: 
     "pair_fingerprint", "rubric_fingerprint"} dict per currently-active
     record in split -- may be empty (an empty split still gets a
     deterministic dataset_fingerprint via real_data_private.dataset_fingerprint)."""
+    _require_unique_record_ids(active_records, context_label="dataset snapshot active_records")
     ds_fp = rdp.dataset_fingerprint(active_records, split)
     artifact = {
         "schema_version": SNAPSHOT_SCHEMA_VERSION,
