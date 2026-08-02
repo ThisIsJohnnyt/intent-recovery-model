@@ -1,0 +1,390 @@
+{
+  "gold_v1.2.2-control-seed17-steps640": {
+    "checkpoints": {
+      "630": "3fbddb2c0ee87d45f5244c57bb9c8745abdc196605cff2119164cfa36e636333",
+      "640": "1ea380f7aba9e9fd832cc1308446e394cdb86198721d5fe8e834a525e725b75f"
+    },
+    "final_hash": "1ea380f7aba9e9fd832cc1308446e394cdb86198721d5fe8e834a525e725b75f",
+    "terminal_checkpoint": 640,
+    "terminal_hash": "1ea380f7aba9e9fd832cc1308446e394cdb86198721d5fe8e834a525e725b75f",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.2-control-seed17-steps640",
+      "seed": 17,
+      "data_seed": 17,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.2-control-seed17-steps680": {
+    "checkpoints": {
+      "675": "1c57e41bfa11515007928adfbd4b54f4cee61e1b9bfcb01e9243043804c19024",
+      "680": "346bf98d122af454eca397e2fef17183b3685a03b31bceab2d06f3883694baa4"
+    },
+    "final_hash": "346bf98d122af454eca397e2fef17183b3685a03b31bceab2d06f3883694baa4",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "346bf98d122af454eca397e2fef17183b3685a03b31bceab2d06f3883694baa4",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.2-control-seed17-steps680",
+      "seed": 17,
+      "data_seed": 17,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.2-control-seed42-steps640": {
+    "checkpoints": {
+      "630": "326eda87fc5f86fab080dc608c7202f00516ecb885bf86f5cd1a248e9d9b9933",
+      "640": "fe3bf9a7126e744871387dec9c94107f56f597ab45508a15808c239c9d8bf091"
+    },
+    "final_hash": "fe3bf9a7126e744871387dec9c94107f56f597ab45508a15808c239c9d8bf091",
+    "terminal_checkpoint": 640,
+    "terminal_hash": "fe3bf9a7126e744871387dec9c94107f56f597ab45508a15808c239c9d8bf091",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.2-control-seed42-steps640",
+      "seed": 42,
+      "data_seed": 42,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.2-control-seed42-steps680": {
+    "checkpoints": {
+      "675": "c39f9d7a4aad27e68870a74c081512761fc7bf223273476597214b1b5fb1db0a",
+      "680": "bf00fe017c4307eaa1711b297c406ff988f6224405c5c29604e0ef67329abf46"
+    },
+    "final_hash": "bf00fe017c4307eaa1711b297c406ff988f6224405c5c29604e0ef67329abf46",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "bf00fe017c4307eaa1711b297c406ff988f6224405c5c29604e0ef67329abf46",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.2-control-seed42-steps680",
+      "seed": 42,
+      "data_seed": 42,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.2-control-seed73-steps640": {
+    "checkpoints": {
+      "630": "e89e8d5c0cfc4dd03e99a2e9f554db092f7ebcf2b0626bafb15a3c22fc33aad5",
+      "640": "d64ebcf37f4a6266d24330c3606f6c602415ffa9cbc60e1920ff3e8f0d10e901"
+    },
+    "final_hash": "d64ebcf37f4a6266d24330c3606f6c602415ffa9cbc60e1920ff3e8f0d10e901",
+    "terminal_checkpoint": 640,
+    "terminal_hash": "d64ebcf37f4a6266d24330c3606f6c602415ffa9cbc60e1920ff3e8f0d10e901",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.2-control-seed73-steps640",
+      "seed": 73,
+      "data_seed": 73,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.2-control-seed73-steps680": {
+    "checkpoints": {
+      "675": "2744aeaacfe2cb50425adb5ea7af14cf1556b7b64141578d74af761dd2f917a1",
+      "680": "6573c2a8dd16a209cf0d29b6a6f37112deaa4a6549ed296af8830b98c61f165e"
+    },
+    "final_hash": "6573c2a8dd16a209cf0d29b6a6f37112deaa4a6549ed296af8830b98c61f165e",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "6573c2a8dd16a209cf0d29b6a6f37112deaa4a6549ed296af8830b98c61f165e",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.2-control-seed73-steps680",
+      "seed": 73,
+      "data_seed": 73,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.2-seed17-control": {
+    "checkpoints": {
+      "585": "e3f9493e98c3b5a38f0b5d85ccb9ba68c8012e0e296063cf85067fd663656c15",
+      "600": "dcd30748027032cb7ad93fd7bb357c319a1380a1ffe3ca100f5b9ed570d1e13c"
+    },
+    "final_hash": "dcd30748027032cb7ad93fd7bb357c319a1380a1ffe3ca100f5b9ed570d1e13c",
+    "terminal_checkpoint": 600,
+    "terminal_hash": "dcd30748027032cb7ad93fd7bb357c319a1380a1ffe3ca100f5b9ed570d1e13c",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.2-seed17-control",
+      "seed": 17,
+      "data_seed": 17,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.2-seed73-control": {
+    "checkpoints": {
+      "585": "1da8c0b20c152c9fb787a1b461b57b0362ccee30d7be33f2e8dc43b21420d150",
+      "600": "ca42d679deaa86f2ba5535c28e20a554c500f055121ef63b217b791a8cdc53b3"
+    },
+    "final_hash": "ca42d679deaa86f2ba5535c28e20a554c500f055121ef63b217b791a8cdc53b3",
+    "terminal_checkpoint": 600,
+    "terminal_hash": "ca42d679deaa86f2ba5535c28e20a554c500f055121ef63b217b791a8cdc53b3",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.2-seed73-control",
+      "seed": 73,
+      "data_seed": 73,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-ablation-fixedsplit-seed17": {
+    "checkpoints": {
+      "663": "f8b0d137b136df9f636d3691d6e22e1e2492f279e67b5e3fb216e9819624b7bf",
+      "680": "6148ba2ad76b26c8b804795ffb8c7c056ee4fb738a347a8fe634133cd8fe8e99"
+    },
+    "final_hash": "6148ba2ad76b26c8b804795ffb8c7c056ee4fb738a347a8fe634133cd8fe8e99",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "6148ba2ad76b26c8b804795ffb8c7c056ee4fb738a347a8fe634133cd8fe8e99",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-ablation-fixedsplit-seed17",
+      "seed": 17,
+      "data_seed": 17,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-ablation-fixedsplit-seed42": {
+    "checkpoints": {
+      "663": "c2a02cbb18db4c4d24c4b6bb3aa09362eb0ea045e3c950757fc69af014be796a",
+      "680": "e7aca49cb1d6cbdf3d4c002c6377f208714071c380e71fb72c7c32fdd82de5e0"
+    },
+    "final_hash": "e7aca49cb1d6cbdf3d4c002c6377f208714071c380e71fb72c7c32fdd82de5e0",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "e7aca49cb1d6cbdf3d4c002c6377f208714071c380e71fb72c7c32fdd82de5e0",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-ablation-fixedsplit-seed42",
+      "seed": 42,
+      "data_seed": 42,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-ablation-fixedsplit-seed73": {
+    "checkpoints": {
+      "663": "1a038cbeae3cba80d33b6970ed96f5a50bb3c4ab261c8ecc4512eb954d18f66d",
+      "680": "5b470a4a294ea18f7084a27b3297c988f2542b92bd3bff48ee1f69def5fa507c"
+    },
+    "final_hash": "5b470a4a294ea18f7084a27b3297c988f2542b92bd3bff48ee1f69def5fa507c",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "5b470a4a294ea18f7084a27b3297c988f2542b92bd3bff48ee1f69def5fa507c",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-ablation-fixedsplit-seed73",
+      "seed": 73,
+      "data_seed": 73,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-groupC-seed42-steps640": {
+    "checkpoints": {
+      "624": "5a8b3b6ae5ae76ab24d1fd3245178478e98dbc7d209aef931f0cc52140a18eea",
+      "640": "6be587b6334074fc93ee2bd47ea165508f7db8aef0d1a580d3d932c1557b7ca4"
+    },
+    "final_hash": "6be587b6334074fc93ee2bd47ea165508f7db8aef0d1a580d3d932c1557b7ca4",
+    "terminal_checkpoint": 640,
+    "terminal_hash": "6be587b6334074fc93ee2bd47ea165508f7db8aef0d1a580d3d932c1557b7ca4",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-groupC-seed42-steps640",
+      "seed": 42,
+      "data_seed": 42,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-groupC-seed73-steps640": {
+    "checkpoints": {
+      "624": "199956327e38ec3f80539ceed8017c422a976499bca334a1ff2bb0527173208f",
+      "640": "cbca41d1da338dbac785529e94ca81a6ee71ea9d6fc1015d3fe99a56a85c29c3"
+    },
+    "final_hash": "cbca41d1da338dbac785529e94ca81a6ee71ea9d6fc1015d3fe99a56a85c29c3",
+    "terminal_checkpoint": 640,
+    "terminal_hash": "cbca41d1da338dbac785529e94ca81a6ee71ea9d6fc1015d3fe99a56a85c29c3",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-groupC-seed73-steps640",
+      "seed": 73,
+      "data_seed": 73,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-groupscreen-seed17-groupA": {
+    "checkpoints": {
+      "624": "26314933e56984f5b608ad090678c540823cc768c5377ca6ddc7e8c1ac341463",
+      "640": "99421280940f86ae99ef18f3bec766e5a5d0db24664dbbb38fce6cbaa57b3cdb"
+    },
+    "final_hash": "99421280940f86ae99ef18f3bec766e5a5d0db24664dbbb38fce6cbaa57b3cdb",
+    "terminal_checkpoint": 640,
+    "terminal_hash": "99421280940f86ae99ef18f3bec766e5a5d0db24664dbbb38fce6cbaa57b3cdb",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-groupscreen-seed17-groupA",
+      "seed": 17,
+      "data_seed": 17,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-groupscreen-seed17-groupB": {
+    "checkpoints": {
+      "624": "1b78887eed756b2aedb93ed02c94d14ced49c14be73d4d171faa6a94966a1adc",
+      "640": "8311d6fc2eed44d500f8bb09ab5d6c9eb474824d19524f9f35c6143619203ae1"
+    },
+    "final_hash": "8311d6fc2eed44d500f8bb09ab5d6c9eb474824d19524f9f35c6143619203ae1",
+    "terminal_checkpoint": 640,
+    "terminal_hash": "8311d6fc2eed44d500f8bb09ab5d6c9eb474824d19524f9f35c6143619203ae1",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-groupscreen-seed17-groupB",
+      "seed": 17,
+      "data_seed": 17,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-groupscreen-seed17-groupC": {
+    "checkpoints": {
+      "624": "cff450dd433757d59b48ba6a8696cf427fba9b4319525c89512c98eea9569d83",
+      "640": "61bdde0bc1c717e8fe561bde860cb16e659868555112c64f0404672820dd9a6d"
+    },
+    "final_hash": "61bdde0bc1c717e8fe561bde860cb16e659868555112c64f0404672820dd9a6d",
+    "terminal_checkpoint": 640,
+    "terminal_hash": "61bdde0bc1c717e8fe561bde860cb16e659868555112c64f0404672820dd9a6d",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-groupscreen-seed17-groupC",
+      "seed": 17,
+      "data_seed": 17,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-minus006-seed17-steps680": {
+    "checkpoints": {
+      "663": "535f25bd35f1920ec86ff1bc44a7ce79db602c483f98428eefce35458454e0c1",
+      "680": "cda6ef8059859a127298bf5ced41b251c6a96e6f2d57988d35cc0f9f23ac8edf"
+    },
+    "final_hash": "cda6ef8059859a127298bf5ced41b251c6a96e6f2d57988d35cc0f9f23ac8edf",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "cda6ef8059859a127298bf5ced41b251c6a96e6f2d57988d35cc0f9f23ac8edf",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-minus006-seed17-steps680",
+      "seed": 17,
+      "data_seed": 17,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-minus006-seed42-steps680": {
+    "checkpoints": {
+      "663": "d2664c6c00b0d86f92025a940b42c2e8f851f87fd6abd6a375bc9405ffd50d87",
+      "680": "3be7cf3385edeb1aab150e9e0599abc833c33ff978f9c5920595a8946ad8ad16"
+    },
+    "final_hash": "3be7cf3385edeb1aab150e9e0599abc833c33ff978f9c5920595a8946ad8ad16",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "3be7cf3385edeb1aab150e9e0599abc833c33ff978f9c5920595a8946ad8ad16",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-minus006-seed42-steps680",
+      "seed": 42,
+      "data_seed": 42,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-minus006-seed73-steps680": {
+    "checkpoints": {
+      "663": "7083310724bc3f8a15adb199412f7197fc5a361dc1dc2d0ccb20efefa58608be",
+      "680": "441b93c7a4611917fe526be4cc41fdfe40e565a219ea1777810224261cdb248d"
+    },
+    "final_hash": "441b93c7a4611917fe526be4cc41fdfe40e565a219ea1777810224261cdb248d",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "441b93c7a4611917fe526be4cc41fdfe40e565a219ea1777810224261cdb248d",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-minus006-seed73-steps680",
+      "seed": 73,
+      "data_seed": 73,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-seed17": {
+    "checkpoints": {
+      "663": "8c4fb9d35df1aade7cda4e16e47de5b0bb02460dbd6f0b9116d5e8af78f4abfa",
+      "680": "fb534be822a302a169c990f51da56e6b33fed591195dc4bea7b3ab878a6ffc46"
+    },
+    "final_hash": "fb534be822a302a169c990f51da56e6b33fed591195dc4bea7b3ab878a6ffc46",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "fb534be822a302a169c990f51da56e6b33fed591195dc4bea7b3ab878a6ffc46",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-seed17",
+      "seed": 17,
+      "data_seed": 17,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-seed42": {
+    "checkpoints": {},
+    "final_hash": "b964c7e77703b6a64f2cf88f2d6d1a6d80b43f3bacdc58dd0e2af94d8d654d4a",
+    "terminal_checkpoint": null,
+    "terminal_hash": null,
+    "final_eq_terminal": null,
+    "shape": "flat",
+    "training_args": {
+      "output_dir": "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\checkpoints\\thoughtorganizer-flan-t5",
+      "seed": 42,
+      "data_seed": null,
+      "num_train_epochs": 40
+    }
+  },
+  "gold_v1.2.3-seed73": {
+    "checkpoints": {
+      "663": "c2876586ddb2bf91042745934805efd096a5f67b4c0de227813cb2809063d0d5",
+      "680": "67555131957d7472dcb126df77560f7f53ac9232e538aaf378e50f8355d48997"
+    },
+    "final_hash": "67555131957d7472dcb126df77560f7f53ac9232e538aaf378e50f8355d48997",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "67555131957d7472dcb126df77560f7f53ac9232e538aaf378e50f8355d48997",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "checkpoints\\gold_v1.2.3-seed73",
+      "seed": 73,
+      "data_seed": 73,
+      "num_train_epochs": 40
+    }
+  },
+  "thoughtorganizer-flan-t5": {
+    "checkpoints": {
+      "663": "6a70f17c1da4cad7cd8f7270bd5745a28b1f410da46ceadc48c804faefbe2752",
+      "680": "b964c7e77703b6a64f2cf88f2d6d1a6d80b43f3bacdc58dd0e2af94d8d654d4a"
+    },
+    "final_hash": "b964c7e77703b6a64f2cf88f2d6d1a6d80b43f3bacdc58dd0e2af94d8d654d4a",
+    "terminal_checkpoint": 680,
+    "terminal_hash": "b964c7e77703b6a64f2cf88f2d6d1a6d80b43f3bacdc58dd0e2af94d8d654d4a",
+    "final_eq_terminal": true,
+    "shape": "structured",
+    "training_args": {
+      "output_dir": "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\checkpoints\\thoughtorganizer-flan-t5",
+      "seed": 42,
+      "data_seed": null,
+      "num_train_epochs": 40
+    }
+  }
+}
