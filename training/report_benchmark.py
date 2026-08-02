@@ -142,6 +142,17 @@ def main() -> None:
         resolved_ids = [r["id"] for r in negative_examples if passes[r["id"]]]
         print(f"  Known limitation(s) now fixed -- reclassify to regression_guard: {resolved_ids}")
 
+    # acceptance_gate: a new capability being checked for the first time, with
+    # no established prior-passing baseline -- unlike regression_guard, a
+    # first-run failure here is not a "regression," so it gets its own count
+    # instead of being folded into either existing category.
+    acceptance_gates = [r for r in results if r.get("status") == "acceptance_gate"]
+    gates_passed = sum(passes[r["id"]] for r in acceptance_gates)
+    print(f"\nAcceptance gates passed: {pct(gates_passed, len(acceptance_gates))}")
+    if gates_passed < len(acceptance_gates):
+        failed_gates = [r["id"] for r in acceptance_gates if not passes[r["id"]]]
+        print(f"  Not yet passing: {failed_gates}")
+
     if unscored:
         print(f"\nNote: {len(unscored)} probe(s) have at least one null score/check: {unscored}")
 

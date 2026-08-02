@@ -3,11 +3,20 @@
 **Status: design and commands only. No training or inference has been run.**
 `intent-recovery-model` PR #13 and this manifest's original version (PR #14)
 were both merged to `main` on 2026-08-02 before joint review of the design
-completed. `thought-organizer-app` PR #4 remains open. **This revision
-corrects a seed confound ChatGPT caught in the merged version** (see
-below) — treat this version, not the one merged as PR #14, as current.
-Compute is still held pending that correction being accepted and
-`thought-organizer-app` PR #4 landing.
+completed. `thought-organizer-app` PR #4 remains open. This revision
+corrects a seed confound ChatGPT caught in the merged version (see below),
+and a second round of corrections from ChatGPT's review of that fix (see
+further below) — treat this version as current, not PR #14's.
+
+**Compute waits for this design to be marked Aligned, full stop.** The
+previous wording here also said compute waits for `thought-organizer-app`
+PR #4 to land, which directly contradicted the release gate elsewhere in
+this document (PR #4 stays unmerged *until* compute passes) — ChatGPT
+caught this circularity. Corrected sequence: (1) this design gets
+reviewed and accepted, (2) the study runs, (3) `thought-organizer-app`
+PR #4 merges/activates only after a compatible checkpoint clears every
+gate. PR #4's own state (open, mergeable, cross-verified) is not a
+precondition for starting compute.
 
 ## Correction (2026-08-02): seed confound in the original screening plan
 
@@ -23,6 +32,63 @@ have real Cell A references), never seed 42 alone. The historical seed-42
 `checkpoint-600` result (13/16, old prompt) stays on record as context
 only — it is not part of the controlled comparison, and no new seed-42
 candidate is trained as part of this study.
+
+## Round 2 correction (2026-08-02): ChatGPT's review of the seed-confound fix
+
+ChatGPT reviewed the seed-confound fix above and found it correct, but
+raised four further issues before compute can start, plus fixture-specific
+revisions. All addressed in this revision:
+
+1. **Circular PR #4 dependency** — fixed above (top of document).
+2. **Commands didn't share a valid working directory.** The original
+   commands mixed `python run_benchmark.py ...` (implicitly run from
+   `training/`) with `git checkout <ref> -- training/prepare_data.py`
+   (implicitly run from the repo root) — neither convention works for
+   both. Fixed by switching to pinned Git worktrees for the two prompt
+   versions and absolute paths throughout (see Setup, below), so no
+   command depends on which directory it's launched from, and
+   `training/prepare_data.py` is never repeatedly swapped in the main
+   working tree.
+3. **`acceptance_gate`, not `regression_guard`.** The five new
+   source-determined-bullets cases have no established prior-passing
+   baseline — labeling them `regression_guard` would make
+   `report_benchmark.py` describe a first-time failure as a "regression."
+   Fixed: `datasets/benchmark/source_determined_bullets_acceptance.jsonl`
+   now uses `"status": "acceptance_gate"`, and `report_benchmark.py` has a
+   dedicated "Acceptance gates passed" section, separate from the
+   regression-guard and negative-example counts.
+4. **Score semantic correctness, not count alone.** A response with the
+   right bullet count can still omit, merge, misattribute, or invent
+   content. Fixed: each case now declares a `bullet_count_rule`
+   (`{"operator": "exact"|"max", "value": N}`, replacing the old
+   `expected_bullet_count` field) as one capability check among the
+   others `run_benchmark.py` already scaffolds from `primary_checks` --
+   a case only passes when format is valid, every scored semantic
+   dimension is `2`, and every capability check (including the bullet/
+   action-count rule) is `true`. No shortcut that checks count alone.
+
+**Fixture-specific revisions**, per ChatGPT's case-by-case review:
+- `sdb-01`, `sdb-02`: accepted as originally written, schema fields
+  updated only.
+- `sdb-03`: minor cleanup — removed a proper name ("Sam") that wasn't
+  necessary for the test and risked incidental overlap with other
+  fixtures' cast of names.
+- `sdb-04`: revised. The original self-contradicted (`expected_bullet_count:
+  7` implied an exact match while the prose said "at most seven"; it both
+  forbade merging ideas and permitted "combining" them, which is the same
+  thing) and reused "Priya," a name already used in
+  `gold_v1.2.1_probes.jsonl` probe 05 -- a real collision, not just a
+  style nit. Now uses `bullet_count_rule: {"operator": "max", "value": 7}`,
+  drops the name, and requires all eight source ideas to survive
+  somewhere across the combined output even though at most seven get
+  their own bullet line.
+- `sdb-05`: revised. The original's two restated ideas ("worried about
+  the rent" / "rent increase is stressing me out") differ enough in
+  content — one factual, one emotional — that whether it's one idea or
+  two was genuinely debatable, undermining the test. Replaced with one
+  literal, concrete task restated in different wording, and added an
+  `action_count_rule` alongside `bullet_count_rule` since the same
+  restated-task risk applies to `action_items`, not only `bullets`.
 
 ## Two findings that update the premise before this can be finalized
 
@@ -144,6 +210,59 @@ clean single-variable change, not a second confound.
   - New contract (`source-determined-bullets-v1`, PR #13 / PR #4):
     `161661198071fd81310681f69381ec8e0287141e1e75b09d3a342414af31ccf1`
 
+## Setup: pinned worktrees + recorded provenance (run once)
+
+Two immutable, side-by-side checkouts instead of repeatedly swapping
+`training/prepare_data.py` inside one working tree. Everything below uses
+absolute paths, so no command depends on which directory it's launched
+from.
+
+```bash
+# Run from the repo root, once, first. `pwd -W` (not plain `pwd`), since
+# this repo's Python is a native Windows binary invoked from Git Bash --
+# plain `pwd`'s POSIX-style path (/c/Users/...) isn't a path Windows
+# Python can resolve; `pwd -W` gives the Windows-style equivalent it needs.
+export REPO_ROOT="$(pwd -W)"
+export PY="$REPO_ROOT/training/venv/Scripts/python.exe"
+export OLD_WT="$REPO_ROOT/../irm-study-old-prompt"
+export NEW_WT="$REPO_ROOT/../irm-study-new-prompt"
+
+# Must print nothing -- don't proceed on a dirty tree.
+git -C "$REPO_ROOT" status --porcelain
+
+# 8d7aa09 = last commit before PR #13 merged (old "3 to 7 lines" prompt).
+# 80062bc = PR #13's merge commit (source-determined-bullets-v1 prompt).
+git -C "$REPO_ROOT" worktree add "$OLD_WT" 8d7aa09
+git -C "$REPO_ROOT" worktree add "$NEW_WT" 80062bc
+
+# Record commit + fingerprint for both, before running anything. Save this
+# output alongside the results -- it's the provenance record for every
+# cell below.
+git -C "$OLD_WT" rev-parse HEAD
+"$PY" -c "
+import sys; sys.path.insert(0, r'$OLD_WT/training')
+import prepare_data as pd, real_data_private as rdp
+print('old contract fingerprint:', rdp.prompt_contract_fingerprint(pd.build_prompt(rdp.PROMPT_CONTRACT_FIXTURE)))
+"
+git -C "$NEW_WT" rev-parse HEAD
+"$PY" -c "
+import sys; sys.path.insert(0, r'$NEW_WT/training')
+import prepare_data as pd, real_data_private as rdp
+print('PROMPT_CONTRACT_VERSION:', pd.PROMPT_CONTRACT_VERSION)
+print('new contract fingerprint:', rdp.prompt_contract_fingerprint(pd.build_prompt(rdp.PROMPT_CONTRACT_FIXTURE)))
+"
+```
+
+Expected fingerprints (both already independently verified earlier this
+session -- the setup output above should match exactly, or stop and
+investigate before running anything else):
+- old: `b325c0640db95f238ac97cc4b254db6347df78144fed0ddb2e6a084bba20e4c5`
+- new: `161661198071fd81310681f69381ec8e0287141e1e75b09d3a342414af31ccf1`
+
+Remove the worktrees only after every cell below has run and all result
+files/provenance are saved: `git -C "$REPO_ROOT" worktree remove "$OLD_WT"`
+and same for `$NEW_WT`.
+
 ## Comparison cells — one same-seed triplet at a time
 
 Screen the seed-17 triplet (A/B/C) first. Only run the seed-73 triplet if
@@ -151,66 +270,69 @@ seed 17 clears the material-regression bar defined below. Seed 42 never
 gets its own triplet in this study (no valid Cell A, see the correction
 above); its historical result is quoted for context only.
 
-Each `git checkout <ref> -- training/prepare_data.py` below leaves that
-version checked out in the working tree until the next such command
-overwrites it -- restore it to `main`'s committed state
-(`git checkout main -- training/prepare_data.py`) once finished, so the
-working tree doesn't sit on a stale swapped-in copy.
+Checkpoints and datasets are read from `$REPO_ROOT` throughout (not
+duplicated into the worktrees, which only hold the pinned *code*) --
+`$OLD_WT`/`$NEW_WT` supply `prepare_data.py`'s wording via whichever
+script's own directory Python resolves `import prepare_data` against.
 
 ### Seed-17 triplet
 
 **A. old-trained + old prompt — reference**
-```
-git checkout 8d7aa09 -- training/prepare_data.py   # old prompt wording -- main now has the NEW prompt post-PR#13; 8d7aa09 is the last commit before it merged
-python run_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
-    checkpoints/gold_v1.2.2-seed17-control/checkpoint-600 \
-    gold_v1.2.2_seed17_oldprompt_reference_results.json
+```bash
+git -C "$REPO_ROOT" status --porcelain   # must be clean before every cell
+"$PY" "$OLD_WT/training/run_benchmark.py" \
+    "$REPO_ROOT/datasets/benchmark/gold_v1.2.1_probes.jsonl" \
+    "$REPO_ROOT/training/checkpoints/gold_v1.2.2-seed17-control/checkpoint-600" \
+    "$REPO_ROOT/training/gold_v1.2.2_seed17_oldprompt_reference_results.json"
 ```
 
 **B. old-trained + new prompt — deployment-risk check** (two variants,
 both cheap: inference only, no training)
 
 B1, the actual production model (checkpoint-520, ONNX — not seed-specific,
-same for both triplets, run once):
-```
-git checkout main -- training/prepare_data.py   # new prompt wording -- PR #13 merged, main has it now
-# Requires a small ORTModelForSeq2SeqLM-based variant of run_benchmark.py
-# (not yet written) pointed at the downloaded checkpoint-520 release assets.
-python run_benchmark_onnx.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
-    <path-to-downloaded-checkpoint-520-onnx-release> \
-    checkpoint520_newprompt_deployment_risk_results.json
-```
+run once total, not once per triplet):
+
+**Not yet implemented** — `run_benchmark_onnx.py` doesn't exist. It needs
+writing: a variant of `run_benchmark.py` that loads via
+`optimum.onnxruntime.ORTModelForSeq2SeqLM.from_pretrained` (pointed at the
+downloaded checkpoint-520 release assets) instead of
+`AutoModelForSeq2SeqLM`, and imports `build_prompt` from `$NEW_WT/training`
+(checkpoint-520 would be served the new prompt in production, per the
+deployment-risk question this cell answers). Not sketching a fake CLI for
+it here since it isn't built -- writing it is separate follow-up work, not
+required before the seed-17 A/B2/C cells below can run.
 
 B2, the seed-17 `checkpoint-600` replica (safetensors, direct):
-```
-git checkout main -- training/prepare_data.py   # new prompt wording -- PR #13 merged, main has it now
-python run_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
-    checkpoints/gold_v1.2.2-seed17-control/checkpoint-600 \
-    gold_v1.2.2_seed17_newprompt_deployment_risk_results.json
+```bash
+"$PY" "$NEW_WT/training/run_benchmark.py" \
+    "$REPO_ROOT/datasets/benchmark/gold_v1.2.1_probes.jsonl" \
+    "$REPO_ROOT/training/checkpoints/gold_v1.2.2-seed17-control/checkpoint-600" \
+    "$REPO_ROOT/training/gold_v1.2.2_seed17_newprompt_deployment_risk_results.json"
 ```
 
 **C. new-trained + new prompt — compatibility candidate, seed 17**
-```
-git checkout main -- training/prepare_data.py   # new prompt wording -- PR #13 merged, main has it now
-
+```bash
 # Regenerate the gold_v1.2.2-only split under the new prompt (writes a new
 # directory, does not touch the existing old-prompt copy). Run once --
 # reused by both seed triplets, since the split itself isn't seed-dependent.
-python - <<'PY'
+# Written into $NEW_WT/training/ so its own `import prepare_data as pd`
+# resolves to the pinned new-contract copy.
+cat > "$NEW_WT/training/_regen_gold_v1.2.2_newprompt.py" <<'PY'
+import os, subprocess, json
 from pathlib import Path
-import subprocess, json
 import prepare_data as pd
 
+repo_root = os.environ["REPO_ROOT"]
 synthetic_66 = subprocess.run(
-    ["git", "show", "HEAD:datasets/synthetic.jsonl"],
-    capture_output=True, text=True, check=True,
+    ["git", "-C", repo_root, "show", "8d7aa09:datasets/synthetic.jsonl"],
+    capture_output=True, encoding="utf-8", check=True,
 ).stdout
 records = [pd.validate_record(json.loads(l), "synthetic.jsonl", i)
            for i, l in enumerate(synthetic_66.splitlines(), 1) if l.strip()]
 val_hashes = pd.load_val_hashes(pd.SPLIT_MANIFEST_PATH)
 train_split, val_split = pd.split_by_manifest(records, val_hashes)
 
-out = Path("data/processed_gold_v1.2.2_control_newprompt")
+out = Path(repo_root) / "training" / "data" / "processed_gold_v1.2.2_control_newprompt"
 out.mkdir(parents=True, exist_ok=True)
 for name, split in [("train.jsonl", train_split), ("val.jsonl", val_split)]:
     with (out / name).open("w", encoding="utf-8") as f:
@@ -218,28 +340,33 @@ for name, split in [("train.jsonl", train_split), ("val.jsonl", val_split)]:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     print(name, len(split))
 PY
+"$PY" "$NEW_WT/training/_regen_gold_v1.2.2_newprompt.py"
+rm "$NEW_WT/training/_regen_gold_v1.2.2_newprompt.py"
 
-python train.py --seed 17 \
-    --output-dir checkpoints/gold_v1.2.2-newprompt-seed17 \
-    --data-dir data/processed_gold_v1.2.2_control_newprompt
-python run_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
-    checkpoints/gold_v1.2.2-newprompt-seed17/final \
-    gold_v1.2.2_seed17_newprompt_candidate_results.json
-python run_benchmark.py datasets/benchmark/source_determined_bullets_acceptance.jsonl \
-    checkpoints/gold_v1.2.2-newprompt-seed17/final \
-    gold_v1.2.2_seed17_newprompt_candidate_bullets_acceptance_results.json
+"$PY" "$NEW_WT/training/train.py" --seed 17 \
+    --output-dir "$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed17" \
+    --data-dir "$REPO_ROOT/training/data/processed_gold_v1.2.2_control_newprompt"
+"$PY" "$NEW_WT/training/run_benchmark.py" \
+    "$REPO_ROOT/datasets/benchmark/gold_v1.2.1_probes.jsonl" \
+    "$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed17/final" \
+    "$REPO_ROOT/training/gold_v1.2.2_seed17_newprompt_candidate_results.json"
+"$PY" "$NEW_WT/training/run_benchmark.py" \
+    "$REPO_ROOT/datasets/benchmark/source_determined_bullets_acceptance.jsonl" \
+    "$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed17/final" \
+    "$REPO_ROOT/training/gold_v1.2.2_seed17_newprompt_candidate_bullets_acceptance_results.json"
 ```
 
 ### Seed-73 triplet — only if the seed-17 triplet clears the bar
 
-Identical structure, seed 73 throughout: Cell A against
-`checkpoints/gold_v1.2.2-seed73-control/checkpoint-600` with the old
-prompt; Cell B2 against the same checkpoint with the new prompt (B1,
+Identical structure and identical `$OLD_WT`/`$NEW_WT`/split, seed 73
+throughout: Cell A against
+`$REPO_ROOT/training/checkpoints/gold_v1.2.2-seed73-control/checkpoint-600`
+via `$OLD_WT`; Cell B2 against the same checkpoint via `$NEW_WT` (B1,
 checkpoint-520, doesn't repeat — it's not seed-specific); Cell C trains
-`checkpoints/gold_v1.2.2-newprompt-seed73` from the same
-`data/processed_gold_v1.2.2_control_newprompt` split, `--seed 73`, then
-runs both `gold_v1.2.1_probes.jsonl` and
-`source_determined_bullets_acceptance.jsonl` against it.
+`$REPO_ROOT/training/checkpoints/gold_v1.2.2-newprompt-seed73` from the
+already-regenerated `data/processed_gold_v1.2.2_control_newprompt` split
+(no need to regenerate it again), `--seed 73`, then runs both probe files
+against it exactly as in the seed-17 triplet.
 
 `train.py --output-dir` defaults to refusing a non-empty target directory
 (`--force` is off by default, specifically because this is the mechanism
@@ -263,18 +390,27 @@ regression only if **all four** hold:
 3. **No reduction in overall strict passes** — Cell C's total pass count
    across all 16 probes must be >= that seed's Cell A pass count.
 4. **Passes the source-determined-bullets acceptance set** —
-   `datasets/benchmark/source_determined_bullets_acceptance.jsonl` (new,
-   this revision — 5 draft dummy cases covering the floor, a natural
-   count, the 7-line ceiling, and the "don't repeat content to hit a
-   target count" failure mode specifically). Every case's
-   `expected_bullet_count` must match exactly. This is the one check with
-   no Cell A equivalent, since Cell A ran under the old contract and
-   wouldn't be expected to satisfy the new rule -- it's evaluated as a
-   standalone pass/fail against the candidate only.
+   `datasets/benchmark/source_determined_bullets_acceptance.jsonl` (5
+   draft dummy cases, `"status": "acceptance_gate"`, covering the floor, a
+   natural count, the 7-line ceiling, and the "don't repeat content to
+   hit a target count" failure mode for both bullets and action items).
+   Reported separately via `report_benchmark.py`'s "Acceptance gates
+   passed" section, never folded into the regression-guard or
+   negative-example counts. A case passes only under the full strict
+   rule: format valid, every scored semantic dimension exactly `2`, every
+   capability check exactly `true` -- including
+   `BULLET_COUNT_RULE_SATISFIED`/`ACTION_COUNT_RULE_SATISFIED`, which must
+   be evaluated against that case's `bullet_count_rule`/`action_count_rule`
+   (`operator`: `exact` or `max`, `value`: N), not just checked as a raw
+   count match. This is the one check with no Cell A equivalent, since
+   Cell A ran under the old contract and wouldn't be expected to satisfy
+   the new rule -- it's evaluated as a standalone pass/fail against the
+   candidate only.
 
-This acceptance set is a draft proposal, not yet reviewed — flagging that
-explicitly rather than treating 5 self-authored cases as sufficient
-without a second pass.
+This acceptance set is a draft proposal (revised once already per
+ChatGPT's fixture-by-fixture review — see Round 2 correction, above),
+still not independently re-reviewed after that revision — flagging that
+explicitly rather than treating it as settled.
 
 ## Release gate
 
@@ -284,4 +420,6 @@ confound-containing version as PR #14). That doesn't change the substance
 of the gate: nothing deploys, and `thought-organizer-app` PR #4 stays
 open/unmerged, until a same-seed-controlled Cell C checkpoint passes all
 four material-regression checks above. This manifest only prepares the
-comparison; it doesn't authorize running it.
+comparison; it doesn't authorize running it. Compute starts once this
+design itself -- not PR #4 -- is reviewed and marked Aligned (see the
+circular-dependency fix at the top of this document).
