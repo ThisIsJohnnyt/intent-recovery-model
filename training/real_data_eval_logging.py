@@ -280,8 +280,15 @@ def save_generation_artifact(artifact: dict) -> Path:
     overwriting if evaluation_id has already been used. Generation
     artifacts are immutable -- a review/comparison/adjudication is a
     separate artifact that references this one, never a second write to
-    the same path."""
+    the same path. Re-validates the full schema and recomputed fingerprint
+    immediately before writing -- a builder already validates once before
+    returning, but nothing stops a caller from mutating the in-memory dict
+    afterward (Phase E lineage/withdrawal third review, finding 2)."""
     path = result_path_for(artifact["split"], artifact["evaluation_id"], artifact.get("release_milestone"))
+    _assert_generation_fields(artifact, artifact.get("evaluation_id"))
+    computed_fp = f"sha256:{rdp.artifact_fingerprint(artifact)}"
+    if artifact.get("artifact_fingerprint") != computed_fp:
+        raise GenerationValidationError(f"{path}: artifact_fingerprint does not match recomputed content -- refusing to save")
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(artifact, indent=2, ensure_ascii=False)
     try:

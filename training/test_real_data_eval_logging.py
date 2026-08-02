@@ -138,8 +138,12 @@ def test_approved_root_enforcement_and_roundtrip():
             check("load_generation_artifact: detects a tampered artifact_fingerprint", True)
 
         # Immutability: saving again with the same evaluation_id must not
-        # silently overwrite the original.
+        # silently overwrite the original -- a self-consistent artifact
+        # (fingerprint recomputed over the changed content) under the same
+        # ID must still be refused by exclusive-create, not merely an
+        # internally-inconsistent one caught by save-time re-validation.
         tampered = {**artifact, "evaluation_reason": "an attempt to overwrite the original"}
+        tampered["artifact_fingerprint"] = f"sha256:{rel.rdp.artifact_fingerprint(tampered)}"
         try:
             rel.save_generation_artifact(tampered)
             check("save_generation_artifact: refuses to overwrite an existing evaluation_id", False)

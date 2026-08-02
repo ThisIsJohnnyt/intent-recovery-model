@@ -177,14 +177,23 @@ def _build_review(generation, generation_path, role, actor_id, *, all_pass=True)
     return review, path
 
 
+def _generation_path_for(generation: dict) -> Path:
+    return rel.result_path_for(generation["split"], generation["evaluation_id"], generation.get("release_milestone"))
+
+
 def _build_comparison(chatgpt_path, claude_path, generation) -> tuple[dict, Path]:
-    comparison = lin.build_comparison_artifact(chatgpt_review_path=chatgpt_path, claude_review_path=claude_path)
+    comparison = lin.build_comparison_artifact(
+        chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=_generation_path_for(generation), rubrics=_RUBRICS_BY_RECORD_ID
+    )
     path = lin.save_comparison_artifact(comparison, split=generation["split"], milestone=generation.get("release_milestone"))
     return comparison, path
 
 
 def _build_adjudication(comparison_path, chatgpt_path, claude_path, generation, **kwargs) -> tuple[dict, Path]:
-    adjudication = lin.build_adjudication_artifact(comparison_path=comparison_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, **kwargs)
+    kwargs.setdefault("rubrics", _RUBRICS_BY_RECORD_ID)
+    adjudication = lin.build_adjudication_artifact(
+        comparison_path=comparison_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=_generation_path_for(generation), **kwargs
+    )
     path = lin.save_adjudication_artifact(adjudication, split=generation["split"], milestone=generation.get("release_milestone"))
     return adjudication, path
 
@@ -273,14 +282,9 @@ def test_review_must_match_generation_record_set_and_fingerprints():
 
     tampered_fp_scores = [{**scores[0], "generation_raw_output_fingerprint": "sha256:" + "9" * 64}, scores[1]]
     review = lin.build_review_artifact(generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=tampered_fp_scores)
-    tmp_dir = Path(tempfile.mkdtemp())
-    try:
-        review_path = tmp_dir / "review.json"
-        review_path.write_text(json.dumps(review), encoding="utf-8")
-        err = _expect_error(lin.LineageValidationError, lin.load_review_verified, review_path, generation)
-        check("load_review_verified: rejects a review whose raw_output_fingerprint doesn't match generation", err is not None, err)
-    finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+    review_path = lin.save_review_artifact(review, split=generation["split"], milestone=generation.get("release_milestone"))
+    err = _expect_error(lin.LineageValidationError, lin.load_review_verified, review_path, generation, _RUBRICS_BY_RECORD_ID)
+    check("load_review_verified: rejects a review whose raw_output_fingerprint doesn't match generation", err is not None, err)
 
 
 # --- Group 5: non-boolean, null, partial, missing, or extra scores fail ---
@@ -383,11 +387,15 @@ def test_reviewer_roles_and_actors_distinct():
     generation, gen_path = _dummy_generation()
     _, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT)
     _, same_actor_path = _build_review(generation, gen_path, "claude", ACTOR_CHATGPT)  # same actor as chatgpt -- invalid
-    err = _expect_error(lin.LineageValidationError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=same_actor_path)
+    err = _expect_error(
+        lin.LineageValidationError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=same_actor_path, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID
+    )
     check("build_comparison_artifact: identical reviewer_actor_id across roles rejected", err is not None, err)
 
     _, wrong_role_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CLAUDE)
-    err = _expect_error(lin.LineageValidationError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=wrong_role_path)
+    err = _expect_error(
+        lin.LineageValidationError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=wrong_role_path, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID
+    )
     check("build_comparison_artifact: claude_review with reviewer_role='chatgpt' rejected", err is not None, err)
 
 
@@ -400,7 +408,9 @@ def test_comparison_requires_same_generation():
     generation2, gen_path2 = _dummy_generation()  # different evaluation_id
     _, chatgpt_path = _build_review(generation1, gen_path1, "chatgpt", ACTOR_CHATGPT)
     _, claude_path = _build_review(generation2, gen_path2, "claude", ACTOR_CLAUDE)
-    err = _expect_error(lin.LineageValidationError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path)
+    err = _expect_error(
+        lin.LineageValidationError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path1, rubrics=_RUBRICS_BY_RECORD_ID
+    )
     check("build_comparison_artifact: reviews of different generations rejected", err is not None, err)
 
 
@@ -430,7 +440,16 @@ def test_reviewer_agreement_requires_alignment():
     chatgpt_review, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT, all_pass=True)
     claude_review, claude_path = _build_review(generation, gen_path, "claude", ACTOR_CLAUDE, all_pass=False)
     disagree_comparison, disagree_path = _build_comparison(chatgpt_path, claude_path, generation)
-    err = _expect_error(lin.LineageValidationError, lin.build_adjudication_artifact, comparison_path=disagree_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, resolution_mode="reviewer_agreement")
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.build_adjudication_artifact,
+        comparison_path=disagree_path,
+        chatgpt_review_path=chatgpt_path,
+        claude_review_path=claude_path,
+        generation_path=gen_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
+        resolution_mode="reviewer_agreement",
+    )
     check("build_adjudication_artifact: reviewer_agreement on a disagreement rejected", err is not None, err)
 
     _, claude_aligned_path = _build_review(generation, gen_path, "claude", ACTOR_CLAUDE, all_pass=True)
@@ -454,6 +473,8 @@ def test_product_owner_resolution_required_for_disagreement():
         comparison_path=aligned_path,
         chatgpt_review_path=chatgpt_path,
         claude_review_path=claude_aligned_path,
+        generation_path=gen_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
         resolution_mode="product_owner_resolution",
         resolved_by_actor_id=ACTOR_OWNER,
         final_scores=chatgpt_review["scores"],
@@ -468,6 +489,8 @@ def test_product_owner_resolution_required_for_disagreement():
         comparison_path=disagree_path,
         chatgpt_review_path=chatgpt_path,
         claude_review_path=claude_disagree_path,
+        generation_path=gen_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
         resolution_mode="product_owner_resolution",
     )
     check("build_adjudication_artifact: product_owner_resolution without resolved_by_actor_id/final_scores rejected", err is not None, err)
@@ -490,6 +513,7 @@ def test_product_owner_resolution_required_for_disagreement():
         comparison_path=disagree_path,
         chatgpt_review_path=chatgpt_path,
         claude_review_path=claude_disagree_path,
+        generation_path=gen_path,
         resolution_mode="product_owner_resolution",
         resolved_by_actor_id=ACTOR_OWNER,
         final_scores=chatgpt_review["scores"],
@@ -503,6 +527,7 @@ def test_product_owner_resolution_required_for_disagreement():
         comparison_path=disagree_path,
         chatgpt_review_path=chatgpt_path,
         claude_review_path=claude_disagree_path,
+        generation_path=gen_path,
         resolution_mode="product_owner_resolution",
         resolved_by_actor_id=ACTOR_OWNER,
         final_scores=tampered_final_scores,
@@ -517,6 +542,7 @@ def test_product_owner_resolution_required_for_disagreement():
         comparison_path=disagree_path,
         chatgpt_review_path=chatgpt_path,
         claude_review_path=claude_disagree_path,
+        generation_path=gen_path,
         resolution_mode="product_owner_resolution",
         resolved_by_actor_id=ACTOR_OWNER,
         final_scores=duplicate_final_scores,
@@ -564,14 +590,18 @@ def test_status_resolution_and_superseded_parent_blocking():
         lin.save_status_event(event)
         check("resolve_active_status: reflects a superseded status event", lin.resolve_active_status(review_ref) == "superseded")
 
-        err = _expect_error(lin.ParentNotActiveError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path)
+        err = _expect_error(
+            lin.ParentNotActiveError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID
+        )
         check("build_comparison_artifact: refuses to build from a superseded review parent", err is not None, err)
 
         invalidate_event = lin.build_status_event(target_artifact=chatgpt_review, target_id_field="review_id", new_status="invalidated", reason_code="withdrawal", actor_id=ACTOR_CHATGPT)
         lin.save_status_event(invalidate_event)
         check("resolve_active_status: invalidated beats superseded when both exist", lin.resolve_active_status(review_ref) == "invalidated")
 
-        err = _expect_error(lin.ParentNotActiveError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path)
+        err = _expect_error(
+            lin.ParentNotActiveError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID
+        )
         check("build_comparison_artifact: refuses to build from an invalidated review parent", err is not None, err)
 
         # A comparison/adjudication built while both reviews were still
@@ -583,7 +613,16 @@ def test_status_resolution_and_superseded_parent_blocking():
         comparison, comparison_path = _build_comparison(aligned_chatgpt_path, aligned_claude_path, generation)
         comparison_event = lin.build_status_event(target_artifact=comparison, target_id_field="comparison_id", new_status="invalidated", reason_code="withdrawal", actor_id=ACTOR_CHATGPT)
         lin.save_status_event(comparison_event)
-        err = _expect_error(lin.ParentNotActiveError, lin.build_adjudication_artifact, comparison_path=comparison_path, chatgpt_review_path=aligned_chatgpt_path, claude_review_path=aligned_claude_path, resolution_mode="reviewer_agreement")
+        err = _expect_error(
+            lin.ParentNotActiveError,
+            lin.build_adjudication_artifact,
+            comparison_path=comparison_path,
+            chatgpt_review_path=aligned_chatgpt_path,
+            claude_review_path=aligned_claude_path,
+            generation_path=gen_path,
+            rubrics=_RUBRICS_BY_RECORD_ID,
+            resolution_mode="reviewer_agreement",
+        )
         check("build_adjudication_artifact: refuses to build from an invalidated comparison parent", err is not None, err)
 
         # And an invalidated adjudication must block a decision citing it.
@@ -613,8 +652,97 @@ def test_never_saved_parent_rejected():
 
     _, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT)
     unsaved_review_path = chatgpt_path.parent / "review_never_saved00000000000000.json"
-    err = _expect_error(lin.LineageValidationError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=unsaved_review_path)
+    err = _expect_error(
+        lin.LineageValidationError, lin.build_comparison_artifact, chatgpt_review_path=chatgpt_path, claude_review_path=unsaved_review_path, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID
+    )
     check("build_comparison_artifact: a review path that was never actually saved is rejected", err is not None, err)
+
+
+def test_parent_copied_outside_canonical_location_rejected():
+    """Phase E lineage/withdrawal third review, finding 1: a valid, active
+    review copied to some other location -- even one still nominally
+    'under' the approved results tree -- must not be accepted as a stored
+    parent just because it exists and is self-consistent. Reproduces the
+    review's outside_storage_parents_accepted live finding."""
+    generation, gen_path = _dummy_generation()
+    _, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT)
+    _, claude_path = _build_review(generation, gen_path, "claude", ACTOR_CLAUDE)
+
+    outside_dir = Path(tempfile.mkdtemp())
+    try:
+        copied_path = outside_dir / "copied_review.json"
+        copied_path.write_text(chatgpt_path.read_text(encoding="utf-8"), encoding="utf-8")
+        err = _expect_error(
+            lin.LineageValidationError,
+            lin.build_comparison_artifact,
+            chatgpt_review_path=copied_path,
+            claude_review_path=claude_path,
+            generation_path=gen_path,
+            rubrics=_RUBRICS_BY_RECORD_ID,
+        )
+        check("build_comparison_artifact: a review copied entirely outside the approved root is rejected", err is not None, err)
+    finally:
+        shutil.rmtree(outside_dir, ignore_errors=True)
+
+    # Copied to a location that IS still under the approved validation
+    # root, but not the canonical reviews/ directory for this evaluation_id.
+    wrong_location = gen_path.parent / "not_the_real_reviews_dir" / "copied_review.json"
+    wrong_location.parent.mkdir(parents=True, exist_ok=True)
+    wrong_location.write_text(chatgpt_path.read_text(encoding="utf-8"), encoding="utf-8")
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.build_comparison_artifact,
+        chatgpt_review_path=wrong_location,
+        claude_review_path=claude_path,
+        generation_path=gen_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
+    )
+    check("build_comparison_artifact: a review copied to a non-canonical location under the approved root is rejected", err is not None, err)
+
+
+def test_save_with_mutated_id_cannot_escape_root():
+    """Phase E lineage/withdrawal third review, finding 2: nothing
+    previously stopped a caller from mutating an in-memory artifact's own
+    ID field (which the save path is derived from) between build and
+    save. Reproduces the review's save_path_left_validation_root live
+    finding."""
+    generation, gen_path = _dummy_generation()
+    review = lin.build_review_artifact(
+        generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=_score_all(generation)
+    )
+    escaping = {**review, "review_id": "review_" + "../" * 10 + "escaped"}
+    escaping["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(escaping)}"
+    err = _expect_error(lin.LineageValidationError, lin.save_review_artifact, escaping, split=generation["split"], milestone=generation.get("release_milestone"))
+    check("save_review_artifact: a mutated, path-shaped review_id is rejected before any write, not written outside the lineage root", err is not None, err)
+
+    expected_root = lin.lineage_root_for(generation["split"], generation["evaluation_id"])
+    escaped_anywhere = any(p.is_file() and not lin._is_relative_to(p, expected_root) for p in Path(rel.RESULTS_PRIVATE_DIR).rglob("*.json") if "escaped" in p.name)
+    check("save_review_artifact: no file was written outside the approved lineage root", not escaped_anywhere)
+
+
+def test_stored_review_with_removed_capability_check_rejected():
+    """Phase E lineage/withdrawal third review, finding 3: a stored review
+    file can be self-consistent (fingerprint recomputed over tampered
+    content) while a required capability check has silently been removed
+    from one of its score records. Reproduces the review's
+    required_check_removed_in_saved_reviews live finding."""
+    generation, gen_path = _dummy_generation(rubrics=[RUBRIC_A])
+    chatgpt_review, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT)
+    _, claude_path = _build_review(generation, gen_path, "claude", ACTOR_CLAUDE)
+
+    tampered = {**chatgpt_review, "scores": [{**chatgpt_review["scores"][0], "capability_checks": {}}]}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    chatgpt_path.write_text(json.dumps(tampered), encoding="utf-8")
+
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.build_comparison_artifact,
+        chatgpt_review_path=chatgpt_path,
+        claude_review_path=claude_path,
+        generation_path=gen_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
+    )
+    check("build_comparison_artifact: a stored review with a required capability check silently removed is rejected", err is not None, err)
 
 
 # --- Group 15: a decision cannot cite anything except active adjudication artifacts ---
@@ -697,6 +825,9 @@ def main() -> None:
         test_adjudication_recomputes_strict_pass,
         test_status_resolution_and_superseded_parent_blocking,
         test_never_saved_parent_rejected,
+        test_parent_copied_outside_canonical_location_rejected,
+        test_save_with_mutated_id_cannot_escape_root,
+        test_stored_review_with_removed_capability_check_rejected,
         test_decision_requires_adjudications,
         test_dataset_snapshot_basic,
         test_duplicate_generation_results_rejected,

@@ -183,9 +183,12 @@ def _build_full_lineage(generation, gen_path, rubric, rfp):
     claude_review = lin.build_review_artifact(generation_path=gen_path, reviewer_role="claude", reviewer_actor_id=ACTOR_B, independent_review_attestation=True, scores=scores)
     chatgpt_path = lin.save_review_artifact(chatgpt_review, split=generation["split"], milestone=generation.get("release_milestone"))
     claude_path = lin.save_review_artifact(claude_review, split=generation["split"], milestone=generation.get("release_milestone"))
-    comparison = lin.build_comparison_artifact(chatgpt_review_path=chatgpt_path, claude_review_path=claude_path)
+    rubrics = {generation["results"][0]["record_id"]: full_rubric}
+    comparison = lin.build_comparison_artifact(chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path, rubrics=rubrics)
     comparison_path = lin.save_comparison_artifact(comparison, split=generation["split"], milestone=generation.get("release_milestone"))
-    adjudication = lin.build_adjudication_artifact(comparison_path=comparison_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, resolution_mode="reviewer_agreement")
+    adjudication = lin.build_adjudication_artifact(
+        comparison_path=comparison_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path, rubrics=rubrics, resolution_mode="reviewer_agreement"
+    )
     adjudication_path = lin.save_adjudication_artifact(adjudication, split=generation["split"], milestone=generation.get("release_milestone"))
     decision = lin.build_decision_record(decision_type="curriculum", deciding_actor_id=ACTOR_OWNER, adjudication_paths=[adjudication_path], outcome="dummy decision for withdrawal test")
     lin.save_decision_record(decision)
@@ -488,6 +491,35 @@ def test_withdrawal_plan_and_completion_kinds_registered():
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+def test_withdrawal_plan_affected_entry_with_absolute_relative_path_rejected():
+    """Phase E lineage/withdrawal third review, finding 4: Path.__truediv__
+    silently discards its left operand when the right operand is absolute
+    (Path("/a") / "/etc/passwd" == Path("/etc/passwd")), so an absolute
+    relative_path in a plan's affected-entry list would let
+    _step_delete_generation_and_lineage_files delete an arbitrary file
+    outside the private-results tree. Reproduces the review's
+    unvalidated_withdrawal_plan_entry_accepted live finding."""
+    with Sandbox() as sb:
+        record_id, _, _, rubric, sfp, pfp, rfp = _setup_validation_record(sb, "1")
+        generation, gen_path = _build_generation_for(record_id, sfp, pfp, rfp)
+        completion = wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", T2)
+        plan_path = wd._plan_path_for(completion["withdrawal_id"])
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        check("plan discovered exactly one affected generation", len(plan["affected_generations"]) == 1)
+
+        tampered = dict(plan)
+        tampered["affected_generations"] = [{**plan["affected_generations"][0], "relative_path": "/outside/private/root.json"}]
+        tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+        plan_path.write_text(json.dumps(tampered), encoding="utf-8")
+
+        raised = False
+        try:
+            wd._load_plan_verified(plan_path)
+        except wd.WithdrawalValidationError:
+            raised = True
+        check("_load_plan_verified: rejects a plan with an absolute relative_path in an affected entry", raised)
+
+
 # --- Group 24: crash injection -- resumable after failure at each stage ---
 
 
@@ -668,6 +700,7 @@ def main() -> None:
         test_concurrent_plan_creation_race_resolves_to_persisted_plan,
         test_concurrent_plan_creation_race_with_conflicting_request_fails_closed,
         test_withdrawal_plan_and_completion_kinds_registered,
+        test_withdrawal_plan_affected_entry_with_absolute_relative_path_rejected,
         test_crash_injection_resumes_correctly,
         test_repeat_completed_withdrawal_is_noop,
         test_withdrawn_record_cannot_reactivate,

@@ -18,7 +18,7 @@ import re
 import shutil
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import real_data_eval_logging as rel
 import real_data_lineage as lin
@@ -75,6 +75,87 @@ _WITHDRAWAL_COMPLETION_FIELDS = frozenset(
 # recomputed over the tampered content.
 lin.register_kind_metadata("withdrawal_plan", fields=_WITHDRAWAL_PLAN_FIELDS, id_field="withdrawal_id", id_pattern=lin._ID_PATTERNS["withdrawal"])
 lin.register_kind_metadata("withdrawal_completion", fields=_WITHDRAWAL_COMPLETION_FIELDS, id_field="withdrawal_id", id_pattern=lin._ID_PATTERNS["withdrawal"])
+
+_AFFECTED_GENERATION_FIELDS = frozenset({"artifact_kind", "artifact_id", "artifact_fingerprint", "relative_path", "split", "milestone"})
+_AFFECTED_ARTIFACT_FIELDS = frozenset({"artifact_kind", "artifact_id", "artifact_fingerprint", "relative_path"})
+
+
+def _validate_relative_path(relative_path, *, context_label: str) -> None:
+    """Per the Phase E lineage/withdrawal third review's finding 4:
+    Path.__truediv__ silently discards its left operand when the right
+    operand is absolute (Path("/a") / "/etc/passwd" == Path("/etc/passwd")),
+    so an absolute relative_path in a plan's affected-entry list would let
+    _step_delete_generation_and_lineage_files delete an arbitrary file
+    outside the private-results tree entirely. Rejects absolute paths,
+    '..'/empty segments, and backslashes, then requires the resolved path
+    to remain inside rel.RESULTS_PRIVATE_DIR."""
+    if not isinstance(relative_path, str) or not relative_path:
+        raise WithdrawalValidationError(f"{context_label}: relative_path must be a non-empty string")
+    if "\\" in relative_path:
+        raise WithdrawalValidationError(f"{context_label}: relative_path must use forward slashes only: {relative_path!r}")
+    candidate = PurePosixPath(relative_path)
+    if candidate.is_absolute():
+        raise WithdrawalValidationError(f"{context_label}: relative_path must not be absolute: {relative_path!r}")
+    if any(part in ("..", "") for part in candidate.parts):
+        raise WithdrawalValidationError(f"{context_label}: relative_path must not contain '..' or empty segments: {relative_path!r}")
+    resolved = (rel.RESULTS_PRIVATE_DIR / relative_path).resolve()
+    if not lin._is_relative_to(resolved, rel.RESULTS_PRIVATE_DIR):
+        raise WithdrawalValidationError(f"{context_label}: relative_path escapes the approved private-results root: {relative_path!r}")
+
+
+def _validate_affected_generation_entry(entry, *, context_label: str) -> None:
+    if not isinstance(entry, dict) or set(entry.keys()) != _AFFECTED_GENERATION_FIELDS:
+        raise WithdrawalValidationError(f"{context_label}: does not have the exact expected field set {sorted(_AFFECTED_GENERATION_FIELDS)}")
+    if entry.get("artifact_kind") != "generation":
+        raise WithdrawalValidationError(f"{context_label}: artifact_kind is {entry.get('artifact_kind')!r}, expected 'generation'")
+    if not isinstance(entry.get("artifact_id"), str) or not rel._GENERATION_ID_RE.match(entry["artifact_id"]):
+        raise WithdrawalValidationError(f"{context_label}: malformed artifact_id")
+    if not isinstance(entry.get("artifact_fingerprint"), str) or not rdm._FINGERPRINT_RE.match(entry["artifact_fingerprint"]):
+        raise WithdrawalValidationError(f"{context_label}: malformed artifact_fingerprint")
+    if entry.get("split") not in rdm.VALID_SPLITS:
+        raise WithdrawalValidationError(f"{context_label}: invalid split {entry.get('split')!r}")
+    if entry["split"] == "real_validation":
+        if entry.get("milestone") is not None:
+            raise WithdrawalValidationError(f"{context_label}: real_validation entries must have milestone=null")
+    else:
+        if not isinstance(entry.get("milestone"), str):
+            raise WithdrawalValidationError(f"{context_label}: real_holdout entries require a milestone string")
+        rel._validate_identifier(entry["milestone"], "milestone")
+    _validate_relative_path(entry.get("relative_path"), context_label=context_label)
+
+
+def _validate_affected_artifact_entry(entry, *, expected_kind: str, context_label: str) -> None:
+    if not isinstance(entry, dict) or set(entry.keys()) != _AFFECTED_ARTIFACT_FIELDS:
+        raise WithdrawalValidationError(f"{context_label}: does not have the exact expected field set {sorted(_AFFECTED_ARTIFACT_FIELDS)}")
+    if entry.get("artifact_kind") != expected_kind:
+        raise WithdrawalValidationError(f"{context_label}: artifact_kind is {entry.get('artifact_kind')!r}, expected {expected_kind!r}")
+    if not isinstance(entry.get("artifact_id"), str) or not lin._ID_PATTERNS[expected_kind].match(entry["artifact_id"]):
+        raise WithdrawalValidationError(f"{context_label}: malformed artifact_id")
+    if not isinstance(entry.get("artifact_fingerprint"), str) or not rdm._FINGERPRINT_RE.match(entry["artifact_fingerprint"]):
+        raise WithdrawalValidationError(f"{context_label}: malformed artifact_fingerprint")
+    _validate_relative_path(entry.get("relative_path"), context_label=context_label)
+
+
+def _validate_plan_affected_entries(plan: dict) -> None:
+    """Validated on both plan build and plan load -- per the Phase E
+    lineage/withdrawal third review's finding 4, the plan's top-level
+    schema was registered (second review, finding 3) but nothing validated
+    the *contents* of affected_generations/reviews/comparisons/
+    adjudications/decisions, including the relative_path later trusted for
+    file deletion and residual checks."""
+    for i, entry in enumerate(plan["affected_generations"]):
+        _validate_affected_generation_entry(entry, context_label=f"affected_generations[{i}]")
+    for i, entry in enumerate(plan["affected_reviews"]):
+        _validate_affected_artifact_entry(entry, expected_kind="review", context_label=f"affected_reviews[{i}]")
+    for i, entry in enumerate(plan["affected_comparisons"]):
+        _validate_affected_artifact_entry(entry, expected_kind="comparison", context_label=f"affected_comparisons[{i}]")
+    for i, entry in enumerate(plan["affected_adjudications"]):
+        _validate_affected_artifact_entry(entry, expected_kind="adjudication", context_label=f"affected_adjudications[{i}]")
+    for i, entry in enumerate(plan["affected_decisions"]):
+        _validate_affected_artifact_entry(entry, expected_kind="decision", context_label=f"affected_decisions[{i}]")
+    if plan["affected_seals"] != []:
+        raise WithdrawalValidationError("affected_seals must be empty -- no holdout-seal mechanism exists yet")
+
 
 ALLOWED_REASON_CODES = ("contributor_request", "consent_expired")
 _REASON_TO_WITHDRAWAL_STATUS = {"contributor_request": "withdrawn", "consent_expired": "expired"}
@@ -370,7 +451,10 @@ def _build_and_save_plan(*, record_id: str, withdrawal_id: str, requested_by_act
     }
     plan["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(plan)}"
     lin._assert_exact_fields(plan, "withdrawal_plan", withdrawal_id)
+    _validate_plan_affected_entries(plan)
     path = _plan_path_for(withdrawal_id)
+    if not lin._is_relative_to(path, WITHDRAWALS_DIR):
+        raise WithdrawalValidationError(f"plan for {withdrawal_id}: resolved save path escapes the approved withdrawals root")
     try:
         lin._save_artifact_exclusive(path, plan)
         return plan
@@ -398,7 +482,9 @@ def _build_and_save_plan(*, record_id: str, withdrawal_id: str, requested_by_act
 
 
 def _load_plan_verified(path: Path) -> dict:
-    return lin._load_artifact_verified(path, expected_schema_version=WITHDRAWAL_PLAN_SCHEMA_VERSION, expected_kind="withdrawal_plan")
+    plan = lin._load_artifact_verified(path, expected_schema_version=WITHDRAWAL_PLAN_SCHEMA_VERSION, expected_kind="withdrawal_plan")
+    _validate_plan_affected_entries(plan)
+    return plan
 
 
 def _load_completion_verified(path: Path) -> dict:
@@ -599,6 +685,8 @@ def _build_and_save_completion(plan: dict, snapshot: dict | None) -> dict:
     completion["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(completion)}"
     lin._assert_exact_fields(completion, "withdrawal_completion", plan["withdrawal_id"])
     path = _completion_path_for(plan["withdrawal_id"])
+    if not lin._is_relative_to(path, WITHDRAWALS_DIR):
+        raise WithdrawalValidationError(f"completion for {plan['withdrawal_id']}: resolved save path escapes the approved withdrawals root")
     try:
         lin._save_artifact_exclusive(path, completion)
     except lin.LineageArtifactExistsError:
