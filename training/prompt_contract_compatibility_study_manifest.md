@@ -90,6 +90,51 @@ revisions. All addressed in this revision:
   `action_count_rule` alongside `bullet_count_rule` since the same
   restated-task risk applies to `action_items`, not only `bullets`.
 
+## Round 3 correction (2026-08-02): a fail-open scoring gap in the acceptance gate
+
+ChatGPT found, and Claude independently reproduced, a real bug in
+`report_benchmark.py`'s `probe_passes()`: it rejects a semantic score only
+when it's non-null *and* not 2, so a result with every score left null
+(never actually scored) still passed, as long as `format_valid` was true
+and every `capability_check` was already true. Reproduced directly:
+`format_valid=True`, all four `scores` null, `BULLET_COUNT_RULE_SATISFIED:
+True` → `probe_passes()` returned `True`. That means an acceptance case
+could show as passing without anyone having actually scored its semantic
+correctness at all.
+
+Fixed: each acceptance case now declares `required_semantic_dimensions`
+(`["topic_completeness", "unsupported_addition_resistance"]` for all five
+-- the minimum ChatGPT specified). `run_benchmark.py` copies this field
+into its result scaffold, so the results file is self-contained.
+`probe_passes()` now requires every listed dimension to be scored exactly
+`2` (missing or null fails, matching how a wrong score already failed),
+and raises on an unrecognized dimension name rather than silently
+ignoring a typo. Existing probes without `required_semantic_dimensions`
+(all 16 in `gold_v1.2.1_probes.jsonl`) are unaffected -- confirmed by
+test and by construction, since an empty required-dimensions list can
+never fail the new check.
+
+`training/test_report_benchmark.py` (new) proves: all-null-required
+dimensions fails; one required dimension null (others scored) fails; one
+required dimension missing from `scores` entirely fails; all required
+dimensions scored 2 with format valid and checks true passes; a required
+dimension scored 1 (partial credit) fails; an unknown dimension name
+raises; format-invalid fails regardless of scores; and a probe with no
+`required_semantic_dimensions` keeps the original lenient behavior.
+Directly re-verified against the acceptance set with two synthetic
+results files: everything null now reports 0/5 acceptance gates passed
+(previously would have shown 5/5); everything correctly scored reports
+5/5.
+
+Two fixture clarifications from the same review: `sdb-04` now also
+requires `action_count_rule: {"operator": "exact", "value": 8}`, since
+all eight source ideas are genuine tasks -- makes "all eight survive"
+objectively checkable via the action-item count instead of a subjective
+"survives somewhere" judgment. `sdb-05` now explicitly requires the
+supported "before Friday" deadline to survive (plus a `DEADLINE_SURVIVED`
+check), since the prior wording could be read as allowing that qualifier
+to quietly disappear as long as the core task remained.
+
 ## Two findings that update the premise before this can be finalized
 
 ### 1. Resolved: production `checkpoint-520` is not lost
@@ -397,10 +442,13 @@ regression only if **all four** hold:
    Reported separately via `report_benchmark.py`'s "Acceptance gates
    passed" section, never folded into the regression-guard or
    negative-example counts. A case passes only under the full strict
-   rule: format valid, every scored semantic dimension exactly `2`, every
-   capability check exactly `true` -- including
-   `BULLET_COUNT_RULE_SATISFIED`/`ACTION_COUNT_RULE_SATISFIED`, which must
-   be evaluated against that case's `bullet_count_rule`/`action_count_rule`
+   rule: format valid, every dimension in that case's
+   `required_semantic_dimensions` (`topic_completeness`,
+   `unsupported_addition_resistance`) scored exactly `2` -- not merely
+   non-null-or-2, which would fail-open on an unscored result, see Round 3
+   correction below -- and every capability check exactly `true`,
+   including `BULLET_COUNT_RULE_SATISFIED`/`ACTION_COUNT_RULE_SATISFIED`,
+   evaluated against that case's `bullet_count_rule`/`action_count_rule`
    (`operator`: `exact` or `max`, `value`: N), not just checked as a raw
    count match. This is the one check with no Cell A equivalent, since
    Cell A ran under the old contract and wouldn't be expected to satisfy

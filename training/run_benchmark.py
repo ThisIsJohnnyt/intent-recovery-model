@@ -89,6 +89,11 @@ def main() -> None:
                 "category": probe["category"],
                 "kind": probe["kind"],
                 "status": probe.get("status"),
+                # Copied from the probe so the results file is self-contained
+                # -- report_benchmark.py's probe_passes() requires these
+                # specific dimensions to be non-null and exactly 2, not just
+                # any dimension the scorer happened to fill in.
+                "required_semantic_dimensions": probe.get("required_semantic_dimensions", []),
                 "raw_output": generated,
                 "format_valid": valid,
                 # Semantic scoring: null until a human (or LLM-judge) pass fills

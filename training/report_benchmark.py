@@ -30,15 +30,39 @@ from collections import Counter
 from pathlib import Path
 
 
+KNOWN_SEMANTIC_DIMENSIONS = {
+    "topic_completeness",
+    "attribution_accuracy",
+    "uncertainty_preservation",
+    "unsupported_addition_resistance",
+}
+
+
 def load_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def probe_passes(result: dict) -> bool:
+    """A null score means "not applicable to this probe" for ordinary
+    probes -- but for a probe that declares required_semantic_dimensions,
+    null on one of those specific dimensions means "never actually
+    scored," not "not applicable," and must fail rather than pass by
+    default. Without this, an entirely-unscored result (format_valid=True,
+    every score still null, every capability_check already True) passes
+    fail-open, since "every non-null score is 2" is vacuously true when
+    every score is null."""
     if not result.get("format_valid"):
         return False
     scores = result.get("scores", {})
     if any(v is not None and v != 2 for v in scores.values()):
+        return False
+    required_dimensions = result.get("required_semantic_dimensions", [])
+    unknown = set(required_dimensions) - KNOWN_SEMANTIC_DIMENSIONS
+    if unknown:
+        raise ValueError(
+            f"{result.get('id')}: required_semantic_dimensions names not recognized: {sorted(unknown)}"
+        )
+    if any(scores.get(dimension) != 2 for dimension in required_dimensions):
         return False
     checks = result.get("capability_checks", {})
     if any(v is not True for v in checks.values()):
