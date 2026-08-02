@@ -21,8 +21,13 @@ abstract.
 import sys
 from pathlib import Path
 
+# report_benchmark.load_jsonl, not run_benchmark.load_probes -- run_benchmark.py
+# imports torch/transformers at module level, so importing anything from it
+# (even a trivial JSONL reader) would drag those into what's supposed to be a
+# lightweight reporter test, breaking it in any environment without the ML
+# dependencies installed. Both functions are identical one-line JSONL readers.
+from report_benchmark import load_jsonl as load_probes
 from report_benchmark import probe_passes
-from run_benchmark import load_probes
 
 GOLD_V1_2_1_PROBES_PATH = Path(__file__).parent.parent / "datasets" / "benchmark" / "gold_v1.2.1_probes.jsonl"
 

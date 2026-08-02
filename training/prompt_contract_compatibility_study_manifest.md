@@ -9,9 +9,11 @@ further rounds of review since (a working-directory/gate-sequencing fix,
 a fail-open scoring gap in the new acceptance set, and the same fail-open
 gap found in the shared 16-probe legacy benchmark this study's Cell
 A/B/C actually run against) — see below, in order — treat this version
-as current, not PR #14's. **Not yet aligned**: the Round 4 per-probe
-`required_semantic_dimensions` mapping is an explicit proposal pending
-review, not a settled decision.
+as current, not PR #14's. **Not yet aligned**: Round 4's per-probe
+`required_semantic_dimensions` mapping was corrected once already (from a
+self-authored heuristic to match two existing historical scored
+benchmarks exactly) and a lightweight-test import bug was fixed in the
+same round — pending review before this is considered settled.
 
 **Compute waits for this design to be marked Aligned, full stop.** The
 previous wording here also said compute waits for `thought-organizer-app`
@@ -153,29 +155,57 @@ contradicts this study's own "16/16 format validity" and "no reduction in
 overall strict passes" material-regression gates: those numbers are only
 meaningful if 0/16 is possible on an unscored run, and it wasn't.
 
-**Fixed, but flagged as a proposal, not a final decision**: added
-`required_semantic_dimensions` to all 16 probes (input/expected_behavior/
-primary_checks/likely_failures/notes untouched -- confirmed byte-identical
-except the one new field, per-probe, before committing). The per-probe
-mapping was derived from each probe's own `likely_failures` list and
-`expected_behavior` text (e.g. "Misattribution" in `likely_failures` ->
-`attribution_accuracy` required; "Invented Answer" -> `uncertainty_
-preservation`; every probe requires `topic_completeness` as a baseline,
-since every one of the 16 is fundamentally about specific content
-surviving correctly). **This mapping has not been jointly reviewed** --
-ChatGPT asked for that review before treating it as committed, and this
-revision provides a concrete draft to review against, not a final answer.
-`run_benchmark.py` already propagates `required_semantic_dimensions`
-generically (added in Round 3), so no further code change was needed
-there. `training/test_report_benchmark.py` gained three integration tests
-against the real file: all 16 probes declare at least one required
-dimension; an unscored scaffold now reports 0/16 (not 4/16); a fully and
-correctly scored scaffold still reports 16/16 (confirming the added
-requirements are satisfiable, not an over-constraint).
+**Fixed**: added `required_semantic_dimensions` to all 16 probes
+(input/expected_behavior/primary_checks/likely_failures/notes untouched --
+confirmed byte-identical except the one new field, per-probe, before
+committing). `run_benchmark.py` already propagates
+`required_semantic_dimensions` generically (added in Round 3), so no
+further code change was needed there. `training/test_report_benchmark.py`
+gained three integration tests against the real file: all 16 probes
+declare at least one required dimension; an unscored scaffold now
+reports 0/16 (not 4/16); a fully and correctly scored scaffold still
+reports 16/16 (confirming the added requirements are satisfiable, not an
+over-constraint).
+
+**Round 4a correction (same day): the first per-probe mapping was a
+self-authored heuristic, not the established rubric.** The initial
+version of this mapping was derived from each probe's own
+`likely_failures` list and `expected_behavior` text -- a reasonable
+starting point, but a guess, not a match to any existing standard.
+ChatGPT pointed out the project already has two independent, authoritative
+scored benchmarks that encode a real historical rubric:
+`training/gold_v1.2.1_benchmark_results_epoch40.json` and
+`training/gold_v1.2.2_benchmark_results_checkpoint600.json`. Verified
+directly: both files score the *identical* set of dimensions per probe
+(confirmed programmatically, not assumed), and diffing that pattern
+against the heuristic mapping surfaced exactly nine probes missing a
+dimension the historical rubric actually required -- eight missing
+`unsupported_addition_resistance` (02, 04, 05, 07, 08, 10, 12, 13) and one
+missing `uncertainty_preservation` (01). The heuristic mapping was never
+wrong in the other direction (no probe had an extra, unsupported
+dimension) -- it just under-weighted `unsupported_addition_resistance`,
+which the historical rubric requires on all 16 probes universally, not
+just where "Unsupported Addition" happened to be the headline
+`likely_failures` entry. Corrected to match the historical rubric exactly
+on all 16 probes; the other seven (03, 06, 09, 11, 14, 15, 16) already
+matched and needed no change.
+
+**Round 4b correction (same day): a real, unrelated engineering bug in
+the new tests.** `training/test_report_benchmark.py` imported
+`run_benchmark.load_probes` -- but `run_benchmark.py` imports `torch`/
+`transformers` at module level, so a "lightweight reporter test" would
+fail in any environment without those installed, even though the
+function it needed is a one-line JSONL reader with no ML dependency.
+Fixed by importing the equivalent `report_benchmark.load_jsonl` instead
+(aliased to the same local name, identical implementation). Verified with
+the base system Python (confirmed to lack `torch` entirely, unlike the
+project's `venv`): the old import path fails with
+`ModuleNotFoundError: No module named 'torch'`; the fixed test suite runs
+clean.
 
 **Alignment status carried forward from this round's review: not yet
-aligned on the complete study gate.** Compute stays held until the
-per-probe dimension mapping above is reviewed and accepted.
+aligned on the complete study gate**, pending this round's corrections
+being accepted.
 
 ## Two findings that update the premise before this can be finalized
 
