@@ -520,6 +520,34 @@ def test_withdrawal_plan_affected_entry_with_absolute_relative_path_rejected():
         check("_load_plan_verified: rejects a plan with an absolute relative_path in an affected entry", raised)
 
 
+def test_withdrawal_plan_entry_relative_path_must_match_canonical():
+    """Phase E lineage/withdrawal fourth verification, finding 4:
+    relative_path was checked for containment only, not for equality with
+    the canonical path implied by the entry's own identifiers (artifact
+    kind, ID, split, milestone) -- an entry could be redirected to a
+    different, still-active file inside the private-results root.
+    Reproduces the review's noncanonical_withdrawal_path live finding."""
+    with Sandbox() as sb:
+        record_id, _, _, rubric, sfp, pfp, rfp = _setup_validation_record(sb, "2")
+        generation, gen_path = _build_generation_for(record_id, sfp, pfp, rfp)
+        completion = wd.withdraw_record_validated(record_id, ACTOR_OWNER, "contributor_request", T2)
+        plan_path = wd._plan_path_for(completion["withdrawal_id"])
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        check("plan discovered exactly one affected generation", len(plan["affected_generations"]) == 1)
+
+        tampered = dict(plan)
+        tampered["affected_generations"] = [{**plan["affected_generations"][0], "relative_path": "real_validation/different_generation.json"}]
+        tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+        plan_path.write_text(json.dumps(tampered), encoding="utf-8")
+
+        raised = False
+        try:
+            wd._load_plan_verified(plan_path)
+        except wd.WithdrawalValidationError:
+            raised = True
+        check("_load_plan_verified: rejects a plan whose relative_path is redirected to a different, still-contained file", raised)
+
+
 # --- Group 24: crash injection -- resumable after failure at each stage ---
 
 
@@ -701,6 +729,7 @@ def main() -> None:
         test_concurrent_plan_creation_race_with_conflicting_request_fails_closed,
         test_withdrawal_plan_and_completion_kinds_registered,
         test_withdrawal_plan_affected_entry_with_absolute_relative_path_rejected,
+        test_withdrawal_plan_entry_relative_path_must_match_canonical,
         test_crash_injection_resumes_correctly,
         test_repeat_completed_withdrawal_is_noop,
         test_withdrawn_record_cannot_reactivate,

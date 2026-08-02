@@ -77,7 +77,25 @@ lin.register_kind_metadata("withdrawal_plan", fields=_WITHDRAWAL_PLAN_FIELDS, id
 lin.register_kind_metadata("withdrawal_completion", fields=_WITHDRAWAL_COMPLETION_FIELDS, id_field="withdrawal_id", id_pattern=lin._ID_PATTERNS["withdrawal"])
 
 _AFFECTED_GENERATION_FIELDS = frozenset({"artifact_kind", "artifact_id", "artifact_fingerprint", "relative_path", "split", "milestone"})
-_AFFECTED_ARTIFACT_FIELDS = frozenset({"artifact_kind", "artifact_id", "artifact_fingerprint", "relative_path"})
+_AFFECTED_LINEAGE_FIELDS = frozenset({"artifact_kind", "artifact_id", "artifact_fingerprint", "relative_path", "evaluation_id", "split", "milestone"})
+_AFFECTED_DECISION_FIELDS = frozenset({"artifact_kind", "artifact_id", "artifact_fingerprint", "relative_path"})
+
+# The plan's declared action sequence is a fixed, versioned constant, not
+# free-form caller input -- per the Phase E lineage/withdrawal fourth
+# verification's finding 4, it was previously an unvalidated field even
+# though it is part of the plan's declared schema.
+_EXPECTED_INTENDED_ACTIONS = [
+    "mark_manifest_withdrawn",
+    "remove_source_row",
+    "remove_rubric_entry",
+    "invalidate_descendants",
+    "retire_affected_seals",
+    "delete_generation_and_lineage_files",
+    "delete_other_source_derived_artifacts",
+    "recompute_dataset_snapshot",
+    "run_residual_checks",
+    "write_completion",
+]
 
 
 def _validate_relative_path(relative_path, *, context_label: str) -> None:
@@ -103,15 +121,7 @@ def _validate_relative_path(relative_path, *, context_label: str) -> None:
         raise WithdrawalValidationError(f"{context_label}: relative_path escapes the approved private-results root: {relative_path!r}")
 
 
-def _validate_affected_generation_entry(entry, *, context_label: str) -> None:
-    if not isinstance(entry, dict) or set(entry.keys()) != _AFFECTED_GENERATION_FIELDS:
-        raise WithdrawalValidationError(f"{context_label}: does not have the exact expected field set {sorted(_AFFECTED_GENERATION_FIELDS)}")
-    if entry.get("artifact_kind") != "generation":
-        raise WithdrawalValidationError(f"{context_label}: artifact_kind is {entry.get('artifact_kind')!r}, expected 'generation'")
-    if not isinstance(entry.get("artifact_id"), str) or not rel._GENERATION_ID_RE.match(entry["artifact_id"]):
-        raise WithdrawalValidationError(f"{context_label}: malformed artifact_id")
-    if not isinstance(entry.get("artifact_fingerprint"), str) or not rdm._FINGERPRINT_RE.match(entry["artifact_fingerprint"]):
-        raise WithdrawalValidationError(f"{context_label}: malformed artifact_fingerprint")
+def _validate_split_and_milestone_fields(entry, *, context_label: str) -> None:
     if entry.get("split") not in rdm.VALID_SPLITS:
         raise WithdrawalValidationError(f"{context_label}: invalid split {entry.get('split')!r}")
     if entry["split"] == "real_validation":
@@ -121,19 +131,68 @@ def _validate_affected_generation_entry(entry, *, context_label: str) -> None:
         if not isinstance(entry.get("milestone"), str):
             raise WithdrawalValidationError(f"{context_label}: real_holdout entries require a milestone string")
         rel._validate_identifier(entry["milestone"], "milestone")
+
+
+def _require_canonical_relative_path(entry, *, canonical_absolute_path: Path, context_label: str) -> None:
+    """Per the Phase E lineage/withdrawal fourth verification's finding 4:
+    _validate_relative_path only proved containment, not that relative_path
+    equals the canonical path implied by the entry's own artifact kind, ID,
+    split, milestone, and (for lineage entries) evaluation_id -- an entry
+    could be redirected to a different, still-active file inside the
+    private-results root and still pass. relative_path must reproduce
+    exactly what the entry's own identifiers imply, or the entry is
+    rejected."""
+    expected = _relpath(canonical_absolute_path)
+    if entry.get("relative_path") != expected:
+        raise WithdrawalValidationError(
+            f"{context_label}: relative_path {entry.get('relative_path')!r} does not match the canonical path {expected!r} implied by this entry's own identifiers"
+        )
+
+
+def _validate_affected_generation_entry(entry, *, context_label: str) -> None:
+    if not isinstance(entry, dict) or set(entry.keys()) != _AFFECTED_GENERATION_FIELDS:
+        raise WithdrawalValidationError(f"{context_label}: does not have the exact expected field set {sorted(_AFFECTED_GENERATION_FIELDS)}")
+    if entry.get("artifact_kind") != "generation":
+        raise WithdrawalValidationError(f"{context_label}: artifact_kind is {entry.get('artifact_kind')!r}, expected 'generation'")
+    if not isinstance(entry.get("artifact_id"), str) or not rel._GENERATION_ID_RE.match(entry["artifact_id"]):
+        raise WithdrawalValidationError(f"{context_label}: malformed artifact_id")
+    if not isinstance(entry.get("artifact_fingerprint"), str) or not rdm._FINGERPRINT_RE.match(entry["artifact_fingerprint"]):
+        raise WithdrawalValidationError(f"{context_label}: malformed artifact_fingerprint")
+    _validate_split_and_milestone_fields(entry, context_label=context_label)
     _validate_relative_path(entry.get("relative_path"), context_label=context_label)
+    canonical = rel.result_path_for(entry["split"], entry["artifact_id"], entry.get("milestone"))
+    _require_canonical_relative_path(entry, canonical_absolute_path=canonical, context_label=context_label)
 
 
-def _validate_affected_artifact_entry(entry, *, expected_kind: str, context_label: str) -> None:
-    if not isinstance(entry, dict) or set(entry.keys()) != _AFFECTED_ARTIFACT_FIELDS:
-        raise WithdrawalValidationError(f"{context_label}: does not have the exact expected field set {sorted(_AFFECTED_ARTIFACT_FIELDS)}")
+def _validate_affected_lineage_entry(entry, *, expected_kind: str, context_label: str) -> None:
+    if not isinstance(entry, dict) or set(entry.keys()) != _AFFECTED_LINEAGE_FIELDS:
+        raise WithdrawalValidationError(f"{context_label}: does not have the exact expected field set {sorted(_AFFECTED_LINEAGE_FIELDS)}")
     if entry.get("artifact_kind") != expected_kind:
         raise WithdrawalValidationError(f"{context_label}: artifact_kind is {entry.get('artifact_kind')!r}, expected {expected_kind!r}")
     if not isinstance(entry.get("artifact_id"), str) or not lin._ID_PATTERNS[expected_kind].match(entry["artifact_id"]):
         raise WithdrawalValidationError(f"{context_label}: malformed artifact_id")
     if not isinstance(entry.get("artifact_fingerprint"), str) or not rdm._FINGERPRINT_RE.match(entry["artifact_fingerprint"]):
         raise WithdrawalValidationError(f"{context_label}: malformed artifact_fingerprint")
+    if not isinstance(entry.get("evaluation_id"), str) or not rel._GENERATION_ID_RE.match(entry["evaluation_id"]):
+        raise WithdrawalValidationError(f"{context_label}: malformed evaluation_id")
+    _validate_split_and_milestone_fields(entry, context_label=context_label)
     _validate_relative_path(entry.get("relative_path"), context_label=context_label)
+    canonical = lin._PARENT_PATH_BUILDERS[expected_kind](entry["split"], entry["evaluation_id"], entry["artifact_id"], entry.get("milestone"))
+    _require_canonical_relative_path(entry, canonical_absolute_path=canonical, context_label=context_label)
+
+
+def _validate_affected_decision_entry(entry, *, context_label: str) -> None:
+    if not isinstance(entry, dict) or set(entry.keys()) != _AFFECTED_DECISION_FIELDS:
+        raise WithdrawalValidationError(f"{context_label}: does not have the exact expected field set {sorted(_AFFECTED_DECISION_FIELDS)}")
+    if entry.get("artifact_kind") != "decision":
+        raise WithdrawalValidationError(f"{context_label}: artifact_kind is {entry.get('artifact_kind')!r}, expected 'decision'")
+    if not isinstance(entry.get("artifact_id"), str) or not lin._ID_PATTERNS["decision"].match(entry["artifact_id"]):
+        raise WithdrawalValidationError(f"{context_label}: malformed artifact_id")
+    if not isinstance(entry.get("artifact_fingerprint"), str) or not rdm._FINGERPRINT_RE.match(entry["artifact_fingerprint"]):
+        raise WithdrawalValidationError(f"{context_label}: malformed artifact_fingerprint")
+    _validate_relative_path(entry.get("relative_path"), context_label=context_label)
+    canonical = lin.DECISIONS_DIR / f"{entry['artifact_id']}.json"
+    _require_canonical_relative_path(entry, canonical_absolute_path=canonical, context_label=context_label)
 
 
 def _validate_plan_affected_entries(plan: dict) -> None:
@@ -146,15 +205,17 @@ def _validate_plan_affected_entries(plan: dict) -> None:
     for i, entry in enumerate(plan["affected_generations"]):
         _validate_affected_generation_entry(entry, context_label=f"affected_generations[{i}]")
     for i, entry in enumerate(plan["affected_reviews"]):
-        _validate_affected_artifact_entry(entry, expected_kind="review", context_label=f"affected_reviews[{i}]")
+        _validate_affected_lineage_entry(entry, expected_kind="review", context_label=f"affected_reviews[{i}]")
     for i, entry in enumerate(plan["affected_comparisons"]):
-        _validate_affected_artifact_entry(entry, expected_kind="comparison", context_label=f"affected_comparisons[{i}]")
+        _validate_affected_lineage_entry(entry, expected_kind="comparison", context_label=f"affected_comparisons[{i}]")
     for i, entry in enumerate(plan["affected_adjudications"]):
-        _validate_affected_artifact_entry(entry, expected_kind="adjudication", context_label=f"affected_adjudications[{i}]")
+        _validate_affected_lineage_entry(entry, expected_kind="adjudication", context_label=f"affected_adjudications[{i}]")
     for i, entry in enumerate(plan["affected_decisions"]):
-        _validate_affected_artifact_entry(entry, expected_kind="decision", context_label=f"affected_decisions[{i}]")
+        _validate_affected_decision_entry(entry, context_label=f"affected_decisions[{i}]")
     if plan["affected_seals"] != []:
         raise WithdrawalValidationError("affected_seals must be empty -- no holdout-seal mechanism exists yet")
+    if plan["intended_actions"] != _EXPECTED_INTENDED_ACTIONS:
+        raise WithdrawalValidationError("intended_actions does not match the exact expected, versioned action list")
 
 
 ALLOWED_REASON_CODES = ("contributor_request", "consent_expired")
@@ -357,19 +418,49 @@ def _discover_affected(record_id: str) -> dict:
                 review = lin._load_artifact_verified(review_path, expected_schema_version=lin.REVIEW_SCHEMA_VERSION, expected_kind="review")
             except lin.LineageValidationError as e:
                 raise WithdrawalDiscoveryError(f"malformed review artifact at {review_path} encountered during discovery: {e}") from e
-            affected_reviews.append({"artifact_kind": "review", "artifact_id": review["review_id"], "artifact_fingerprint": review["artifact_fingerprint"], "relative_path": _relpath(review_path)})
+            affected_reviews.append(
+                {
+                    "artifact_kind": "review",
+                    "artifact_id": review["review_id"],
+                    "artifact_fingerprint": review["artifact_fingerprint"],
+                    "relative_path": _relpath(review_path),
+                    "evaluation_id": generation["evaluation_id"],
+                    "split": review["split"],
+                    "milestone": review.get("milestone"),
+                }
+            )
         for comparison_path in sorted((lineage_dir / "comparisons").glob("*.json")) if (lineage_dir / "comparisons").exists() else []:
             try:
                 comparison = lin._load_artifact_verified(comparison_path, expected_schema_version=lin.COMPARISON_SCHEMA_VERSION, expected_kind="comparison")
             except lin.LineageValidationError as e:
                 raise WithdrawalDiscoveryError(f"malformed comparison artifact at {comparison_path} encountered during discovery: {e}") from e
-            affected_comparisons.append({"artifact_kind": "comparison", "artifact_id": comparison["comparison_id"], "artifact_fingerprint": comparison["artifact_fingerprint"], "relative_path": _relpath(comparison_path)})
+            affected_comparisons.append(
+                {
+                    "artifact_kind": "comparison",
+                    "artifact_id": comparison["comparison_id"],
+                    "artifact_fingerprint": comparison["artifact_fingerprint"],
+                    "relative_path": _relpath(comparison_path),
+                    "evaluation_id": generation["evaluation_id"],
+                    "split": comparison["split"],
+                    "milestone": comparison.get("milestone"),
+                }
+            )
         for adjudication_path in sorted((lineage_dir / "adjudications").glob("*.json")) if (lineage_dir / "adjudications").exists() else []:
             try:
                 adjudication = lin._load_artifact_verified(adjudication_path, expected_schema_version=lin.ADJUDICATION_SCHEMA_VERSION, expected_kind="adjudication")
             except lin.LineageValidationError as e:
                 raise WithdrawalDiscoveryError(f"malformed adjudication artifact at {adjudication_path} encountered during discovery: {e}") from e
-            affected_adjudications.append({"artifact_kind": "adjudication", "artifact_id": adjudication["adjudication_id"], "artifact_fingerprint": adjudication["artifact_fingerprint"], "relative_path": _relpath(adjudication_path)})
+            affected_adjudications.append(
+                {
+                    "artifact_kind": "adjudication",
+                    "artifact_id": adjudication["adjudication_id"],
+                    "artifact_fingerprint": adjudication["artifact_fingerprint"],
+                    "relative_path": _relpath(adjudication_path),
+                    "evaluation_id": generation["evaluation_id"],
+                    "split": adjudication["split"],
+                    "milestone": adjudication.get("milestone"),
+                }
+            )
 
     affected_adjudication_ids = {a["artifact_id"] for a in affected_adjudications}
     affected_decisions = []
@@ -450,7 +541,7 @@ def _build_and_save_plan(*, record_id: str, withdrawal_id: str, requested_by_act
         ],
     }
     plan["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(plan)}"
-    lin._assert_exact_fields(plan, "withdrawal_plan", withdrawal_id)
+    lin._assert_full_integrity(plan, "withdrawal_plan", withdrawal_id)
     _validate_plan_affected_entries(plan)
     path = _plan_path_for(withdrawal_id)
     if not lin._is_relative_to(path, WITHDRAWALS_DIR):
@@ -683,7 +774,7 @@ def _build_and_save_completion(plan: dict, snapshot: dict | None) -> dict:
         "post_withdrawal_snapshot": {"snapshot_id": snapshot["snapshot_id"], "artifact_kind": "dataset_snapshot", "artifact_fingerprint": snapshot["artifact_fingerprint"]} if snapshot else None,
     }
     completion["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(completion)}"
-    lin._assert_exact_fields(completion, "withdrawal_completion", plan["withdrawal_id"])
+    lin._assert_full_integrity(completion, "withdrawal_completion", plan["withdrawal_id"])
     path = _completion_path_for(plan["withdrawal_id"])
     if not lin._is_relative_to(path, WITHDRAWALS_DIR):
         raise WithdrawalValidationError(f"completion for {plan['withdrawal_id']}: resolved save path escapes the approved withdrawals root")

@@ -68,6 +68,8 @@ _REVIEW_FIELDS = frozenset(
         "artifact_kind",
         "review_id",
         "created_at_utc",
+        "split",
+        "milestone",
         "generation",
         "reviewer_role",
         "reviewer_actor_id",
@@ -88,6 +90,8 @@ _COMPARISON_FIELDS = frozenset(
         "artifact_kind",
         "comparison_id",
         "created_at_utc",
+        "split",
+        "milestone",
         "generation",
         "chatgpt_review",
         "claude_review",
@@ -102,6 +106,8 @@ _ADJUDICATION_FIELDS = frozenset(
         "artifact_kind",
         "adjudication_id",
         "created_at_utc",
+        "split",
+        "milestone",
         "generation",
         "comparison",
         "chatgpt_review",
@@ -246,8 +252,13 @@ def _validate_before_save(artifact: dict, kind: str, path: Path, *, expected_roo
     Per the Phase E lineage/withdrawal third review's finding 2, a review
     whose review_id was replaced with a path-shaped value after building
     -- with the fingerprint recomputed over the tampered content -- was
-    written successfully outside its approved lineage root."""
-    _assert_exact_fields(artifact, kind, path)
+    written successfully outside its approved lineage root. Per the
+    fourth verification's finding 2, this now calls the same complete
+    per-kind integrity check the loader uses (_assert_full_integrity),
+    not just the field-shape check -- a malformed created_at_utc must
+    never reach disk in the first place, not be caught only on a later
+    load."""
+    _assert_full_integrity(artifact, kind, path)
     computed_fp = f"sha256:{rdp.artifact_fingerprint(artifact)}"
     if artifact.get("artifact_fingerprint") != computed_fp:
         raise LineageValidationError(f"{path}: artifact_fingerprint does not match recomputed content -- refusing to save")
@@ -361,14 +372,55 @@ def _assert_exact_fields(obj: dict, kind: str, context_id) -> None:
             _assert_ref_shape(item, expected_fields=expected_fields, field_name=f"{field_name}[{i}]", context_id=context_id, nullable=False)
 
 
+_SPLIT_MILESTONE_KINDS = frozenset({"review", "comparison", "adjudication"})
+
+
+def _assert_valid_split_and_milestone(obj: dict, *, context_id) -> None:
+    split = obj.get("split")
+    if split not in rdm.VALID_SPLITS:
+        raise LineageValidationError(f"{context_id}: invalid split {split!r}")
+    milestone = obj.get("milestone")
+    if split == "real_validation":
+        if milestone is not None:
+            raise LineageValidationError(f"{context_id}: real_validation artifacts must have milestone=null")
+    else:
+        if not isinstance(milestone, str):
+            raise LineageValidationError(f"{context_id}: real_holdout artifacts require a milestone string")
+        try:
+            rel._validate_identifier(milestone, "milestone")
+        except rel.UnsafeIdentifierError as e:
+            raise LineageValidationError(f"{context_id}: {e}") from e
+
+
+def _assert_full_integrity(artifact: dict, kind: str, context_id) -> None:
+    """The one complete per-kind structural/semantic validator, used
+    identically at build (every builder calls this immediately before
+    returning), save (_validate_before_save), and load
+    (_load_artifact_verified). Per the Phase E lineage/withdrawal fourth
+    verification's finding 2: save-time validation previously ran only
+    _assert_exact_fields (top-level fields, ID format, nested reference
+    shapes) -- not the full semantic check load already performed -- so a
+    malformed created_at_utc reached disk as long as the ID and
+    fingerprint were otherwise internally consistent, relying on a later
+    load to catch what save itself should never have written."""
+    _assert_exact_fields(artifact, kind, context_id)
+    try:
+        rdm.validate_utc_timestamp(artifact.get("created_at_utc"), "created_at_utc")
+    except rdm.ManifestValidationError as e:
+        raise LineageValidationError(f"{context_id}: {e}") from e
+    if kind in _SPLIT_MILESTONE_KINDS:
+        _assert_valid_split_and_milestone(artifact, context_id=context_id)
+
+
 def _load_artifact_verified(path: Path, *, expected_schema_version: str, expected_kind: str) -> dict:
     """Loads and verifies: duplicate-key-free JSON, schema/kind match,
-    exact field set for the kind including nested reference shapes
-    (reject unknown or missing top-level or nested-reference fields -- a
+    the full per-kind integrity check (_assert_full_integrity: exact field
+    set including nested reference shapes, a well-formed created_at_utc,
+    and a valid split/milestone binding for kinds that carry one), and
+    that the recomputed artifact_fingerprint matches the stored one -- a
     self-consistent artifact with an extra field must not pass just
     because its own fingerprint was recomputed over that tampered
-    content), a well-formed created_at_utc, and that the recomputed
-    artifact_fingerprint matches the stored one."""
+    content."""
     path = Path(path)
     if not path.exists():
         raise LineageValidationError(f"{path}: artifact does not exist")
@@ -382,11 +434,7 @@ def _load_artifact_verified(path: Path, *, expected_schema_version: str, expecte
         raise LineageValidationError(f"{path}: schema_version is {artifact.get('schema_version')!r}, expected {expected_schema_version!r}")
     if artifact.get("artifact_kind") != expected_kind:
         raise LineageValidationError(f"{path}: artifact_kind is {artifact.get('artifact_kind')!r}, expected {expected_kind!r}")
-    _assert_exact_fields(artifact, expected_kind, path)
-    try:
-        rdm.validate_utc_timestamp(artifact.get("created_at_utc"), "created_at_utc")
-    except rdm.ManifestValidationError as e:
-        raise LineageValidationError(f"{path}: {e}") from e
+    _assert_full_integrity(artifact, expected_kind, path)
     declared_fp = artifact.get("artifact_fingerprint", "")
     computed_fp = f"sha256:{rdp.artifact_fingerprint(artifact)}"
     if declared_fp != computed_fp:
@@ -540,7 +588,13 @@ def _verify_stored_score_record(score: dict, *, rubric: dict) -> None:
     recomputed = rsc.compute_strict_pass({**score, "review_status": "scored"})
     if recomputed is None:
         raise LineageValidationError(f"{record_id}: stored score record is not fully scored")
-    if recomputed != score.get("strict_pass"):
+    stored_strict_pass = score.get("strict_pass")
+    # isinstance, not == -- per the Phase E lineage/withdrawal fourth
+    # verification's finding 3, Python considers True == 1, so a stored
+    # integer 1 would silently match a recomputed True under plain !=.
+    if not isinstance(stored_strict_pass, bool):
+        raise LineageValidationError(f"{record_id}: stored strict_pass must be a literal boolean, got {stored_strict_pass!r}")
+    if recomputed != stored_strict_pass:
         raise LineageValidationError(f"{record_id}: stored strict_pass does not match the value recomputed from its own scores -- possible tampering")
 
 
@@ -581,6 +635,8 @@ def build_review_artifact(
         "artifact_kind": "review",
         "review_id": new_review_id(),
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "split": generation["split"],
+        "milestone": generation.get("release_milestone"),
         "generation": {
             "evaluation_id": generation["evaluation_id"],
             "artifact_kind": generation["artifact_kind"],
@@ -598,7 +654,7 @@ def build_review_artifact(
         "supersedes_review": supersedes_review,
     }
     artifact["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(artifact)}"
-    _assert_exact_fields(artifact, "review", artifact["review_id"])
+    _assert_full_integrity(artifact, "review", artifact["review_id"])
     return artifact
 
 
@@ -663,27 +719,14 @@ def load_review_verified(path: Path, generation: dict, rubrics: dict[str, dict])
 
 
 
-def build_comparison_artifact(*, chatgpt_review_path: Path, claude_review_path: Path, generation_path: Path, rubrics: dict[str, dict]) -> dict:
-    """chatgpt_review_path/claude_review_path: the actual stored paths of
-    both parent reviews. generation_path/rubrics: required to load each
-    review through a generation- and rubric-aware verified path
-    (load_review_verified), not only the generic top-level loader -- per
-    the Phase E lineage/withdrawal third review's finding 3, the generic
-    loader alone does not re-validate a stored review's score records
-    against their bound rubric, so a tampered-but-self-consistent review
-    could otherwise pass."""
-    generation = load_and_require_active_parent(generation_path, expected_kind="generation", parent_label="generation")
-    chatgpt_review = load_review_verified(chatgpt_review_path, generation, rubrics)
-    claude_review = load_review_verified(claude_review_path, generation, rubrics)
-    if chatgpt_review["reviewer_role"] != "chatgpt":
-        raise LineageValidationError("chatgpt_review must have reviewer_role 'chatgpt'")
-    if claude_review["reviewer_role"] != "claude":
-        raise LineageValidationError("claude_review must have reviewer_role 'claude'")
-    if chatgpt_review["reviewer_actor_id"] == claude_review["reviewer_actor_id"]:
-        raise LineageValidationError("chatgpt and claude reviews must use distinct reviewer actor IDs")
-    if chatgpt_review["generation"] != claude_review["generation"]:
-        raise LineageValidationError("both reviews must share the exact same generation parent reference -- cannot compare reviews of different generations")
-
+def _compute_record_comparisons(chatgpt_review: dict, claude_review: dict) -> tuple[list[dict], bool]:
+    """Derives record_comparisons/any_disagreement fresh from two verified
+    reviews -- shared by build_comparison_artifact (to build a comparison)
+    and load_comparison_verified (to re-derive and cross-check a stored
+    comparison), per the Phase E lineage/withdrawal fourth verification's
+    finding 3: a stored comparison must never be trusted at face value,
+    only as a claim to be independently re-derived and checked for exact
+    equality every time it is used as a parent."""
     _require_unique_record_ids(chatgpt_review["scores"], context_label="chatgpt_review scores")
     _require_unique_record_ids(claude_review["scores"], context_label="claude_review scores")
     chatgpt_by_id = {s["record_id"]: s for s in chatgpt_review["scores"]}
@@ -713,12 +756,39 @@ def build_comparison_artifact(*, chatgpt_review_path: Path, claude_review_path: 
                 "strict_pass_disagreement": strict_pass_diff,
             }
         )
+    return record_comparisons, any_disagreement
+
+
+def build_comparison_artifact(*, chatgpt_review_path: Path, claude_review_path: Path, generation_path: Path, rubrics: dict[str, dict]) -> dict:
+    """chatgpt_review_path/claude_review_path: the actual stored paths of
+    both parent reviews. generation_path/rubrics: required to load each
+    review through a generation- and rubric-aware verified path
+    (load_review_verified), not only the generic top-level loader -- per
+    the Phase E lineage/withdrawal third review's finding 3, the generic
+    loader alone does not re-validate a stored review's score records
+    against their bound rubric, so a tampered-but-self-consistent review
+    could otherwise pass."""
+    generation = load_and_require_active_parent(generation_path, expected_kind="generation", parent_label="generation")
+    chatgpt_review = load_review_verified(chatgpt_review_path, generation, rubrics)
+    claude_review = load_review_verified(claude_review_path, generation, rubrics)
+    if chatgpt_review["reviewer_role"] != "chatgpt":
+        raise LineageValidationError("chatgpt_review must have reviewer_role 'chatgpt'")
+    if claude_review["reviewer_role"] != "claude":
+        raise LineageValidationError("claude_review must have reviewer_role 'claude'")
+    if chatgpt_review["reviewer_actor_id"] == claude_review["reviewer_actor_id"]:
+        raise LineageValidationError("chatgpt and claude reviews must use distinct reviewer actor IDs")
+    if chatgpt_review["generation"] != claude_review["generation"]:
+        raise LineageValidationError("both reviews must share the exact same generation parent reference -- cannot compare reviews of different generations")
+
+    record_comparisons, any_disagreement = _compute_record_comparisons(chatgpt_review, claude_review)
 
     artifact = {
         "schema_version": COMPARISON_SCHEMA_VERSION,
         "artifact_kind": "comparison",
         "comparison_id": new_comparison_id(),
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "split": generation["split"],
+        "milestone": generation.get("release_milestone"),
         "generation": chatgpt_review["generation"],
         "chatgpt_review": _artifact_ref(chatgpt_review, "review_id"),
         "claude_review": _artifact_ref(claude_review, "review_id"),
@@ -726,8 +796,33 @@ def build_comparison_artifact(*, chatgpt_review_path: Path, claude_review_path: 
         "alignment_status": "disagreement" if any_disagreement else "aligned",
     }
     artifact["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(artifact)}"
-    _assert_exact_fields(artifact, "comparison", artifact["comparison_id"])
+    _assert_full_integrity(artifact, "comparison", artifact["comparison_id"])
     return artifact
+
+
+def load_comparison_verified(path: Path, chatgpt_review: dict, claude_review: dict) -> dict:
+    """Loads a comparison parent (canonical path, active status -- see
+    load_and_require_active_parent) and cross-checks it against its
+    claimed review parents: exact reference match, shared generation, and
+    -- per the Phase E lineage/withdrawal fourth verification's finding 3
+    -- record_comparisons/alignment_status RECOMPUTED fresh from the two
+    verified reviews and required to exactly equal what the stored
+    comparison claims. A stored comparison file can be self-consistent
+    (its own fingerprint recomputed over altered content) while
+    alignment_status was changed from 'disagreement' to 'aligned' with an
+    emptied record_comparisons list -- this closes that gap."""
+    comparison = load_and_require_active_parent(path, expected_kind="comparison", parent_label="comparison")
+    if comparison["chatgpt_review"] != _artifact_ref(chatgpt_review, "review_id"):
+        raise LineageValidationError(f"{path}: comparison's chatgpt_review reference does not match the supplied chatgpt_review")
+    if comparison["claude_review"] != _artifact_ref(claude_review, "review_id"):
+        raise LineageValidationError(f"{path}: comparison's claude_review reference does not match the supplied claude_review")
+    if comparison["generation"] != chatgpt_review["generation"]:
+        raise LineageValidationError(f"{path}: comparison's generation reference does not match the supplied reviews")
+    record_comparisons, any_disagreement = _compute_record_comparisons(chatgpt_review, claude_review)
+    expected_alignment = "disagreement" if any_disagreement else "aligned"
+    if comparison["alignment_status"] != expected_alignment or comparison["record_comparisons"] != record_comparisons:
+        raise LineageValidationError(f"{path}: stored alignment_status/record_comparisons do not match the value recomputed from the verified reviews -- possible tampering")
+    return comparison
 
 
 def _comparison_path(split: str, evaluation_id: str, comparison_id: str, milestone: str | None = None) -> Path:
@@ -773,14 +868,10 @@ def build_adjudication_artifact(
         raise LineageValidationError(f"resolution_mode must be one of {RESOLUTION_MODES}, got {resolution_mode!r}")
     if rubrics is None:
         raise LineageValidationError("rubrics (record_id -> rubric) is required to verify both review parents")
-    comparison = load_and_require_active_parent(comparison_path, expected_kind="comparison", parent_label="comparison")
     generation = load_and_require_active_parent(generation_path, expected_kind="generation", parent_label="generation")
     chatgpt_review = load_review_verified(chatgpt_review_path, generation, rubrics)
     claude_review = load_review_verified(claude_review_path, generation, rubrics)
-    if comparison["chatgpt_review"] != _artifact_ref(chatgpt_review, "review_id"):
-        raise LineageValidationError("comparison's chatgpt_review reference does not match the supplied chatgpt_review")
-    if comparison["claude_review"] != _artifact_ref(claude_review, "review_id"):
-        raise LineageValidationError("comparison's claude_review reference does not match the supplied claude_review")
+    comparison = load_comparison_verified(comparison_path, chatgpt_review, claude_review)
 
     if resolution_mode == "reviewer_agreement":
         if comparison["alignment_status"] != "aligned":
@@ -850,6 +941,8 @@ def build_adjudication_artifact(
         "artifact_kind": "adjudication",
         "adjudication_id": new_adjudication_id(),
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "split": generation["split"],
+        "milestone": generation.get("release_milestone"),
         "generation": comparison["generation"],
         "comparison": _artifact_ref(comparison, "comparison_id"),
         "chatgpt_review": comparison["chatgpt_review"],
@@ -860,7 +953,7 @@ def build_adjudication_artifact(
         "aggregate_strict_pass": rsc.aggregate_strict_pass_rate(recomputed_final),
     }
     artifact["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(artifact)}"
-    _assert_exact_fields(artifact, "adjudication", artifact["adjudication_id"])
+    _assert_full_integrity(artifact, "adjudication", artifact["adjudication_id"])
     return artifact
 
 
@@ -904,7 +997,7 @@ def build_decision_record(*, decision_type: str, deciding_actor_id: str, adjudic
         "reference": reference,
     }
     artifact["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(artifact)}"
-    _assert_exact_fields(artifact, "decision", artifact["decision_id"])
+    _assert_full_integrity(artifact, "decision", artifact["decision_id"])
     return artifact
 
 
@@ -937,7 +1030,7 @@ def build_status_event(*, target_artifact: dict, target_id_field: str, new_statu
         "actor_id": actor_id,
     }
     artifact["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(artifact)}"
-    _assert_exact_fields(artifact, "status_event", artifact["status_event_id"])
+    _assert_full_integrity(artifact, "status_event", artifact["status_event_id"])
     return artifact
 
 
@@ -1001,25 +1094,6 @@ def require_parent_active(parent_ref: dict, *, parent_label: str) -> None:
         raise ParentNotActiveError(f"{parent_label} ({parent_ref['artifact_id']}) is {status!r}, not active -- refusing to build a new descendant from it")
 
 
-def _infer_split_and_milestone_from_path(path: Path) -> tuple[str, str | None]:
-    """Determines which approved private-results root a path falls under
-    and, for holdout, which milestone directory. review/comparison/
-    adjudication artifacts don't carry split/milestone as JSON fields
-    themselves (only generation does), so the only way to know where a
-    loaded parent is *supposed* to live is to read it back out of the path
-    it was actually loaded from, then require that to reproduce the exact
-    canonical path implied by the artifact's own stored content."""
-    resolved = Path(path).resolve()
-    if _is_relative_to(resolved, rel.VALIDATION_RESULTS_DIR):
-        return "real_validation", None
-    if _is_relative_to(resolved, rel.HOLDOUT_RESULTS_DIR):
-        remainder = resolved.relative_to(rel.HOLDOUT_RESULTS_DIR.resolve()).parts
-        if not remainder:
-            raise LineageValidationError(f"{path}: cannot infer milestone from holdout path")
-        return "real_holdout", remainder[0]
-    raise LineageValidationError(f"{path}: not under an approved private-results root")
-
-
 _PARENT_PATH_BUILDERS = {
     "review": _review_path,
     "comparison": _comparison_path,
@@ -1048,8 +1122,19 @@ def load_and_require_active_parent(path: Path, *, expected_kind: str, parent_lab
     location (even still under the approved results tree) was accepted as
     a stored parent just because it existed and was self-consistent --
     nothing checked it was actually AT the location its own content
-    implies. Callers must use the dict this returns for all subsequent
-    processing, not whatever in-memory object they originally had."""
+    implies. Per the fourth verification's finding 1: the first fix
+    derived split/milestone from wherever the file physically was, which
+    is tautological -- reconstructing "the canonical path for the split
+    the file happens to sit under" always matches. Review/comparison/
+    adjudication now carry split/milestone as their own immutable,
+    fingerprint-bound fields (copied from the verified generation at
+    build time), so canonical-path reconstruction here reads them from
+    the verified artifact's own content, never from the location it was
+    found at -- a review copied into a mismatched split/milestone tree
+    now reconstructs a canonical path that does NOT match where it was
+    actually found. Callers must use the dict this returns for all
+    subsequent processing, not whatever in-memory object they originally
+    had."""
     path = Path(path)
     if expected_kind == "generation":
         loaded = rel.load_generation_artifact(path)
@@ -1061,9 +1146,8 @@ def load_and_require_active_parent(path: Path, *, expected_kind: str, parent_lab
         ref = _artifact_ref(loaded, _KIND_METADATA[expected_kind]["id_field"])
     else:
         loaded = _load_artifact_verified(path, expected_schema_version=_KIND_SCHEMA_VERSIONS[expected_kind], expected_kind=expected_kind)
-        split, milestone = _infer_split_and_milestone_from_path(path)
         id_field = _KIND_METADATA[expected_kind]["id_field"]
-        canonical = _PARENT_PATH_BUILDERS[expected_kind](split, loaded["generation"]["evaluation_id"], loaded[id_field], milestone)
+        canonical = _PARENT_PATH_BUILDERS[expected_kind](loaded["split"], loaded["generation"]["evaluation_id"], loaded[id_field], loaded.get("milestone"))
         ref = _artifact_ref(loaded, id_field)
     if path.resolve() != canonical.resolve():
         raise LineageValidationError(f"{path}: does not match the canonical path {canonical} implied by its own content -- refusing to treat as a valid stored parent")
@@ -1095,7 +1179,7 @@ def build_dataset_snapshot(*, split: str, creation_reason: str, active_records: 
         "parent_snapshot": parent_snapshot,
     }
     artifact["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(artifact)}"
-    _assert_exact_fields(artifact, "dataset_snapshot", artifact["snapshot_id"])
+    _assert_full_integrity(artifact, "dataset_snapshot", artifact["snapshot_id"])
     return artifact
 
 

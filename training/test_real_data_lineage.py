@@ -745,6 +745,103 @@ def test_stored_review_with_removed_capability_check_rejected():
     check("build_comparison_artifact: a stored review with a required capability check silently removed is rejected", err is not None, err)
 
 
+def test_review_copied_to_cross_split_location_rejected():
+    """Phase E lineage/withdrawal fourth verification, finding 1: canonical
+    parent binding previously derived split/milestone from wherever the
+    file physically was, which is tautological -- reconstructing 'the
+    canonical path for the split the file happens to sit under' always
+    matches. Reproduces the review's cross_split_parent live finding: a
+    validation review copied into the holdout tree at the exact
+    canonical-for-that-tree location (matching its own review_id) must
+    still be rejected, since the review's own (fingerprint-bound) split
+    field says real_validation."""
+    generation, gen_path = _dummy_generation()
+    chatgpt_review, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT)
+    _, claude_path = _build_review(generation, gen_path, "claude", ACTOR_CLAUDE)
+
+    holdout_review_path = rel.HOLDOUT_RESULTS_DIR / "some_milestone" / "lineage" / generation["evaluation_id"] / "reviews" / f"{chatgpt_review['review_id']}.json"
+    holdout_review_path.parent.mkdir(parents=True, exist_ok=True)
+    holdout_review_path.write_text(chatgpt_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.build_comparison_artifact,
+        chatgpt_review_path=holdout_review_path,
+        claude_review_path=claude_path,
+        generation_path=gen_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
+    )
+    check("build_comparison_artifact: a review copied to the exact canonical path under a DIFFERENT split tree is rejected", err is not None, err)
+
+
+def test_save_rejects_malformed_timestamp():
+    """Phase E lineage/withdrawal fourth verification, finding 2: save-time
+    validation previously ran only field-shape checks (_assert_exact_fields),
+    not the full semantic check (timestamp) load already performed.
+    Reproduces the review's invalid_timestamp_save live finding."""
+    generation, gen_path = _dummy_generation()
+    review = lin.build_review_artifact(
+        generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=_score_all(generation)
+    )
+    tampered = {**review, "created_at_utc": "not-a-timestamp"}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    err = _expect_error(lin.LineageValidationError, lin.save_review_artifact, tampered, split=generation["split"], milestone=generation.get("release_milestone"))
+    check("save_review_artifact: a self-consistent artifact with a malformed created_at_utc is rejected before any write", err is not None, err)
+
+
+def test_stored_nonboolean_strict_pass_rejected():
+    """Phase E lineage/withdrawal fourth verification, finding 3: Python
+    considers True == 1, so a stored integer 1 previously matched a
+    recomputed True under plain !=. Reproduces the review's
+    nonboolean_stored_strict_pass live finding."""
+    generation, gen_path = _dummy_generation(rubrics=[RUBRIC_A])
+    chatgpt_review, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT)
+    _, claude_path = _build_review(generation, gen_path, "claude", ACTOR_CLAUDE)
+
+    tampered = {**chatgpt_review, "scores": [{**chatgpt_review["scores"][0], "strict_pass": 1}]}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    chatgpt_path.write_text(json.dumps(tampered), encoding="utf-8")
+
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.build_comparison_artifact,
+        chatgpt_review_path=chatgpt_path,
+        claude_review_path=claude_path,
+        generation_path=gen_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
+    )
+    check("build_comparison_artifact: a stored review with strict_pass=1 (int, not literal bool) is rejected", err is not None, err)
+
+
+def test_altered_comparison_alignment_rejected():
+    """Phase E lineage/withdrawal fourth verification, finding 3: comparison
+    artifacts lacked a recursive semantic re-derivation on load --
+    alignment_status/record_comparisons were trusted at face value as long
+    as the top-level field set and self-fingerprint were consistent.
+    Reproduces the review's altered_comparison_alignment live finding."""
+    generation, gen_path = _dummy_generation()
+    chatgpt_review, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT, all_pass=True)
+    _, claude_path = _build_review(generation, gen_path, "claude", ACTOR_CLAUDE, all_pass=False)
+    disagree_comparison, disagree_path = _build_comparison(chatgpt_path, claude_path, generation)
+    check("setup: comparison genuinely disagrees before tampering", disagree_comparison["alignment_status"] == "disagreement")
+
+    tampered = {**disagree_comparison, "alignment_status": "aligned", "record_comparisons": []}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    disagree_path.write_text(json.dumps(tampered), encoding="utf-8")
+
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.build_adjudication_artifact,
+        comparison_path=disagree_path,
+        chatgpt_review_path=chatgpt_path,
+        claude_review_path=claude_path,
+        generation_path=gen_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
+        resolution_mode="reviewer_agreement",
+    )
+    check("build_adjudication_artifact: a stored comparison with altered alignment_status/record_comparisons is rejected", err is not None, err)
+
+
 # --- Group 15: a decision cannot cite anything except active adjudication artifacts ---
 
 
@@ -828,6 +925,10 @@ def main() -> None:
         test_parent_copied_outside_canonical_location_rejected,
         test_save_with_mutated_id_cannot_escape_root,
         test_stored_review_with_removed_capability_check_rejected,
+        test_review_copied_to_cross_split_location_rejected,
+        test_save_rejects_malformed_timestamp,
+        test_stored_nonboolean_strict_pass_rejected,
+        test_altered_comparison_alignment_rejected,
         test_decision_requires_adjudications,
         test_dataset_snapshot_basic,
         test_duplicate_generation_results_rejected,
