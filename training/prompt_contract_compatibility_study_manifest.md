@@ -1,10 +1,28 @@
 # Prompt-contract compatibility study — frozen design manifest
 
-**Status: design and commands only. No training or inference has been run.
-Compute is held pending joint review of `intent-recovery-model` PR #13,
-`thought-organizer-app` PR #4, and this manifest**, per Johnny/ChatGPT's
-2026-08-02 refinement replacing an open-ended retrain with a frozen,
-single-variable compatibility study.
+**Status: design and commands only. No training or inference has been run.**
+`intent-recovery-model` PR #13 and this manifest's original version (PR #14)
+were both merged to `main` on 2026-08-02 before joint review of the design
+completed. `thought-organizer-app` PR #4 remains open. **This revision
+corrects a seed confound ChatGPT caught in the merged version** (see
+below) — treat this version, not the one merged as PR #14, as current.
+Compute is still held pending that correction being accepted and
+`thought-organizer-app` PR #4 landing.
+
+## Correction (2026-08-02): seed confound in the original screening plan
+
+The version merged as PR #14 set Cell A's reference to the seed-17/73
+`checkpoint-600` replicas (the only ones with surviving weights, per
+finding #2 below) but had Cell C **screen seed 42 first**. Comparing a
+freshly-trained seed-42 candidate against a seed-17/73 reference conflates
+the prompt-contract change with seed variation — exactly the kind of
+second variable this study exists to rule out. Caught by ChatGPT, verified
+here, and corrected: **the comparison cells below are structured as one
+same-seed A/B/C triplet at a time**, screening seed 17 or 73 first (both
+have real Cell A references), never seed 42 alone. The historical seed-42
+`checkpoint-600` result (13/16, old prompt) stays on record as context
+only — it is not part of the controlled comparison, and no new seed-42
+candidate is trained as part of this study.
 
 ## Two findings that update the premise before this can be finalized
 
@@ -101,9 +119,11 @@ clean single-variable change, not a second confound.
   gold_v1.2.3 hunk since that's a strict append). Old-prompt processed
   copy already exists at `training/data/processed_gold_v1.2.2_control/`.
   New-prompt copy needs regenerating (command below) — not yet done.
-- **Seeds**: 42 (screen first), 17, 73 — matches every prior seed study
-  in this project. Run 17 and 73 only if 42 shows no material
-  regression, per the instruction.
+- **Seeds**: 17 (screen first), 73 (only if 17 clears the bar below).
+  Seed 42 is excluded from the controlled comparison — its original
+  `checkpoint-600` reference no longer exists (see finding #2), so there
+  is no valid same-seed Cell A to compare a new seed-42 candidate
+  against. The historical seed-42 result stays as context only.
 - **Steps**: 600 (40 epochs x ceil(60/4)=15 steps/epoch — `train.py`'s
   `num_train_epochs=40` and `per_device_train_batch_size=4` are hardcoded,
   not CLI-configurable, so this falls out automatically from the existing
@@ -124,31 +144,36 @@ clean single-variable change, not a second confound.
   - New contract (`source-determined-bullets-v1`, PR #13 / PR #4):
     `161661198071fd81310681f69381ec8e0287141e1e75b09d3a342414af31ccf1`
 
-## Comparison cells
+## Comparison cells — one same-seed triplet at a time
 
-### A. old-trained + old prompt — reference
+Screen the seed-17 triplet (A/B/C) first. Only run the seed-73 triplet if
+seed 17 clears the material-regression bar defined below. Seed 42 never
+gets its own triplet in this study (no valid Cell A, see the correction
+above); its historical result is quoted for context only.
 
-Use the seed-17 and seed-73 `checkpoint-600` control replicas (original
-seed-42 weights unavailable, see finding #2). Historical seed-42 number
-(13/16, old prompt) stays on record but can't be re-run.
+Each `git checkout <ref> -- training/prepare_data.py` below leaves that
+version checked out in the working tree until the next such command
+overwrites it -- restore it to `main`'s committed state
+(`git checkout main -- training/prepare_data.py`) once finished, so the
+working tree doesn't sit on a stale swapped-in copy.
 
+### Seed-17 triplet
+
+**A. old-trained + old prompt — reference**
 ```
-git checkout main -- training/prepare_data.py   # old prompt wording
+git checkout 8d7aa09 -- training/prepare_data.py   # old prompt wording -- main now has the NEW prompt post-PR#13; 8d7aa09 is the last commit before it merged
 python run_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
     checkpoints/gold_v1.2.2-seed17-control/checkpoint-600 \
     gold_v1.2.2_seed17_oldprompt_reference_results.json
-python run_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
-    checkpoints/gold_v1.2.2-seed73-control/checkpoint-600 \
-    gold_v1.2.2_seed73_oldprompt_reference_results.json
 ```
 
-### B. old-trained + new prompt — deployment-risk check
+**B. old-trained + new prompt — deployment-risk check** (two variants,
+both cheap: inference only, no training)
 
-Two variants, both cheap (inference only, no training):
-
-**B1. The actual production model** (checkpoint-520, ONNX):
+B1, the actual production model (checkpoint-520, ONNX — not seed-specific,
+same for both triplets, run once):
 ```
-git checkout claude/prompt-contract-sync -- training/prepare_data.py   # new prompt wording
+git checkout main -- training/prepare_data.py   # new prompt wording -- PR #13 merged, main has it now
 # Requires a small ORTModelForSeq2SeqLM-based variant of run_benchmark.py
 # (not yet written) pointed at the downloaded checkpoint-520 release assets.
 python run_benchmark_onnx.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
@@ -156,27 +181,21 @@ python run_benchmark_onnx.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
     checkpoint520_newprompt_deployment_risk_results.json
 ```
 
-**B2. checkpoint-600 replicas** (seed 17/73, safetensors, direct):
+B2, the seed-17 `checkpoint-600` replica (safetensors, direct):
 ```
-git checkout claude/prompt-contract-sync -- training/prepare_data.py   # new prompt wording
+git checkout main -- training/prepare_data.py   # new prompt wording -- PR #13 merged, main has it now
 python run_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
     checkpoints/gold_v1.2.2-seed17-control/checkpoint-600 \
     gold_v1.2.2_seed17_newprompt_deployment_risk_results.json
-python run_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
-    checkpoints/gold_v1.2.2-seed73-control/checkpoint-600 \
-    gold_v1.2.2_seed73_newprompt_deployment_risk_results.json
 ```
 
-### C. new-trained + new prompt — compatibility candidate
-
-Screen seed 42 first. Only run 17/73 if 42 shows no material regression
-against cell A.
-
+**C. new-trained + new prompt — compatibility candidate, seed 17**
 ```
-git checkout claude/prompt-contract-sync -- training/prepare_data.py   # new prompt wording
+git checkout main -- training/prepare_data.py   # new prompt wording -- PR #13 merged, main has it now
 
 # Regenerate the gold_v1.2.2-only split under the new prompt (writes a new
-# directory, does not touch the existing old-prompt copy):
+# directory, does not touch the existing old-prompt copy). Run once --
+# reused by both seed triplets, since the split itself isn't seed-dependent.
 python - <<'PY'
 from pathlib import Path
 import subprocess, json
@@ -200,22 +219,27 @@ for name, split in [("train.jsonl", train_split), ("val.jsonl", val_split)]:
     print(name, len(split))
 PY
 
-# Screen seed 42:
-python train.py --seed 42 \
-    --output-dir checkpoints/gold_v1.2.2-newprompt-seed42 \
-    --data-dir data/processed_gold_v1.2.2_control_newprompt
-python run_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
-    checkpoints/gold_v1.2.2-newprompt-seed42/final \
-    gold_v1.2.2_seed42_newprompt_candidate_results.json
-
-# Only if seed 42 avoids material regression vs. cell A:
 python train.py --seed 17 \
     --output-dir checkpoints/gold_v1.2.2-newprompt-seed17 \
     --data-dir data/processed_gold_v1.2.2_control_newprompt
-python train.py --seed 73 \
-    --output-dir checkpoints/gold_v1.2.2-newprompt-seed73 \
-    --data-dir data/processed_gold_v1.2.2_control_newprompt
+python run_benchmark.py datasets/benchmark/gold_v1.2.1_probes.jsonl \
+    checkpoints/gold_v1.2.2-newprompt-seed17/final \
+    gold_v1.2.2_seed17_newprompt_candidate_results.json
+python run_benchmark.py datasets/benchmark/source_determined_bullets_acceptance.jsonl \
+    checkpoints/gold_v1.2.2-newprompt-seed17/final \
+    gold_v1.2.2_seed17_newprompt_candidate_bullets_acceptance_results.json
 ```
+
+### Seed-73 triplet — only if the seed-17 triplet clears the bar
+
+Identical structure, seed 73 throughout: Cell A against
+`checkpoints/gold_v1.2.2-seed73-control/checkpoint-600` with the old
+prompt; Cell B2 against the same checkpoint with the new prompt (B1,
+checkpoint-520, doesn't repeat — it's not seed-specific); Cell C trains
+`checkpoints/gold_v1.2.2-newprompt-seed73` from the same
+`data/processed_gold_v1.2.2_control_newprompt` split, `--seed 73`, then
+runs both `gold_v1.2.1_probes.jsonl` and
+`source_determined_bullets_acceptance.jsonl` against it.
 
 `train.py --output-dir` defaults to refusing a non-empty target directory
 (`--force` is off by default, specifically because this is the mechanism
@@ -224,17 +248,40 @@ that silently pruned the original checkpoint-520 and checkpoint-600 via
 never-before-used directory name, so this protection shouldn't even need
 to trigger.
 
-## What "material regression" should mean here
+## Material regression — pinned definition (per ChatGPT's 2026-08-02 correction)
 
-Not decided in this manifest — recommend joint review pin this down
-explicitly before screening seed 42, e.g. as a specific pass-rate
-threshold or "no probe regresses from P to F relative to cell A that
-wasn't already failing under cell B." Left open deliberately rather than
-guessed at unilaterally.
+Evaluated same-seed (Cell C vs. that seed's own Cell A), not against the
+other seed or the historical seed-42 number. A candidate avoids material
+regression only if **all four** hold:
 
-## Release gate (unchanged)
+1. **16/16 format validity** — every one of the 16 `gold_v1.2.1_probes.jsonl`
+   outputs parses as well-formed (narrative/bullets/actions markers
+   present, correctly ordered).
+2. **No regression-guard pass becomes a failure** — every probe marked
+   `"status": "regression_guard"` that passed under that seed's Cell A
+   must still pass under Cell C.
+3. **No reduction in overall strict passes** — Cell C's total pass count
+   across all 16 probes must be >= that seed's Cell A pass count.
+4. **Passes the source-determined-bullets acceptance set** —
+   `datasets/benchmark/source_determined_bullets_acceptance.jsonl` (new,
+   this revision — 5 draft dummy cases covering the floor, a natural
+   count, the 7-line ceiling, and the "don't repeat content to hit a
+   target count" failure mode specifically). Every case's
+   `expected_bullet_count` must match exactly. This is the one check with
+   no Cell A equivalent, since Cell A ran under the old contract and
+   wouldn't be expected to satisfy the new rule -- it's evaluated as a
+   standalone pass/fail against the candidate only.
 
-Neither `intent-recovery-model` PR #13 nor `thought-organizer-app` PR #4
-merges, and nothing deploys, until a checkpoint from cell C passes its
-release gates. This manifest only prepares the comparison; it doesn't
-authorize running it.
+This acceptance set is a draft proposal, not yet reviewed — flagging that
+explicitly rather than treating 5 self-authored cases as sufficient
+without a second pass.
+
+## Release gate
+
+`intent-recovery-model` PR #13 merged to `main` on 2026-08-02 (ahead of
+joint design review completing, along with this manifest's original,
+confound-containing version as PR #14). That doesn't change the substance
+of the gate: nothing deploys, and `thought-organizer-app` PR #4 stays
+open/unmerged, until a same-seed-controlled Cell C checkpoint passes all
+four material-regression checks above. This manifest only prepares the
+comparison; it doesn't authorize running it.
