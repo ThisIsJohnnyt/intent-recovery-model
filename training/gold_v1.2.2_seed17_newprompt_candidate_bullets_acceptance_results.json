@@ -1,0 +1,100 @@
+[
+  {
+    "id": "sdb-01",
+    "category": "source_determined_bullets",
+    "kind": "direct",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### I need to pick up the dry cleaning before Friday. ###BULLETS### Dry cleaning needs to be picked up before Friday; both references are unresolved ###ACTIONS### Pick up dry cleaning before Friday",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": null,
+      "NO_INVENTED_CONTENT": null
+    },
+    "failure_labels": []
+  },
+  {
+    "id": "sdb-02",
+    "category": "source_determined_bullets",
+    "kind": "direct",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### I need to call the dentist to reschedule my upcoming appointment and separately water the plants while I'm away. ###BULLETS### Reschedule dentist appointment separately Water plants while I'm away ###ACTIONS### Call dentist to reschedule",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": null,
+      "NO_TOPIC_MERGE": null,
+      "NO_EXCESSIVE_FRAGMENTATION": null
+    },
+    "failure_labels": []
+  },
+  {
+    "id": "sdb-03",
+    "category": "source_determined_bullets",
+    "kind": "direct",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### I need to renew the car registration and email a coworker about the project timeline. I also need to pick a paint color for the hallway. ###BULLETS### Renewal car registration Email a coworker about the project timeline Pick a paint color for the hallway ###ACTIONS### Renew car registration Email a coworker about the project timeline Pick a paint color for the hallway",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": null
+    },
+    "failure_labels": []
+  },
+  {
+    "id": "sdb-04",
+    "category": "source_determined_bullets",
+    "kind": "adversarial",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### The roof needs an oil change, the car needs an oil change, the gutters are clogged, and the dog needs a vet visit. I still haven't filed the insurance claim, the dog needs a vet visit, and I never finished setting up the new router. ###BULLETS### Roof needs an oil change Car needs an oil change Pet needs a vet visit New router needs a drill ###ACTIONS### Finish the insurance claim Return a borrowed drill",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": null,
+      "ACTION_COUNT_RULE_SATISFIED": null,
+      "NO_TOPIC_MERGE": null
+    },
+    "failure_labels": []
+  },
+  {
+    "id": "sdb-05",
+    "category": "source_determined_bullets",
+    "kind": "adversarial",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### I need to call the insurance company about the claim before Friday and remember to ring up the company about that claim. ###BULLETS### Insurance claim: call before Friday; need to ring up insurance company about the same claim ###ACTIONS### Call insurance company about the claim before Friday",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": null,
+      "ACTION_COUNT_RULE_SATISFIED": null,
+      "NO_DUPLICATE_FOR_RESTATED_TASK": null,
+      "DEADLINE_SURVIVED": null
+    },
+    "failure_labels": []
+  }
+]

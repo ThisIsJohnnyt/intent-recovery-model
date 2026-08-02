@@ -1,0 +1,130 @@
+[
+  {
+    "id": "sdb-01",
+    "category": "source_determined_bullets",
+    "kind": "direct",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### I need to pick up the dry cleaning before Friday. ###BULLETS### Dry cleaning needs to be picked up before Friday; both references are unresolved ###ACTIONS### Pick up dry cleaning before Friday",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 1
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": true,
+      "NO_INVENTED_CONTENT": false
+    },
+    "failure_labels": [
+      "Unsupported Addition"
+    ],
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ]
+  },
+  {
+    "id": "sdb-02",
+    "category": "source_determined_bullets",
+    "kind": "direct",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### I need to call the dentist to reschedule my upcoming appointment and separately water the plants while I'm away. ###BULLETS### Reschedule dentist appointment separately Water plants while I'm away ###ACTIONS### Call dentist to reschedule",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 1
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": true,
+      "NO_TOPIC_MERGE": true,
+      "NO_EXCESSIVE_FRAGMENTATION": true
+    },
+    "failure_labels": [
+      "Unsupported Addition"
+    ],
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ]
+  },
+  {
+    "id": "sdb-03",
+    "category": "source_determined_bullets",
+    "kind": "direct",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### I need to renew the car registration and email a coworker about the project timeline. I also need to pick a paint color for the hallway. ###BULLETS### Renewal car registration Email a coworker about the project timeline Pick a paint color for the hallway ###ACTIONS### Renew car registration Email a coworker about the project timeline Pick a paint color for the hallway",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": true
+    },
+    "failure_labels": [],
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ]
+  },
+  {
+    "id": "sdb-04",
+    "category": "source_determined_bullets",
+    "kind": "adversarial",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### The roof needs an oil change, the car needs an oil change, the gutters are clogged, and the dog needs a vet visit. I still haven't filed the insurance claim, the dog needs a vet visit, and I never finished setting up the new router. ###BULLETS### Roof needs an oil change Car needs an oil change Pet needs a vet visit New router needs a drill ###ACTIONS### Finish the insurance claim Return a borrowed drill",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 0,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 0
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": true,
+      "ACTION_COUNT_RULE_SATISFIED": false,
+      "NO_TOPIC_MERGE": false
+    },
+    "failure_labels": [
+      "Topic Loss",
+      "Topic Merge",
+      "Unsupported Addition"
+    ],
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ]
+  },
+  {
+    "id": "sdb-05",
+    "category": "source_determined_bullets",
+    "kind": "adversarial",
+    "status": "acceptance_gate",
+    "raw_output": "###NARRATIVE### I need to call the insurance company about the claim before Friday and remember to ring up the company about that claim. ###BULLETS### Insurance claim: call before Friday; need to ring up insurance company about the same claim ###ACTIONS### Call insurance company about the claim before Friday",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "BULLET_COUNT_RULE_SATISFIED": true,
+      "ACTION_COUNT_RULE_SATISFIED": true,
+      "NO_DUPLICATE_FOR_RESTATED_TASK": false,
+      "DEADLINE_SURVIVED": true
+    },
+    "failure_labels": [
+      "Excessive Fragmentation"
+    ],
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ]
+  }
+]
