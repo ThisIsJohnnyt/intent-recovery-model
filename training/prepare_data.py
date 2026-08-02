@@ -34,7 +34,22 @@ SPLIT_MANIFEST_PATH = Path(__file__).parent / "split_manifest.json"
 
 # Mirrors src/services/noteOrganizer.ts SYSTEM_PROMPT / USER_PROMPT_TEMPLATE
 # exactly, so the model trains on the identical prompt shape it sees in
-# production for the single-pass (non-chunked) path.
+# production for the single-pass (non-chunked) path. Neither side may
+# change alone -- see REAL_DATA_ANNOTATION_GUIDE.md's "Cross-repository
+# prompt-contract dependency" and training/REAL_DATA_EVALUATION_PROTOCOL.md's
+# prompt-contract fingerprint test. PROMPT_CONTRACT_VERSION must match the
+# app repository's own version identifier before either side merges a
+# contract change; bump both together, never one alone.
+#
+# RELEASE GATE (approved 2026-08-02, see
+# training/app_prompt_bullet_count_reconciliation.md): the app-repository
+# change lands in step with this one, but production activation of the
+# new wording waits for a checkpoint trained or verified under this
+# contract -- existing deployed checkpoints were trained on the old
+# "3 to 7 lines" wording. The app and a compatible checkpoint release
+# together; this training-side edit alone does not authorize deployment.
+PROMPT_CONTRACT_VERSION = "source-determined-bullets-v1"
+
 SYSTEM_PROMPT = (
     "You are a compassionate AI assistant helping someone organize scattered, "
     "fragmented thoughts written under real-world conditions like time "
@@ -59,7 +74,9 @@ USER_PROMPT_TEMPLATE = (
     "a coherent, flowing narrative that groups related ideas, keeps the "
     "original meaning and tone, and reads less anxiety-inducing than the "
     f"raw thoughts\n{BULLETS_MARKER}\n"
-    "one key idea per line, 3 to 7 lines\n"
+    "One source-supported key idea per line, up to 7 lines. Use fewer "
+    "lines when the source supports fewer ideas. Never add, split, or "
+    "repeat content to reach a target count.\n"
     f"{ACTIONS_MARKER}\n"
     "one task per line; leave this section empty if there are no tasks"
 )

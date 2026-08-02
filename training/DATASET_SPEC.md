@@ -43,7 +43,7 @@ One JSON object per line (JSONL), UTF-8:
 
 Rules for `output`:
 - `narrative`: rewrites `input` as a coherent narrative. Same meaning and tone as the input, just organized. Not therapy-speak, not generic — it should clearly be about the specific things mentioned in `input`.
-- `bullets`: 3-7 short key points extracted from `input`.
+- `bullets`: one short key point per source-supported idea in `input`, up to 7. Source-determined count -- use fewer than 7 when `input` supports fewer ideas; never add, split, or repeat content to reach a target count. A one-idea input gets one bullet.
 - `action_items`: concrete tasks/next steps mentioned in `input`. Use an empty array `[]` when the input has none — never invent one.
 
 `difficulty` and `category` are optional annotations, not part of what the model
@@ -139,7 +139,9 @@ no markdown fences, no commentary) for a note-organizing app. Each line:
 "input" = realistic scattered, messy personal notes a real person would
 jot down (voice-to-text or quick typing), NOT polished writing. "narrative"
 = the same content rewritten as one coherent paragraph, same meaning/tone,
-easier to read. "bullets" = 3-7 short key points. "action_items" = concrete
+easier to read. "bullets" = one key point per source-supported idea, up
+to 7, fewer when the input supports fewer ideas -- never added, split, or
+repeated to reach a target count. "action_items" = concrete
 tasks mentioned, or [] if none — never invent tasks that aren't implied by
 the input. "difficulty" is your judgment of how hard this example is to
 recover correctly. "category" is the one specific recovery skill this
