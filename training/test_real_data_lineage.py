@@ -182,10 +182,17 @@ def _generation_path_for(generation: dict) -> Path:
 
 
 def _build_comparison(chatgpt_path, claude_path, generation) -> tuple[dict, Path]:
-    comparison = lin.build_comparison_artifact(
-        chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=_generation_path_for(generation), rubrics=_RUBRICS_BY_RECORD_ID
+    generation_path = _generation_path_for(generation)
+    comparison = lin.build_comparison_artifact(chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=generation_path, rubrics=_RUBRICS_BY_RECORD_ID)
+    path = lin.save_comparison_artifact(
+        comparison,
+        chatgpt_review_path=chatgpt_path,
+        claude_review_path=claude_path,
+        generation_path=generation_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
+        split=generation["split"],
+        milestone=generation.get("release_milestone"),
     )
-    path = lin.save_comparison_artifact(comparison, split=generation["split"], milestone=generation.get("release_milestone"))
     return comparison, path
 
 
@@ -842,6 +849,74 @@ def test_altered_comparison_alignment_rejected():
     check("build_adjudication_artifact: a stored comparison with altered alignment_status/record_comparisons is rejected", err is not None, err)
 
 
+def test_save_review_artifact_rejects_invalid_reviewer_role():
+    """Phase E lineage/withdrawal final narrow verification: an otherwise
+    self-consistent review with an invalid reviewer_role must be rejected
+    at save time, before it is ever admitted to immutable storage -- not
+    merely rejected later when consumed. Reproduces the review's
+    invalid_reviewer_role_save live finding."""
+    generation, gen_path = _dummy_generation()
+    review = lin.build_review_artifact(
+        generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=_score_all(generation)
+    )
+    tampered = {**review, "reviewer_role": "not_a_real_role"}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    expected_path = lin._review_path(generation["split"], generation["evaluation_id"], tampered["review_id"], generation.get("release_milestone"))
+
+    err = _expect_error(lin.LineageValidationError, lin.save_review_artifact, tampered, split=generation["split"], milestone=generation.get("release_milestone"))
+    check("save_review_artifact: an otherwise self-consistent invalid reviewer_role is rejected", err is not None, err)
+    check("save_review_artifact: no file was written for the rejected review", not expected_path.exists())
+
+
+def test_save_review_artifact_rejects_nonboolean_strict_pass():
+    """Phase E lineage/withdrawal final narrow verification: an otherwise
+    self-consistent review with a stored strict_pass=1 (int, not literal
+    bool) must be rejected at save time. Reproduces the review's
+    nonboolean_strict_pass_save live finding."""
+    generation, gen_path = _dummy_generation(rubrics=[RUBRIC_A])
+    review = lin.build_review_artifact(
+        generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=_score_all(generation)
+    )
+    tampered = {**review, "scores": [{**review["scores"][0], "strict_pass": 1}]}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    expected_path = lin._review_path(generation["split"], generation["evaluation_id"], tampered["review_id"], generation.get("release_milestone"))
+
+    err = _expect_error(lin.LineageValidationError, lin.save_review_artifact, tampered, split=generation["split"], milestone=generation.get("release_milestone"))
+    check("save_review_artifact: an otherwise self-consistent strict_pass=1 is rejected", err is not None, err)
+    check("save_review_artifact: no file was written for the rejected review", not expected_path.exists())
+
+
+def test_save_comparison_artifact_rejects_altered_alignment():
+    """Phase E lineage/withdrawal final narrow verification: an otherwise
+    self-consistent comparison with altered alignment_status/
+    record_comparisons must be rejected at save time, before it is ever
+    admitted to immutable storage. Reproduces the review's
+    altered_comparison_save live finding."""
+    generation, gen_path = _dummy_generation()
+    chatgpt_review, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT, all_pass=True)
+    _, claude_path = _build_review(generation, gen_path, "claude", ACTOR_CLAUDE, all_pass=False)
+    comparison = lin.build_comparison_artifact(chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID)
+    check("setup: comparison genuinely disagrees before tampering", comparison["alignment_status"] == "disagreement")
+
+    tampered = {**comparison, "alignment_status": "aligned", "record_comparisons": []}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    expected_path = lin._comparison_path(generation["split"], generation["evaluation_id"], tampered["comparison_id"], generation.get("release_milestone"))
+
+    err = _expect_error(
+        lin.LineageValidationError,
+        lin.save_comparison_artifact,
+        tampered,
+        chatgpt_review_path=chatgpt_path,
+        claude_review_path=claude_path,
+        generation_path=gen_path,
+        rubrics=_RUBRICS_BY_RECORD_ID,
+        split=generation["split"],
+        milestone=generation.get("release_milestone"),
+    )
+    check("save_comparison_artifact: altered alignment_status/record_comparisons rejected before writing", err is not None, err)
+    check("save_comparison_artifact: no file was written for the rejected comparison", not expected_path.exists())
+
+
 # --- Group 15: a decision cannot cite anything except active adjudication artifacts ---
 
 
@@ -929,6 +1004,9 @@ def main() -> None:
         test_save_rejects_malformed_timestamp,
         test_stored_nonboolean_strict_pass_rejected,
         test_altered_comparison_alignment_rejected,
+        test_save_review_artifact_rejects_invalid_reviewer_role,
+        test_save_review_artifact_rejects_nonboolean_strict_pass,
+        test_save_comparison_artifact_rejects_altered_alignment,
         test_decision_requires_adjudications,
         test_dataset_snapshot_basic,
         test_duplicate_generation_results_rejected,

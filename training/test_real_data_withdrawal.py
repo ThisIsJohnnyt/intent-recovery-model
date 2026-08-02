@@ -185,7 +185,15 @@ def _build_full_lineage(generation, gen_path, rubric, rfp):
     claude_path = lin.save_review_artifact(claude_review, split=generation["split"], milestone=generation.get("release_milestone"))
     rubrics = {generation["results"][0]["record_id"]: full_rubric}
     comparison = lin.build_comparison_artifact(chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path, rubrics=rubrics)
-    comparison_path = lin.save_comparison_artifact(comparison, split=generation["split"], milestone=generation.get("release_milestone"))
+    comparison_path = lin.save_comparison_artifact(
+        comparison,
+        chatgpt_review_path=chatgpt_path,
+        claude_review_path=claude_path,
+        generation_path=gen_path,
+        rubrics=rubrics,
+        split=generation["split"],
+        milestone=generation.get("release_milestone"),
+    )
     adjudication = lin.build_adjudication_artifact(
         comparison_path=comparison_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path, rubrics=rubrics, resolution_mode="reviewer_agreement"
     )

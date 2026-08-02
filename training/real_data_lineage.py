@@ -545,6 +545,46 @@ _REVIEW_SCORE_FIELDS = frozenset(
 )
 
 
+def _verify_score_record_self_consistency(score: dict, *, context_id) -> None:
+    """Rubric-FREE structural/semantic checks for one score record: exact
+    field set, scores/capability_checks/failure_labels/format_valid shape
+    and value types, and a strict_pass that is both a literal boolean and
+    consistent with the record's own other fields. Does not verify the
+    capability_checks KEY SET against any specific rubric -- that
+    requires external rubric context and is layered on top by
+    _verify_stored_score_record. Used both by that function and directly
+    by save-time review/adjudication validation (see
+    _verify_review_semantics, _verify_adjudication_semantics), per the
+    Phase E lineage/withdrawal final narrow verification's finding: a
+    self-consistent-but-semantically-invalid record (e.g. a non-boolean
+    strict_pass) must never be admitted to immutable storage in the first
+    place, not merely rejected later when consumed."""
+    if not isinstance(score, dict) or set(score.keys()) != _REVIEW_SCORE_FIELDS:
+        raise LineageValidationError(f"{context_id}: score record does not have the exact expected field set {sorted(_REVIEW_SCORE_FIELDS)}")
+    record_id = score.get("record_id")
+    if not isinstance(score.get("scores"), dict) or set(score["scores"].keys()) != set(rsc.SEMANTIC_DIMENSIONS) or not all(isinstance(v, bool) for v in score["scores"].values()):
+        raise LineageValidationError(f"{context_id}: {record_id}: scores must have exactly the semantic-dimension keys, each a literal boolean")
+    if not isinstance(score.get("capability_checks"), dict) or not all(isinstance(v, bool) for v in score["capability_checks"].values()):
+        raise LineageValidationError(f"{context_id}: {record_id}: capability_checks must be a dict of literal booleans")
+    failure_labels = score.get("failure_labels")
+    if not isinstance(failure_labels, list) or len(set(failure_labels)) != len(failure_labels) or not set(failure_labels) <= rsc.FAILURE_LABEL_VOCABULARY:
+        raise LineageValidationError(f"{context_id}: {record_id}: failure_labels are malformed, duplicated, or contain an unknown label")
+    if not isinstance(score.get("format_valid"), bool):
+        raise LineageValidationError(f"{context_id}: {record_id}: format_valid must be a literal boolean")
+
+    recomputed = rsc.compute_strict_pass({**score, "review_status": "scored"})
+    if recomputed is None:
+        raise LineageValidationError(f"{context_id}: {record_id}: score record is not fully scored")
+    stored_strict_pass = score.get("strict_pass")
+    # isinstance, not == -- per the Phase E lineage/withdrawal fourth
+    # verification's finding 3, Python considers True == 1, so a stored
+    # integer 1 would silently match a recomputed True under plain !=.
+    if not isinstance(stored_strict_pass, bool):
+        raise LineageValidationError(f"{context_id}: {record_id}: strict_pass must be a literal boolean, got {stored_strict_pass!r}")
+    if recomputed != stored_strict_pass:
+        raise LineageValidationError(f"{context_id}: {record_id}: strict_pass does not match the value recomputed from its own scores -- possible tampering")
+
+
 def _verify_stored_score_record(score: dict, *, rubric: dict) -> None:
     """Re-validates an already-built, stored score record (loaded from a
     saved review) against its bound rubric. Per the Phase E lineage/
@@ -557,9 +597,8 @@ def _verify_stored_score_record(score: dict, *, rubric: dict) -> None:
     -- this closes that gap by re-deriving the required check set from a
     freshly supplied rubric and recomputing strict_pass, rather than
     trusting whatever the file claims."""
-    if not isinstance(score, dict) or set(score.keys()) != _REVIEW_SCORE_FIELDS:
-        raise LineageValidationError(f"stored score record does not have the exact expected field set {sorted(_REVIEW_SCORE_FIELDS)}")
-    record_id = score["record_id"]
+    record_id = score.get("record_id") if isinstance(score, dict) else None
+    _verify_score_record_self_consistency(score, context_id="stored score")
     try:
         rdm._validate_rubric_entry(rubric, record_id)
     except rdm.ManifestValidationError as e:
@@ -575,27 +614,8 @@ def _verify_stored_score_record(score: dict, *, rubric: dict) -> None:
         raise LineageValidationError(f"{record_id}: stored score's rubric_fingerprint does not match the supplied rubric: {e}") from e
 
     expected_checks = set(rubric["capability_checks"])
-    if not isinstance(score.get("scores"), dict) or set(score["scores"].keys()) != set(rsc.SEMANTIC_DIMENSIONS):
-        raise LineageValidationError(f"{record_id}: stored scores do not have the exact expected semantic-dimension keys")
-    if not isinstance(score.get("capability_checks"), dict) or set(score["capability_checks"].keys()) != expected_checks:
+    if set(score["capability_checks"].keys()) != expected_checks:
         raise LineageValidationError(f"{record_id}: stored capability_checks do not exactly match the rubric's required checks {sorted(expected_checks)}")
-    failure_labels = score.get("failure_labels")
-    if not isinstance(failure_labels, list) or len(set(failure_labels)) != len(failure_labels) or not set(failure_labels) <= rsc.FAILURE_LABEL_VOCABULARY:
-        raise LineageValidationError(f"{record_id}: stored failure_labels are malformed, duplicated, or contain an unknown label")
-    if not isinstance(score.get("format_valid"), bool):
-        raise LineageValidationError(f"{record_id}: stored format_valid must be a literal boolean")
-
-    recomputed = rsc.compute_strict_pass({**score, "review_status": "scored"})
-    if recomputed is None:
-        raise LineageValidationError(f"{record_id}: stored score record is not fully scored")
-    stored_strict_pass = score.get("strict_pass")
-    # isinstance, not == -- per the Phase E lineage/withdrawal fourth
-    # verification's finding 3, Python considers True == 1, so a stored
-    # integer 1 would silently match a recomputed True under plain !=.
-    if not isinstance(stored_strict_pass, bool):
-        raise LineageValidationError(f"{record_id}: stored strict_pass must be a literal boolean, got {stored_strict_pass!r}")
-    if recomputed != stored_strict_pass:
-        raise LineageValidationError(f"{record_id}: stored strict_pass does not match the value recomputed from its own scores -- possible tampering")
 
 
 def build_review_artifact(
@@ -662,7 +682,29 @@ def _review_path(split: str, evaluation_id: str, review_id: str, milestone: str 
     return lineage_root_for(split, evaluation_id, milestone) / "reviews" / f"{review_id}.json"
 
 
+def _verify_review_semantics(review: dict) -> None:
+    """Rubric-free per-kind semantic validation for a review, run at save
+    time in addition to the shared structural layer (_validate_before_save)
+    -- per the Phase E lineage/withdrawal final narrow verification: an
+    otherwise self-consistent review with an invalid reviewer_role, a
+    malformed actor ID, a non-literal-True attestation, or a semantically
+    broken score record (e.g. strict_pass=1) must be rejected before it is
+    ever written to immutable storage, not only when later consumed by
+    load_review_verified. This does not verify each score's
+    capability_checks against a specific rubric's required set -- that
+    needs external rubric context and remains a load-time check."""
+    if review.get("reviewer_role") not in REVIEWER_ROLES:
+        raise LineageValidationError(f"review has an invalid reviewer_role: {review.get('reviewer_role')!r}")
+    _require_actor_id(review.get("reviewer_actor_id"), "reviewer_actor_id")
+    if review.get("independent_review_attestation") is not True:
+        raise LineageValidationError("review's independent_review_attestation must be literal True")
+    _require_unique_record_ids(review.get("scores", []), context_label="review scores")
+    for score in review["scores"]:
+        _verify_score_record_self_consistency(score, context_id=f"review {review.get('review_id')}")
+
+
 def save_review_artifact(review: dict, *, split: str, milestone: str | None = None) -> Path:
+    _verify_review_semantics(review)
     path = _review_path(split, review["generation"]["evaluation_id"], review["review_id"], milestone)
     _validate_before_save(review, "review", path, expected_root=lineage_root_for(split, review["generation"]["evaluation_id"], milestone))
     return _save_artifact_exclusive(path, review)
@@ -829,7 +871,32 @@ def _comparison_path(split: str, evaluation_id: str, comparison_id: str, milesto
     return lineage_root_for(split, evaluation_id, milestone) / "comparisons" / f"{comparison_id}.json"
 
 
-def save_comparison_artifact(comparison: dict, *, split: str, milestone: str | None = None) -> Path:
+def save_comparison_artifact(
+    comparison: dict, *, chatgpt_review_path: Path, claude_review_path: Path, generation_path: Path, rubrics: dict[str, dict], split: str, milestone: str | None = None
+) -> Path:
+    """chatgpt_review_path/claude_review_path/generation_path/rubrics: per
+    the Phase E lineage/withdrawal final narrow verification, a comparison
+    cannot be verified for semantic correctness (alignment_status,
+    record_comparisons) from its own content alone -- it stores only
+    references to its parent reviews, not their score content. Re-loading
+    and re-verifying both reviews here (the same way build_comparison_artifact
+    and load_comparison_verified do) closes the gap where an altered
+    alignment_status/record_comparisons, self-consistent after
+    recomputing the fingerprint, was previously written successfully."""
+    generation = load_and_require_active_parent(generation_path, expected_kind="generation", parent_label="generation")
+    chatgpt_review = load_review_verified(chatgpt_review_path, generation, rubrics)
+    claude_review = load_review_verified(claude_review_path, generation, rubrics)
+    if comparison.get("chatgpt_review") != _artifact_ref(chatgpt_review, "review_id"):
+        raise LineageValidationError("comparison's chatgpt_review reference does not match the supplied chatgpt_review")
+    if comparison.get("claude_review") != _artifact_ref(claude_review, "review_id"):
+        raise LineageValidationError("comparison's claude_review reference does not match the supplied claude_review")
+    if comparison.get("generation") != chatgpt_review["generation"]:
+        raise LineageValidationError("comparison's generation reference does not match the supplied reviews")
+    record_comparisons, any_disagreement = _compute_record_comparisons(chatgpt_review, claude_review)
+    expected_alignment = "disagreement" if any_disagreement else "aligned"
+    if comparison.get("alignment_status") != expected_alignment or comparison.get("record_comparisons") != record_comparisons:
+        raise LineageValidationError("comparison's alignment_status/record_comparisons do not match the value recomputed from the verified reviews -- refusing to save")
+
     path = _comparison_path(split, comparison["generation"]["evaluation_id"], comparison["comparison_id"], milestone)
     _validate_before_save(comparison, "comparison", path, expected_root=lineage_root_for(split, comparison["generation"]["evaluation_id"], milestone))
     return _save_artifact_exclusive(path, comparison)
@@ -961,7 +1028,33 @@ def _adjudication_path(split: str, evaluation_id: str, adjudication_id: str, mil
     return lineage_root_for(split, evaluation_id, milestone) / "adjudications" / f"{adjudication_id}.json"
 
 
+def _verify_adjudication_semantics(adjudication: dict) -> None:
+    """Rubric-free per-kind semantic validation for an adjudication, run
+    at save time in addition to the shared structural layer -- mirrors
+    _verify_review_semantics for the same reason (see its docstring):
+    validates resolution_mode, the actor binding that mode requires or
+    forbids, each result record's self-consistency, and that
+    aggregate_strict_pass is exactly what recomputing from the adjudication's
+    own results produces."""
+    if adjudication.get("resolution_mode") not in RESOLUTION_MODES:
+        raise LineageValidationError(f"adjudication has an invalid resolution_mode: {adjudication.get('resolution_mode')!r}")
+    resolved_by_actor_id = adjudication.get("resolved_by_actor_id")
+    if adjudication["resolution_mode"] == "reviewer_agreement":
+        if resolved_by_actor_id is not None:
+            raise LineageValidationError("reviewer_agreement adjudication must have resolved_by_actor_id=null")
+    else:
+        _require_actor_id(resolved_by_actor_id, "resolved_by_actor_id")
+    results = adjudication.get("results", [])
+    _require_unique_record_ids(results, context_label="adjudication results")
+    for result in results:
+        _verify_score_record_self_consistency(result, context_id=f"adjudication {adjudication.get('adjudication_id')}")
+    expected_aggregate = rsc.aggregate_strict_pass_rate(results)
+    if adjudication.get("aggregate_strict_pass") != expected_aggregate:
+        raise LineageValidationError("adjudication's aggregate_strict_pass does not match the value recomputed from its own results")
+
+
 def save_adjudication_artifact(adjudication: dict, *, split: str, milestone: str | None = None) -> Path:
+    _verify_adjudication_semantics(adjudication)
     path = _adjudication_path(split, adjudication["generation"]["evaluation_id"], adjudication["adjudication_id"], milestone)
     _validate_before_save(adjudication, "adjudication", path, expected_root=lineage_root_for(split, adjudication["generation"]["evaluation_id"], milestone))
     return _save_artifact_exclusive(path, adjudication)
@@ -1001,7 +1094,22 @@ def build_decision_record(*, decision_type: str, deciding_actor_id: str, adjudic
     return artifact
 
 
+def _verify_decision_semantics(decision: dict) -> None:
+    """Rubric-free per-kind semantic validation for a decision, run at
+    save time -- mirrors _verify_review_semantics for the same reason."""
+    if decision.get("decision_type") not in DECISION_TYPES:
+        raise LineageValidationError(f"decision has an invalid decision_type: {decision.get('decision_type')!r}")
+    _require_actor_id(decision.get("deciding_actor_id"), "deciding_actor_id")
+    if not decision.get("adjudications"):
+        raise LineageValidationError("decision requires at least one adjudication reference")
+    _require_unique_record_ids(
+        [{"record_id": ref["artifact_id"]} for ref in decision["adjudications"]],
+        context_label="decision adjudication references",
+    )
+
+
 def save_decision_record(decision: dict) -> Path:
+    _verify_decision_semantics(decision)
     path = DECISIONS_DIR / f"{decision['decision_id']}.json"
     _validate_before_save(decision, "decision", path, expected_root=DECISIONS_DIR)
     return _save_artifact_exclusive(path, decision)
@@ -1034,7 +1142,16 @@ def build_status_event(*, target_artifact: dict, target_id_field: str, new_statu
     return artifact
 
 
+def _verify_status_event_semantics(event: dict) -> None:
+    """Rubric-free per-kind semantic validation for a status event, run
+    at save time -- mirrors _verify_review_semantics for the same reason."""
+    if event.get("new_status") not in STATUS_VALUES:
+        raise LineageValidationError(f"status event has an invalid new_status: {event.get('new_status')!r}")
+    _require_actor_id(event.get("actor_id"), "actor_id")
+
+
 def save_status_event(event: dict) -> Path:
+    _verify_status_event_semantics(event)
     path = STATUS_EVENTS_DIR / f"{event['status_event_id']}.json"
     _validate_before_save(event, "status_event", path, expected_root=STATUS_EVENTS_DIR)
     return _save_artifact_exclusive(path, event)
@@ -1183,9 +1300,22 @@ def build_dataset_snapshot(*, split: str, creation_reason: str, active_records: 
     return artifact
 
 
-def save_dataset_snapshot(snapshot: dict) -> Path:
+def _verify_dataset_snapshot_semantics(snapshot: dict) -> None:
+    """Rubric-free per-kind semantic validation for a dataset snapshot,
+    run at save time -- mirrors _verify_review_semantics for the same
+    reason: recomputes dataset_fingerprint from the snapshot's own
+    active_records/split rather than trusting the stored value."""
     if snapshot.get("split") not in rdm.VALID_SPLITS:
         raise LineageValidationError(f"dataset_snapshot has an invalid split {snapshot.get('split')!r}")
+    active_records = snapshot.get("active_records", [])
+    _require_unique_record_ids(active_records, context_label="dataset snapshot active_records")
+    expected_fp = f"sha256:{rdp.dataset_fingerprint(active_records, snapshot['split'])}"
+    if snapshot.get("dataset_fingerprint") != expected_fp:
+        raise LineageValidationError("dataset_snapshot's dataset_fingerprint does not match the value recomputed from its own active_records")
+
+
+def save_dataset_snapshot(snapshot: dict) -> Path:
+    _verify_dataset_snapshot_semantics(snapshot)
     path = DATASET_SNAPSHOTS_DIR / snapshot["split"] / f"{snapshot['snapshot_id']}.json"
     _validate_before_save(snapshot, "dataset_snapshot", path, expected_root=DATASET_SNAPSHOTS_DIR / snapshot["split"])
     return _save_artifact_exclusive(path, snapshot)
