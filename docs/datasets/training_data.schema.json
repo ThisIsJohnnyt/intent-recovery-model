@@ -25,7 +25,7 @@
         "bullets": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Short key points extracted from 'input'. Typically 3-7; may be empty."
+          "description": "Short key points extracted from 'input', one per source-supported idea. Source-determined count, up to 7, fewer when the input supports fewer ideas; never added, split, or repeated to reach a target count. May be empty."
         },
         "action_items": {
           "type": "array",
