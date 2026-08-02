@@ -3,11 +3,10 @@
 Usage:
     python prepare_data.py
 
-Reads datasets/synthetic.jsonl (trained on), datasets/real_validation.jsonl
-(held out, routine dev-eval), and datasets/real_holdout.jsonl (held out,
-sealed release-milestone eval only), and writes
-training/data/processed/{train,val,real_validation,real_holdout_eval}.jsonl,
-each record shaped {"prompt": ..., "target": ...} ready for tokenization.
+Reads datasets/synthetic.jsonl (trained on) and datasets/real_validation.jsonl
+(held out, routine dev-eval), and writes
+training/data/processed/{train,val,real_validation}.jsonl, each record shaped
+{"prompt": ..., "target": ...} ready for tokenization.
 
 Train/val membership for synthetic.jsonl comes from split_manifest.json, not a
 random shuffle -- see that file's own description for why. Every example not
@@ -15,13 +14,14 @@ listed there defaults to train, so appending new Gold examples can never
 silently move an existing example between train and val.
 
 real_validation.jsonl and real_holdout.jsonl serve different roles -- see
-docs/decisions/PDR-004.md. Routine development work (checkpoint comparison,
-error analysis, curriculum decisions) should use real_validation.jsonl.
-real_holdout.jsonl is reserved for declared release milestones only, is
-evaluated by the separate training/evaluate_holdout.py script (never
-automatically by train.py), and must not be consulted to guide day-to-day
-decisions -- see that PDR for why. Neither file is ever written into
-train.jsonl.
+docs/decisions/PDR-004.md and PDR-005.md. Routine development work
+(checkpoint comparison, error analysis, curriculum decisions) should use
+real_validation.jsonl. real_holdout.jsonl is reserved for declared release
+milestones only and, per PDR-005's least-privilege requirement, is never
+opened, validated, or copied here at all -- the separate
+training/evaluate_holdout.py script loads it directly in memory, only when
+explicitly invoked with a declared milestone. Neither file is ever written
+into train.jsonl.
 """
 import hashlib
 import json
@@ -69,6 +69,21 @@ def build_prompt(raw_input: str) -> str:
     return f"{SYSTEM_PROMPT}\n\nUSER'S RAW THOUGHTS:\n{raw_input}\n\n{USER_PROMPT_TEMPLATE}"
 
 
+def check_format_valid(generated: str) -> bool:
+    """Shared by train.py, evaluate_holdout.py, and
+    evaluate_real_validation.py -- previously duplicated inline in each."""
+    narrative_idx = generated.find(NARRATIVE_MARKER)
+    bullets_idx = generated.find(BULLETS_MARKER)
+    actions_idx = generated.find(ACTIONS_MARKER)
+    return (
+        narrative_idx != -1
+        and bullets_idx != -1
+        and actions_idx != -1
+        and narrative_idx < bullets_idx < actions_idx
+        and generated[narrative_idx + len(NARRATIVE_MARKER) : bullets_idx].strip() != ""
+    )
+
+
 def validate_record(record: dict, source: str, line_no: int) -> dict:
     if "input" not in record or not isinstance(record["input"], str) or not record["input"].strip():
         raise ValueError(f"{source}:{line_no}: missing/empty 'input' string")
@@ -94,6 +109,13 @@ def validate_record(record: dict, source: str, line_no: int) -> dict:
         "prompt": build_prompt(record["input"]),
         "target": "\n".join(target_lines),
         "_input": record["input"],
+        # Retained so callers needing to recompute a pair_fingerprint (e.g.
+        # evaluate_holdout.py against the private manifest) have the exact
+        # structured output the manifest's fingerprint was computed over --
+        # "target" above is a flattened marker string, not usable for that.
+        # Always stripped before any processed file is written; see write()
+        # and split_by_manifest() below.
+        "_output": output,
     }
 
 
@@ -109,6 +131,33 @@ def load_jsonl(path: Path) -> list[dict]:
             try:
                 raw = json.loads(line)
             except json.JSONDecodeError as e:
+                raise ValueError(f"{path.name}:{line_no}: invalid JSON ({e})") from e
+            records.append(validate_record(raw, path.name, line_no))
+    return records
+
+
+def load_jsonl_strict(path: Path) -> list[dict]:
+    """Like load_jsonl, but also rejects duplicate JSON object keys within
+    a line -- for real_validation.jsonl and real_holdout.jsonl specifically,
+    where the private manifest's fingerprints were computed over one
+    unambiguous input/output pair, and a last-write-wins parse of a crafted
+    duplicate key is deterministic but not that same unambiguous value.
+    Used by evaluate_holdout.py and evaluate_real_validation.py; not needed
+    for synthetic.jsonl, which isn't part of that consent-governed trust
+    boundary."""
+    import real_data_manifest as rdm
+
+    if not path.exists():
+        return []
+    records = []
+    with path.open("r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                raw = json.loads(line, object_pairs_hook=rdm.reject_duplicate_keys)
+            except (json.JSONDecodeError, rdm.DuplicateJSONKeyError) as e:
                 raise ValueError(f"{path.name}:{line_no}: invalid JSON ({e})") from e
             records.append(validate_record(raw, path.name, line_no))
     return records
@@ -137,7 +186,7 @@ def split_by_manifest(records: list[dict], val_hashes: set[str]) -> tuple[list[d
         h = input_hash(record["_input"])
         seen_hashes.add(h)
         (val_split if h in val_hashes else train_split).append(
-            {k: v for k, v in record.items() if k != "_input"}
+            {k: v for k, v in record.items() if k not in ("_input", "_output")}
         )
 
     missing = val_hashes - seen_hashes
@@ -156,11 +205,9 @@ def split_by_manifest(records: list[dict], val_hashes: set[str]) -> tuple[list[d
 def main() -> None:
     synthetic_path = DATA_DIR / "synthetic.jsonl"
     validation_path = DATA_DIR / "real_validation.jsonl"
-    holdout_path = DATA_DIR / "real_holdout.jsonl"
 
     synthetic = load_jsonl(synthetic_path)
     real_validation = load_jsonl(validation_path)
-    real_holdout = load_jsonl(holdout_path)
 
     if not synthetic:
         print(
@@ -188,22 +235,21 @@ def main() -> None:
 
     write("train.jsonl", train_split)
     write("val.jsonl", val_split)
-    write("real_validation.jsonl", [{k: v for k, v in r.items() if k != "_input"} for r in real_validation])
-    write("real_holdout_eval.jsonl", [{k: v for k, v in r.items() if k != "_input"} for r in real_holdout])
+    write("real_validation.jsonl", [{k: v for k, v in r.items() if k not in ("_input", "_output")} for r in real_validation])
 
     if not real_validation:
         print(
-            f"Note: {validation_path} is empty. Add some of your real notes there "
-            "(same format) for routine development-time evaluation.",
+            f"Note: {validation_path} is empty. Do not populate it directly -- real "
+            "notes require consent, de-identification, and a private manifest entry "
+            "first. See docs/decisions/PDR-005.md and datasets/REAL_DATA_GOVERNANCE.md.",
             file=sys.stderr,
         )
-    if not real_holdout:
-        print(
-            f"Note: {holdout_path} is empty. This is the sealed release-milestone "
-            "holdout -- populate it only when you're ready to treat it as such; "
-            "see docs/decisions/PDR-004.md.",
-            file=sys.stderr,
-        )
+
+    print(
+        "\n(datasets/real_holdout.jsonl is never opened here -- it's sealed for "
+        "release milestones; evaluate_holdout.py loads it directly, in memory, "
+        "only when explicitly invoked. See docs/decisions/PDR-005.md.)"
+    )
 
 
 if __name__ == "__main__":

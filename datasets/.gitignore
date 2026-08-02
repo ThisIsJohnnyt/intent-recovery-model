@@ -4,3 +4,8 @@
 # eval) serve different roles — see docs/decisions/PDR-004.md.
 real_validation.jsonl
 real_holdout.jsonl
+
+# Private consent/provenance manifest and rubric sidecars for real-note
+# evaluation — never model-facing, never published. See
+# docs/decisions/PDR-005.md and REAL_DATA_GOVERNANCE.md.
+private/
