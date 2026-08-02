@@ -181,9 +181,9 @@ def _build_full_lineage(generation, gen_path, rubric, rfp):
     scores = [lin.build_review_score_record(generation_record=generation["results"][0], rubric=full_rubric, scores={dim: True for dim in __import__("real_data_scoring").SEMANTIC_DIMENSIONS}, capability_checks={}, failure_labels=[])]
     chatgpt_review = lin.build_review_artifact(generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_A, independent_review_attestation=True, scores=scores)
     claude_review = lin.build_review_artifact(generation_path=gen_path, reviewer_role="claude", reviewer_actor_id=ACTOR_B, independent_review_attestation=True, scores=scores)
-    chatgpt_path = lin.save_review_artifact(chatgpt_review, split=generation["split"], milestone=generation.get("release_milestone"))
-    claude_path = lin.save_review_artifact(claude_review, split=generation["split"], milestone=generation.get("release_milestone"))
     rubrics = {generation["results"][0]["record_id"]: full_rubric}
+    chatgpt_path = lin.save_review_artifact(chatgpt_review, generation_path=gen_path, rubrics=rubrics, split=generation["split"], milestone=generation.get("release_milestone"))
+    claude_path = lin.save_review_artifact(claude_review, generation_path=gen_path, rubrics=rubrics, split=generation["split"], milestone=generation.get("release_milestone"))
     comparison = lin.build_comparison_artifact(chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path, rubrics=rubrics)
     comparison_path = lin.save_comparison_artifact(
         comparison,
@@ -197,9 +197,18 @@ def _build_full_lineage(generation, gen_path, rubric, rfp):
     adjudication = lin.build_adjudication_artifact(
         comparison_path=comparison_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=gen_path, rubrics=rubrics, resolution_mode="reviewer_agreement"
     )
-    adjudication_path = lin.save_adjudication_artifact(adjudication, split=generation["split"], milestone=generation.get("release_milestone"))
+    adjudication_path = lin.save_adjudication_artifact(
+        adjudication,
+        comparison_path=comparison_path,
+        chatgpt_review_path=chatgpt_path,
+        claude_review_path=claude_path,
+        generation_path=gen_path,
+        rubrics=rubrics,
+        split=generation["split"],
+        milestone=generation.get("release_milestone"),
+    )
     decision = lin.build_decision_record(decision_type="curriculum", deciding_actor_id=ACTOR_OWNER, adjudication_paths=[adjudication_path], outcome="dummy decision for withdrawal test")
-    lin.save_decision_record(decision)
+    lin.save_decision_record(decision, adjudication_paths=[adjudication_path])
     return chatgpt_review, claude_review, comparison, adjudication, decision
 
 

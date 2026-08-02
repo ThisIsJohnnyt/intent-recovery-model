@@ -173,7 +173,9 @@ def _build_review(generation, generation_path, role, actor_id, *, all_pass=True)
         independent_review_attestation=True,
         scores=_score_all(generation, all_pass=all_pass),
     )
-    path = lin.save_review_artifact(review, split=generation["split"], milestone=generation.get("release_milestone"))
+    path = lin.save_review_artifact(
+        review, generation_path=generation_path, rubrics=_RUBRICS_BY_RECORD_ID, split=generation["split"], milestone=generation.get("release_milestone")
+    )
     return review, path
 
 
@@ -198,10 +200,20 @@ def _build_comparison(chatgpt_path, claude_path, generation) -> tuple[dict, Path
 
 def _build_adjudication(comparison_path, chatgpt_path, claude_path, generation, **kwargs) -> tuple[dict, Path]:
     kwargs.setdefault("rubrics", _RUBRICS_BY_RECORD_ID)
+    generation_path = _generation_path_for(generation)
     adjudication = lin.build_adjudication_artifact(
-        comparison_path=comparison_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=_generation_path_for(generation), **kwargs
+        comparison_path=comparison_path, chatgpt_review_path=chatgpt_path, claude_review_path=claude_path, generation_path=generation_path, **kwargs
     )
-    path = lin.save_adjudication_artifact(adjudication, split=generation["split"], milestone=generation.get("release_milestone"))
+    path = lin.save_adjudication_artifact(
+        adjudication,
+        comparison_path=comparison_path,
+        chatgpt_review_path=chatgpt_path,
+        claude_review_path=claude_path,
+        generation_path=generation_path,
+        rubrics=kwargs["rubrics"],
+        split=generation["split"],
+        milestone=generation.get("release_milestone"),
+    )
     return adjudication, path
 
 
@@ -287,9 +299,16 @@ def test_review_must_match_generation_record_set_and_fingerprints():
     err = _expect_error(lin.LineageValidationError, lin.build_review_artifact, generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=missing_one)
     check("build_review_artifact: fewer scores than generation records rejected", err is not None, err)
 
-    tampered_fp_scores = [{**scores[0], "generation_raw_output_fingerprint": "sha256:" + "9" * 64}, scores[1]]
-    review = lin.build_review_artifact(generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=tampered_fp_scores)
-    review_path = lin.save_review_artifact(review, split=generation["split"], milestone=generation.get("release_milestone"))
+    review = lin.build_review_artifact(generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=scores)
+    review_path = lin.save_review_artifact(
+        review, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID, split=generation["split"], milestone=generation.get("release_milestone")
+    )
+    # Tamper the file directly (not via save_review_artifact, which would
+    # now reject this itself) so load_review_verified's own check is
+    # exercised in isolation.
+    tampered = {**review, "scores": [{**review["scores"][0], "generation_raw_output_fingerprint": "sha256:" + "9" * 64}, review["scores"][1]]}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    review_path.write_text(json.dumps(tampered), encoding="utf-8")
     err = _expect_error(lin.LineageValidationError, lin.load_review_verified, review_path, generation, _RUBRICS_BY_RECORD_ID)
     check("load_review_verified: rejects a review whose raw_output_fingerprint doesn't match generation", err is not None, err)
 
@@ -719,7 +738,9 @@ def test_save_with_mutated_id_cannot_escape_root():
     )
     escaping = {**review, "review_id": "review_" + "../" * 10 + "escaped"}
     escaping["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(escaping)}"
-    err = _expect_error(lin.LineageValidationError, lin.save_review_artifact, escaping, split=generation["split"], milestone=generation.get("release_milestone"))
+    err = _expect_error(
+        lin.LineageValidationError, lin.save_review_artifact, escaping, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID, split=generation["split"], milestone=generation.get("release_milestone")
+    )
     check("save_review_artifact: a mutated, path-shaped review_id is rejected before any write, not written outside the lineage root", err is not None, err)
 
     expected_root = lin.lineage_root_for(generation["split"], generation["evaluation_id"])
@@ -792,7 +813,9 @@ def test_save_rejects_malformed_timestamp():
     )
     tampered = {**review, "created_at_utc": "not-a-timestamp"}
     tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
-    err = _expect_error(lin.LineageValidationError, lin.save_review_artifact, tampered, split=generation["split"], milestone=generation.get("release_milestone"))
+    err = _expect_error(
+        lin.LineageValidationError, lin.save_review_artifact, tampered, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID, split=generation["split"], milestone=generation.get("release_milestone")
+    )
     check("save_review_artifact: a self-consistent artifact with a malformed created_at_utc is rejected before any write", err is not None, err)
 
 
@@ -863,7 +886,9 @@ def test_save_review_artifact_rejects_invalid_reviewer_role():
     tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
     expected_path = lin._review_path(generation["split"], generation["evaluation_id"], tampered["review_id"], generation.get("release_milestone"))
 
-    err = _expect_error(lin.LineageValidationError, lin.save_review_artifact, tampered, split=generation["split"], milestone=generation.get("release_milestone"))
+    err = _expect_error(
+        lin.LineageValidationError, lin.save_review_artifact, tampered, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID, split=generation["split"], milestone=generation.get("release_milestone")
+    )
     check("save_review_artifact: an otherwise self-consistent invalid reviewer_role is rejected", err is not None, err)
     check("save_review_artifact: no file was written for the rejected review", not expected_path.exists())
 
@@ -881,9 +906,84 @@ def test_save_review_artifact_rejects_nonboolean_strict_pass():
     tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
     expected_path = lin._review_path(generation["split"], generation["evaluation_id"], tampered["review_id"], generation.get("release_milestone"))
 
-    err = _expect_error(lin.LineageValidationError, lin.save_review_artifact, tampered, split=generation["split"], milestone=generation.get("release_milestone"))
+    err = _expect_error(
+        lin.LineageValidationError, lin.save_review_artifact, tampered, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID, split=generation["split"], milestone=generation.get("release_milestone")
+    )
     check("save_review_artifact: an otherwise self-consistent strict_pass=1 is rejected", err is not None, err)
     check("save_review_artifact: no file was written for the rejected review", not expected_path.exists())
+
+
+def test_save_review_artifact_rejects_removed_rubric_capability_check():
+    """Phase E lineage/withdrawal save-context-binding verification:
+    review save's own self-consistency check does not verify a score's
+    capability_checks against a specific rubric's required set (that
+    needs external rubric context) -- _verify_review_bindings closes this
+    by reloading the generation and re-checking every score against its
+    bound rubric before writing. Reproduces the review's
+    review_missing_rubric_check_save live finding."""
+    generation, gen_path = _dummy_generation(rubrics=[RUBRIC_A])
+    review = lin.build_review_artifact(
+        generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=_score_all(generation)
+    )
+    tampered = {**review, "scores": [{**review["scores"][0], "capability_checks": {}}]}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    expected_path = lin._review_path(generation["split"], generation["evaluation_id"], tampered["review_id"], generation.get("release_milestone"))
+
+    err = _expect_error(
+        lin.LineageValidationError, lin.save_review_artifact, tampered, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID, split=generation["split"], milestone=generation.get("release_milestone")
+    )
+    check("save_review_artifact: a removed rubric-required capability check is rejected", err is not None, err)
+    check("save_review_artifact: no file was written for the rejected review", not expected_path.exists())
+
+
+def test_save_review_artifact_rejects_mismatched_generation_reference():
+    """Phase E lineage/withdrawal save-context-binding verification: review
+    save's own self-consistency check never re-establishes the generation
+    binding -- nothing previously stopped a caller from mutating a
+    review's generation reference after building it, as long as the
+    fingerprint was recomputed over the tampered content.
+    _verify_review_bindings closes this by reloading the real generation
+    and requiring an exact reference match. Reproduces the review's
+    review_wrong_generation_binding_save live finding."""
+    generation, gen_path = _dummy_generation()
+    other_generation, _ = _dummy_generation()
+    review = lin.build_review_artifact(
+        generation_path=gen_path, reviewer_role="chatgpt", reviewer_actor_id=ACTOR_CHATGPT, independent_review_attestation=True, scores=_score_all(generation)
+    )
+    tampered = {**review, "generation": {**review["generation"], "evaluation_id": other_generation["evaluation_id"], "artifact_fingerprint": other_generation["artifact_fingerprint"]}}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    expected_path = lin._review_path(generation["split"], generation["evaluation_id"], tampered["review_id"], generation.get("release_milestone"))
+
+    err = _expect_error(
+        lin.LineageValidationError, lin.save_review_artifact, tampered, generation_path=gen_path, rubrics=_RUBRICS_BY_RECORD_ID, split=generation["split"], milestone=generation.get("release_milestone")
+    )
+    check("save_review_artifact: a mismatched generation reference is rejected", err is not None, err)
+    check("save_review_artifact: no file was written for the rejected review", not expected_path.exists())
+
+
+def test_save_decision_record_rejects_mismatched_adjudication_reference():
+    """Phase E lineage/withdrawal save-context-binding verification:
+    decision save's own self-consistency check never re-establishes that
+    its adjudication references are the real, verified adjudications --
+    _verify_decision_semantics only checks the reference list's shape, not
+    its truth. save_decision_record now reloads every referenced
+    adjudication and requires the stored reference list to match exactly.
+    Reproduces the review's decision_wrong_parent_binding_save live
+    finding."""
+    generation, gen_path = _dummy_generation()
+    _, chatgpt_path = _build_review(generation, gen_path, "chatgpt", ACTOR_CHATGPT)
+    _, claude_path = _build_review(generation, gen_path, "claude", ACTOR_CLAUDE)
+    comparison, comparison_path = _build_comparison(chatgpt_path, claude_path, generation)
+    adjudication, adjudication_path = _build_adjudication(comparison_path, chatgpt_path, claude_path, generation, resolution_mode="reviewer_agreement")
+    decision = lin.build_decision_record(decision_type="curriculum", deciding_actor_id=ACTOR_OWNER, adjudication_paths=[adjudication_path], outcome="dummy decision for testing")
+
+    tampered = {**decision, "adjudications": [{**decision["adjudications"][0], "artifact_fingerprint": "sha256:" + "9" * 64}]}
+    tampered["artifact_fingerprint"] = f"sha256:{rdp.artifact_fingerprint(tampered)}"
+    expected_path = lin.DECISIONS_DIR / f"{tampered['decision_id']}.json"
+
+    err = _expect_error(lin.LineageValidationError, lin.save_decision_record, tampered, adjudication_paths=[adjudication_path])
+    check("save_decision_record: a mismatched adjudication reference is rejected", err is not None, err)
+    check("save_decision_record: no file was written for the rejected decision", not expected_path.exists())
 
 
 def test_save_comparison_artifact_rejects_altered_alignment():
@@ -932,6 +1032,8 @@ def test_decision_requires_adjudications():
     adjudication, adjudication_path = _build_adjudication(comparison_path, chatgpt_path, claude_path, generation, resolution_mode="reviewer_agreement")
     decision = lin.build_decision_record(decision_type="curriculum", deciding_actor_id=ACTOR_OWNER, adjudication_paths=[adjudication_path], outcome="dummy decision for testing")
     check("build_decision_record: valid adjudication reference accepted", decision["adjudications"][0]["artifact_id"] == adjudication["adjudication_id"])
+    lin.save_decision_record(decision, adjudication_paths=[adjudication_path])
+    check("save_decision_record: valid decision with matching adjudication reference saves successfully", (lin.DECISIONS_DIR / f"{decision['decision_id']}.json").exists())
 
     err = _expect_error(lin.LineageValidationError, lin.build_decision_record, decision_type="not_a_real_type", deciding_actor_id=ACTOR_OWNER, adjudication_paths=[adjudication_path], outcome="x")
     check("build_decision_record: invalid decision_type rejected", err is not None, err)
@@ -1006,6 +1108,9 @@ def main() -> None:
         test_altered_comparison_alignment_rejected,
         test_save_review_artifact_rejects_invalid_reviewer_role,
         test_save_review_artifact_rejects_nonboolean_strict_pass,
+        test_save_review_artifact_rejects_removed_rubric_capability_check,
+        test_save_review_artifact_rejects_mismatched_generation_reference,
+        test_save_decision_record_rejects_mismatched_adjudication_reference,
         test_save_comparison_artifact_rejects_altered_alignment,
         test_decision_requires_adjudications,
         test_dataset_snapshot_basic,

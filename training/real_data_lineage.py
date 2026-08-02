@@ -703,59 +703,80 @@ def _verify_review_semantics(review: dict) -> None:
         _verify_score_record_self_consistency(score, context_id=f"review {review.get('review_id')}")
 
 
-def save_review_artifact(review: dict, *, split: str, milestone: str | None = None) -> Path:
+def save_review_artifact(review: dict, *, generation_path: Path, rubrics: dict[str, dict], split: str, milestone: str | None = None) -> Path:
+    """generation_path/rubrics: per the Phase E lineage/withdrawal
+    save-context-binding verification, a review's own self-consistency
+    (_verify_review_semantics) is not enough -- nothing previously stopped
+    a caller from mutating a review's generation reference (or any
+    rubric-bound field) after building it and before saving, as long as
+    the fingerprint was recomputed over the tampered content. The
+    generation is reloaded and verified here, and the review's claimed
+    bindings to it are cross-checked (see _verify_review_bindings) before
+    any file is written."""
     _verify_review_semantics(review)
+    generation = load_and_require_active_parent(generation_path, expected_kind="generation", parent_label="generation")
+    _verify_review_bindings(review, generation, rubrics, context_id=review.get("review_id"))
     path = _review_path(split, review["generation"]["evaluation_id"], review["review_id"], milestone)
     _validate_before_save(review, "review", path, expected_root=lineage_root_for(split, review["generation"]["evaluation_id"], milestone))
     return _save_artifact_exclusive(path, review)
 
 
-def load_review_verified(path: Path, generation: dict, rubrics: dict[str, dict]) -> dict:
-    """Loads a review parent (canonical path, active status -- see
-    load_and_require_active_parent) and cross-checks it against its
-    claimed generation parent: exact fingerprint match, matching copied
-    dataset/checkpoint/rubric-schema fingerprints, and an exactly-matching
-    record set with per-record raw-output/rubric-fingerprint/format-
-    validity agreement. Also re-validates every stored score record
-    against its fingerprint-bound rubric (see _verify_stored_score_record)
-    -- per the Phase E lineage/withdrawal third review's finding 3, a
-    self-consistent but tampered review (e.g. a required capability check
-    silently removed, with the fingerprint recomputed over the tampered
-    content) must not pass just because its own hash is internally
-    consistent. rubrics: {record_id: rubric}, one entry per record this
-    review covers."""
-    review = load_and_require_active_parent(path, expected_kind="review", parent_label="review")
-    _require_unique_record_ids(review["scores"], context_label="loaded review scores")
-    # review's shape (including "generation") is guaranteed by the fingerprint
-    # check above -- it's byte-identical to what build_review_artifact produced.
+def _verify_review_bindings(review: dict, generation: dict, rubrics: dict[str, dict], *, context_id) -> None:
+    """Cross-checks a review's claimed bindings -- generation reference,
+    copied dataset/checkpoint/rubric-schema/prompt-contract fingerprints,
+    split/milestone, an exactly-matching record set, and per-record
+    raw-output/rubric-fingerprint/format-validity agreement -- against a
+    verified generation, and re-validates every score against its
+    fingerprint-bound rubric (see _verify_stored_score_record). Shared by
+    load_review_verified (an already-saved review) and save_review_artifact
+    (an in-memory review about to be written), per the Phase E lineage/
+    withdrawal save-context-binding verification: a review must not enter
+    immutable storage claiming bindings it cannot prove, any more than a
+    loaded one should be trusted without re-proving them. rubrics:
+    {record_id: rubric}, one entry per record this review covers."""
     gen_ref = review["generation"]
     if gen_ref["artifact_kind"] != "generation":
-        raise LineageValidationError(f"{path}: review's parent reference is not kind 'generation'")
+        raise LineageValidationError(f"{context_id}: review's parent reference is not kind 'generation'")
     if gen_ref["evaluation_id"] != generation["evaluation_id"] or gen_ref["artifact_fingerprint"] != generation["artifact_fingerprint"]:
-        raise LineageValidationError(f"{path}: review's generation reference does not match the verified generation artifact")
+        raise LineageValidationError(f"{context_id}: review's generation reference does not match the verified generation artifact")
     if review.get("dataset_fingerprint") != generation["dataset"]["fingerprint"]:
-        raise LineageValidationError(f"{path}: review's copied dataset_fingerprint does not match generation")
+        raise LineageValidationError(f"{context_id}: review's copied dataset_fingerprint does not match generation")
     if review.get("checkpoint_fingerprint") != generation["checkpoint"]["fingerprint"]:
-        raise LineageValidationError(f"{path}: review's copied checkpoint_fingerprint does not match generation")
+        raise LineageValidationError(f"{context_id}: review's copied checkpoint_fingerprint does not match generation")
     if review.get("rubric_schema_version") != generation["dataset"]["rubric_schema_version"]:
-        raise LineageValidationError(f"{path}: review's copied rubric_schema_version does not match generation")
+        raise LineageValidationError(f"{context_id}: review's copied rubric_schema_version does not match generation")
+    if review.get("prompt_contract") != generation.get("prompt_contract"):
+        raise LineageValidationError(f"{context_id}: review's copied prompt_contract does not match generation")
+    if review.get("split") != generation["split"] or review.get("milestone") != generation.get("release_milestone"):
+        raise LineageValidationError(f"{context_id}: review's split/milestone does not match generation")
 
     generation_by_id = {r["record_id"]: r for r in generation["results"]}
     review_record_ids = {s["record_id"] for s in review["scores"]}
     if set(generation_by_id.keys()) != review_record_ids:
-        raise LineageValidationError(f"{path}: review record set does not exactly match generation record set")
+        raise LineageValidationError(f"{context_id}: review record set does not exactly match generation record set")
     for score in review["scores"]:
         gen_r = generation_by_id[score["record_id"]]
         if score["generation_raw_output_fingerprint"] != gen_r["raw_output_fingerprint"]:
-            raise LineageValidationError(f"{path}: {score['record_id']}: review's raw_output_fingerprint does not match generation")
+            raise LineageValidationError(f"{context_id}: {score['record_id']}: review's raw_output_fingerprint does not match generation")
         if score["rubric_fingerprint"] != gen_r["rubric_fingerprint"]:
-            raise LineageValidationError(f"{path}: {score['record_id']}: review's rubric_fingerprint does not match generation")
+            raise LineageValidationError(f"{context_id}: {score['record_id']}: review's rubric_fingerprint does not match generation")
         if score["format_valid"] != gen_r["format_valid"]:
-            raise LineageValidationError(f"{path}: {score['record_id']}: review's format_valid does not match generation")
+            raise LineageValidationError(f"{context_id}: {score['record_id']}: review's format_valid does not match generation")
         rubric = rubrics.get(score["record_id"])
         if rubric is None:
-            raise LineageValidationError(f"{path}: {score['record_id']}: no rubric available to verify this stored score")
+            raise LineageValidationError(f"{context_id}: {score['record_id']}: no rubric available to verify this score")
         _verify_stored_score_record(score, rubric=rubric)
+
+
+def load_review_verified(path: Path, generation: dict, rubrics: dict[str, dict]) -> dict:
+    """Loads a review parent (canonical path, active status -- see
+    load_and_require_active_parent) and cross-checks it against its claimed
+    generation parent and rubrics (see _verify_review_bindings)."""
+    review = load_and_require_active_parent(path, expected_kind="review", parent_label="review")
+    _require_unique_record_ids(review["scores"], context_label="loaded review scores")
+    # review's shape (including "generation") is guaranteed by the fingerprint
+    # check above -- it's byte-identical to what build_review_artifact produced.
+    _verify_review_bindings(review, generation, rubrics, context_id=path)
     return review
 
 
@@ -1053,8 +1074,79 @@ def _verify_adjudication_semantics(adjudication: dict) -> None:
         raise LineageValidationError("adjudication's aggregate_strict_pass does not match the value recomputed from its own results")
 
 
-def save_adjudication_artifact(adjudication: dict, *, split: str, milestone: str | None = None) -> Path:
+def _verify_adjudication_bindings(
+    adjudication: dict, *, generation: dict, comparison: dict, chatgpt_review: dict, claude_review: dict, rubrics: dict[str, dict], context_id
+) -> None:
+    """Cross-checks an adjudication's claimed bindings -- generation,
+    comparison, and both review references, split/milestone, and (mode-
+    appropriate) its results against the reviews/comparison it claims to
+    derive from -- against freshly verified parents. Mirrors
+    _verify_review_bindings for the same reason: an adjudication must not
+    enter immutable storage claiming bindings it cannot prove."""
+    if adjudication["generation"] != chatgpt_review["generation"]:
+        raise LineageValidationError(f"{context_id}: adjudication's generation reference does not match the verified reviews")
+    if adjudication["comparison"] != _artifact_ref(comparison, "comparison_id"):
+        raise LineageValidationError(f"{context_id}: adjudication's comparison reference does not match the verified comparison")
+    if adjudication["chatgpt_review"] != comparison["chatgpt_review"] or adjudication["claude_review"] != comparison["claude_review"]:
+        raise LineageValidationError(f"{context_id}: adjudication's review references do not match the verified comparison")
+    if adjudication.get("split") != generation["split"] or adjudication.get("milestone") != generation.get("release_milestone"):
+        raise LineageValidationError(f"{context_id}: adjudication's split/milestone does not match generation")
+
+    results_by_id = {r["record_id"]: r for r in adjudication["results"]}
+    for record_id, result in results_by_id.items():
+        rubric = rubrics.get(record_id)
+        if rubric is None:
+            raise LineageValidationError(f"{context_id}: {record_id}: no rubric available to verify this result")
+        _verify_stored_score_record(result, rubric=rubric)
+
+    chatgpt_by_id = {s["record_id"]: s for s in chatgpt_review["scores"]}
+    if adjudication["resolution_mode"] == "reviewer_agreement":
+        if set(results_by_id.keys()) != set(chatgpt_by_id.keys()):
+            raise LineageValidationError(f"{context_id}: reviewer_agreement results do not cover exactly chatgpt_review's record set")
+        for record_id, result in results_by_id.items():
+            original = chatgpt_by_id[record_id]
+            for field in ("generation_raw_output_fingerprint", "rubric_fingerprint", "format_valid", "scores", "capability_checks", "failure_labels"):
+                if result.get(field) != original.get(field):
+                    raise LineageValidationError(f"{context_id}: {record_id}: reviewer_agreement result does not match chatgpt_review's score for field {field!r}")
+    else:
+        comparison_record_ids = {rc["record_id"] for rc in comparison["record_comparisons"]}
+        if set(results_by_id.keys()) != comparison_record_ids:
+            raise LineageValidationError(f"{context_id}: product_owner_resolution results do not cover exactly the compared record set")
+        for record_id, result in results_by_id.items():
+            original = chatgpt_by_id[record_id]
+            for field in ("generation_raw_output_fingerprint", "rubric_fingerprint", "format_valid"):
+                if result.get(field) != original.get(field):
+                    raise LineageValidationError(f"{context_id}: {record_id}: product_owner_resolution result may not change immutable field {field!r}")
+
+
+def save_adjudication_artifact(
+    adjudication: dict,
+    *,
+    comparison_path: Path,
+    chatgpt_review_path: Path,
+    claude_review_path: Path,
+    generation_path: Path,
+    rubrics: dict[str, dict],
+    split: str,
+    milestone: str | None = None,
+) -> Path:
+    """comparison_path/chatgpt_review_path/claude_review_path/generation_path/
+    rubrics: per the Phase E lineage/withdrawal save-context-binding
+    verification, an adjudication's own self-consistency
+    (_verify_adjudication_semantics) is not enough -- nothing previously
+    stopped a caller from mutating its generation/comparison/review
+    references after building it. All parents are reloaded and verified
+    here (the same way build_adjudication_artifact does), and the
+    adjudication's claimed bindings to them are cross-checked (see
+    _verify_adjudication_bindings) before any file is written."""
     _verify_adjudication_semantics(adjudication)
+    generation = load_and_require_active_parent(generation_path, expected_kind="generation", parent_label="generation")
+    chatgpt_review = load_review_verified(chatgpt_review_path, generation, rubrics)
+    claude_review = load_review_verified(claude_review_path, generation, rubrics)
+    comparison = load_comparison_verified(comparison_path, chatgpt_review, claude_review)
+    _verify_adjudication_bindings(
+        adjudication, generation=generation, comparison=comparison, chatgpt_review=chatgpt_review, claude_review=claude_review, rubrics=rubrics, context_id=adjudication.get("adjudication_id")
+    )
     path = _adjudication_path(split, adjudication["generation"]["evaluation_id"], adjudication["adjudication_id"], milestone)
     _validate_before_save(adjudication, "adjudication", path, expected_root=lineage_root_for(split, adjudication["generation"]["evaluation_id"], milestone))
     return _save_artifact_exclusive(path, adjudication)
@@ -1108,8 +1200,20 @@ def _verify_decision_semantics(decision: dict) -> None:
     )
 
 
-def save_decision_record(decision: dict) -> Path:
+def save_decision_record(decision: dict, *, adjudication_paths: list[Path]) -> Path:
+    """adjudication_paths: per the Phase E lineage/withdrawal
+    save-context-binding verification, a decision's own self-consistency
+    (_verify_decision_semantics) is not enough -- nothing previously
+    stopped a caller from mutating an adjudication reference's fingerprint
+    after building the decision. Each adjudication is reloaded and
+    verified here (the same way build_decision_record does), and the
+    decision's stored reference list is required to match exactly before
+    any file is written."""
     _verify_decision_semantics(decision)
+    adjudications = [load_and_require_active_parent(p, expected_kind="adjudication", parent_label="adjudication") for p in adjudication_paths]
+    expected_refs = [_artifact_ref(a, "adjudication_id") for a in adjudications]
+    if decision["adjudications"] != expected_refs:
+        raise LineageValidationError("decision's adjudication reference list does not match the verified adjudications")
     path = DECISIONS_DIR / f"{decision['decision_id']}.json"
     _validate_before_save(decision, "decision", path, expected_root=DECISIONS_DIR)
     return _save_artifact_exclusive(path, decision)
@@ -1122,6 +1226,21 @@ def load_decision_verified(path: Path) -> dict:
 
 
 def build_status_event(*, target_artifact: dict, target_id_field: str, new_status: str, reason_code: str, actor_id: str, replacement_artifact: dict | None = None, withdrawal_id: str | None = None) -> dict:
+    """Deliberately narrower contract than review/comparison/adjudication/
+    decision saves: a status event asserts a *claim* about an artifact ref
+    (kind/id/fingerprint) -- it does not require target_artifact/
+    replacement_artifact to be independently reloaded and re-verified from
+    a stored path at build/save time. This is intentional, not an
+    oversight (Phase E lineage/withdrawal save-context-binding
+    verification): status events are write-once claims consumed entirely
+    through resolve_active_status, which loads and verifies every
+    candidate status event itself before trusting it, and withdrawal's
+    _step_invalidate_descendants only ever calls this with refs it already
+    derived from its own verified plan/discovery data. A status event
+    with a fabricated target would simply never match anything real when
+    resolve_active_status scans for it -- it does not let a false claim
+    change any other artifact's resolved status the way an unverified
+    review/comparison/adjudication/decision binding could."""
     if new_status not in STATUS_VALUES:
         raise LineageValidationError(f"new_status must be one of {STATUS_VALUES}, got {new_status!r}")
     _require_actor_id(actor_id, "actor_id")
