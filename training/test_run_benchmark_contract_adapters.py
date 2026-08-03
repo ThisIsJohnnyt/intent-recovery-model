@@ -3,27 +3,46 @@ refactor, and report_benchmark.py's active structural recomputation. No
 pytest dependency: run directly with
 `python test_run_benchmark_contract_adapters.py`.
 
-No model loading, no inference, no training anywhere in this file --
+No model loading, inference, or training anywhere in this file --
 authorized scope is "dummy-only shared runner adapter and active
 structural-validation implementation" per Johnny's 2026-08-02
 authorization. Every "generated" string below is hand-written, not model
-output. Deliberately importable without torch/transformers installed
-(confirmed directly against the base system Python, matching
-test_report_benchmark.py's existing convention for the same reason) --
-run_benchmark.py's own torch/transformers imports were moved inside
-main(), after contract selection and count-rule preflight validation, so
-those fail-closed checks are provably reachable before any ML dependency
-is even imported, not just before a model is actually loaded.
+output.
 
-Covers prompt_contract_vnext_static_final_review_and_branch_reconciliation.md's
-two authorized items:
-1. The shared runner adapter (contract_adapters.py + run_benchmark.py's
-   build_result_for_probe/parse_args), with regression tests proving the
-   v1 default path is unchanged.
-2. Active structural recomputation (report_benchmark.py's
-   evaluate_v2_count_rules/v2_result_passes).
+Covers the 12 minimum re-review acceptance tests from
+prompt_contract_vnext_adapter_structural_implementation_review.md's six
+findings, all independently reproduced against the pre-fix code before
+being fixed (see that review and the commit message for detail):
+
+1/2. The actual report_benchmark.py CLI path (not just the underlying
+     functions) reports failure for an honestly-unmet count rule, and
+     raises on tampered structural data.
+3. Structural verification runs even when semantics are unscored/failing
+   (no short-circuit).
+4. A copied top-level count-rule mismatch against the frozen probe raises.
+5. Contract/version/fingerprint/parser-version mismatch or omission
+   raises.
+6. Parse-validity/parsed-structure/count mismatches raise.
+7. Missing one or both count rules on a source_determined_items_v2 case
+   raises at both runner preflight and report time.
+8. Duplicate IDs and malformed rule shapes/values fail before model
+   import and at report time.
+9. The default v1 import path does not import v2 candidate/parser modules
+   (fresh-subprocess test -- a same-process check would be tainted by any
+   earlier test in this file that already selected v2).
+10. The protected v1 result scaffold remains unchanged for representative
+    cases (the narrower, accurate claim -- not "all runner behavior is
+    byte-for-byte identical," which the review correctly pointed out is
+    too strong given stdout and the import graph both changed).
+11. The protected 16-probe benchmark can still run under v2 without being
+    forced to declare acceptance-only count rules.
+12. Malformed/duplicate CLI contract selection fails with a clear domain
+    error.
 """
+import json
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import contract_adapters as ca
@@ -31,6 +50,7 @@ import report_benchmark as rb
 import run_benchmark as rbm
 
 FAILURES = []
+TRAINING_DIR = Path(__file__).parent
 
 
 def check(name: str, condition: bool, detail: str = "") -> None:
@@ -38,6 +58,31 @@ def check(name: str, condition: bool, detail: str = "") -> None:
     print(f"[{status}] {name}" + (f" -- {detail}" if detail and not condition else ""))
     if not condition:
         FAILURES.append(name)
+
+
+def _v2_probe(id_: str, bullet_rule=None, action_rule=None, category="source_determined_items_v2", **extra) -> dict:
+    probe = {
+        "id": id_, "category": category, "kind": "direct", "status": "acceptance_gate",
+        "required_semantic_dimensions": [], "primary_checks": [],
+    }
+    if bullet_rule is not None:
+        probe["bullet_count_rule"] = bullet_rule
+    if action_rule is not None:
+        probe["action_count_rule"] = action_rule
+    probe.update(extra)
+    return probe
+
+
+def _fully_score(result: dict) -> dict:
+    for dim in result["required_semantic_dimensions"]:
+        result["scores"][dim] = 2
+    for check_name in result["capability_checks"]:
+        result["capability_checks"][check_name] = True
+    return result
+
+
+ONE_BULLET_ONE_ACTION = "###NARRATIVE### text ###BULLETS### ###BULLET### one idea ###ACTIONS### ###ACTION### one task"
+TWO_BULLETS_ZERO_ACTIONS = "###NARRATIVE### text ###BULLETS### ###BULLET### one ###BULLET### two ###ACTIONS###"
 
 
 # ---------------------------------------------------------------------------
@@ -53,8 +98,9 @@ def test_select_v1_and_v2_succeed():
     v2 = ca.select_contract_adapter("v2")
     check("v1 adapter version matches prepare_data.PROMPT_CONTRACT_VERSION", v1.version == "source-determined-bullets-v1", v1.version)
     check("v2 adapter version matches prompt_contract_v2_candidate.PROMPT_CONTRACT_VERSION", v2.version == "source-determined-items-v2-candidate", v2.version)
-    check("v1 adapter has no count extraction (v1 doesn't define per-item counts)", v1.extract_counts is None)
-    check("v2 adapter has count extraction", v2.extract_counts is not None)
+    check("v1 adapter has no structural parser (v1 doesn't define per-item counts)", v1.parse is None)
+    check("v2 adapter has a structural parser", v2.parse is not None)
+    check("v2 adapter carries a parser_version", v2.parser_version is not None, v2.parser_version)
 
 
 def test_unknown_contract_name_raises_before_any_model_import():
@@ -66,32 +112,61 @@ def test_unknown_contract_name_raises_before_any_model_import():
 
 
 def test_fingerprint_mismatch_raises():
-    # Constructs a deliberately-wrong adapter (real build_prompt, wrong
-    # locked fingerprint) and registers it under a throwaway name to
-    # exercise the mismatch path without touching either real locked
-    # constant. Restores CONTRACT_ADAPTERS afterward.
     broken = ca.ContractAdapter(
-        name="broken-test-only",
-        version="irrelevant",
-        build_prompt=ca.V1_ADAPTER.build_prompt,
-        check_format_valid=ca.V1_ADAPTER.check_format_valid,
-        extract_counts=None,
-        expected_fingerprint="0" * 64,
+        name="broken-test-only", version="irrelevant",
+        build_prompt=ca.select_contract_adapter("v1").build_prompt,
+        check_format_valid=ca.select_contract_adapter("v1").check_format_valid,
+        parse=None, parser_version=None, expected_fingerprint="0" * 64,
     )
-    original = dict(ca.CONTRACT_ADAPTERS)
-    ca.CONTRACT_ADAPTERS["broken-test-only"] = broken
+    original = dict(ca._ADAPTER_BUILDERS)
+    ca._ADAPTER_BUILDERS["broken-test-only"] = lambda: broken
     try:
         ca.select_contract_adapter("broken-test-only")
         check("fingerprint mismatch raises ContractSelectionError", False, "did not raise")
     except ca.ContractSelectionError as e:
         check("fingerprint mismatch raises ContractSelectionError", "fingerprint mismatch" in str(e), str(e))
     finally:
-        ca.CONTRACT_ADAPTERS.clear()
-        ca.CONTRACT_ADAPTERS.update(original)
+        ca._ADAPTER_BUILDERS.clear()
+        ca._ADAPTER_BUILDERS.update(original)
 
 
 # ---------------------------------------------------------------------------
-# Part 2: preflight_validate_count_rules
+# Part 2 (acceptance test 9): fresh-process import isolation
+# ---------------------------------------------------------------------------
+
+def test_fresh_process_v1_selection_never_imports_v2_modules():
+    script = (
+        "import sys, run_benchmark, contract_adapters as ca\n"
+        "ca.select_contract_adapter('v1')\n"
+        "present = [m for m in sys.modules if 'prompt_contract_v2' in m]\n"
+        "print('PRESENT:' + repr(present))\n"
+    )
+    out = subprocess.run([sys.executable, "-c", script], cwd=str(TRAINING_DIR), capture_output=True, text=True)
+    check("fresh process: importing run_benchmark + selecting v1 does not exit nonzero", out.returncode == 0, out.stderr)
+    check(
+        "fresh process: v2 candidate/parser modules absent from sys.modules after only selecting v1",
+        "PRESENT:[]" in out.stdout,
+        out.stdout + out.stderr,
+    )
+
+
+def test_fresh_process_v2_selection_does_import_v2_modules():
+    script = (
+        "import sys, contract_adapters as ca\n"
+        "ca.select_contract_adapter('v2')\n"
+        "present = sorted(m for m in sys.modules if 'prompt_contract_v2' in m)\n"
+        "print('PRESENT:' + repr(present))\n"
+    )
+    out = subprocess.run([sys.executable, "-c", script], cwd=str(TRAINING_DIR), capture_output=True, text=True)
+    check(
+        "fresh process: selecting v2 does import both v2 candidate/parser modules",
+        "prompt_contract_v2_candidate" in out.stdout and "prompt_contract_v2_parser" in out.stdout,
+        out.stdout + out.stderr,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Part 3 (acceptance tests 7, 8, 11): preflight validation
 # ---------------------------------------------------------------------------
 
 def test_preflight_is_a_no_op_for_v1_even_with_garbage_rules():
@@ -106,7 +181,7 @@ def test_preflight_is_a_no_op_for_v1_even_with_garbage_rules():
 
 def test_preflight_requires_both_rules_or_neither():
     v2 = ca.select_contract_adapter("v2")
-    one_sided = [{"id": "p1", "bullet_count_rule": {"operator": "exact", "value": 1}}]
+    one_sided = [_v2_probe("p1", bullet_rule={"operator": "exact", "value": 1}, category="direct")]
     try:
         ca.preflight_validate_count_rules(one_sided, v2)
         check("preflight rejects a rule declared on only one of bullet/action", False, "did not raise")
@@ -116,11 +191,7 @@ def test_preflight_requires_both_rules_or_neither():
 
 def test_preflight_rejects_unknown_operator():
     v2 = ca.select_contract_adapter("v2")
-    bad_op = [{
-        "id": "p2",
-        "bullet_count_rule": {"operator": "at-least", "value": 2},
-        "action_count_rule": {"operator": "exact", "value": 1},
-    }]
+    bad_op = [_v2_probe("p2", bullet_rule={"operator": "at-least", "value": 2}, action_rule={"operator": "exact", "value": 1}, category="direct")]
     try:
         ca.preflight_validate_count_rules(bad_op, v2)
         check("preflight rejects an unrecognized operator", False, "did not raise")
@@ -130,11 +201,7 @@ def test_preflight_rejects_unknown_operator():
 
 def test_preflight_accepts_well_formed_rules():
     v2 = ca.select_contract_adapter("v2")
-    good = [{
-        "id": "p3",
-        "bullet_count_rule": {"operator": "max", "value": 7},
-        "action_count_rule": {"operator": "exact", "value": 8},
-    }]
+    good = [_v2_probe("p3", bullet_rule={"operator": "max", "value": 7}, action_rule={"operator": "exact", "value": 8})]
     try:
         ca.preflight_validate_count_rules(good, v2)
         check("preflight accepts well-formed exact/max rules", True)
@@ -142,15 +209,86 @@ def test_preflight_accepts_well_formed_rules():
         check("preflight accepts well-formed exact/max rules", False, str(e))
 
 
+def test_preflight_rejects_duplicate_probe_ids():
+    v2 = ca.select_contract_adapter("v2")
+    dup_rule = {"operator": "exact", "value": 1}
+    dup = [_v2_probe("dup", bullet_rule=dup_rule, action_rule=dup_rule) for _ in range(2)]
+    try:
+        ca.preflight_validate_count_rules(dup, v2)
+        check("preflight rejects duplicate probe ids", False, "did not raise")
+    except ca.ContractSelectionError as e:
+        check("preflight rejects duplicate probe ids", "dup" in str(e), str(e))
+
+
+def test_preflight_rejects_malformed_rule_values():
+    v2 = ca.select_contract_adapter("v2")
+    action_rule = {"operator": "exact", "value": 1}
+    malformed_cases = [
+        ("string value", {"operator": "exact", "value": "1"}),
+        ("negative max", {"operator": "max", "value": -1}),
+        ("unknown key", {"operator": "exact", "value": 1, "extra": "huh"}),
+        ("boolean value", {"operator": "exact", "value": True}),
+    ]
+    for name, bad_rule in malformed_cases:
+        probes = [_v2_probe("p", bullet_rule=bad_rule, action_rule=action_rule, category="direct")]
+        try:
+            ca.preflight_validate_count_rules(probes, v2)
+            check(f"preflight rejects malformed rule value ({name})", False, "did not raise")
+        except ca.ContractSelectionError as e:
+            check(f"preflight rejects malformed rule value ({name})", True, str(e))
+
+
+def test_preflight_requires_both_rules_for_v2_acceptance_category_even_if_both_absent():
+    v2 = ca.select_contract_adapter("v2")
+    missing = [{"id": "sdi2-oops", "category": "source_determined_items_v2"}]
+    try:
+        ca.preflight_validate_count_rules(missing, v2)
+        check("preflight rejects a source_determined_items_v2 probe missing both rules", False, "did not raise")
+    except ca.ContractSelectionError as e:
+        check("preflight rejects a source_determined_items_v2 probe missing both rules", "sdi2-oops" in str(e), str(e))
+
+
+def test_preflight_accepts_protected_16_probes_under_v2_without_requiring_rules():
+    v2 = ca.select_contract_adapter("v2")
+    probes = rbm.load_probes(TRAINING_DIR.parent / "datasets" / "benchmark" / "gold_v1.2.1_probes.jsonl")
+    check("gold_v1.2.1_probes.jsonl loads as 16 probes", len(probes) == 16, str(len(probes)))
+    try:
+        ca.preflight_validate_count_rules(probes, v2)
+        check("preflight accepts the protected 16 probes under v2 with no count rules declared", True)
+    except Exception as e:
+        check("preflight accepts the protected 16 probes under v2 with no count rules declared", False, str(e))
+
+
+def test_report_time_preflight_also_rejects_missing_rules_and_duplicates():
+    # Finding 5/7's "repeat the same validations in the reporter" -- these
+    # go through report_benchmark.py's own re-validation, not
+    # contract_adapters directly, proving main()'s report-time path (not
+    # just the runner's) is protected too.
+    tmpdir = Path(tempfile.mkdtemp())
+    bench_path = tmpdir / "bench.jsonl"
+    results_path = tmpdir / "results.json"
+    bench_path.write_text(json.dumps({"id": "sdi2-oops", "category": "source_determined_items_v2"}) + "\n", encoding="utf-8")
+    results_path.write_text("[]", encoding="utf-8")
+    out = subprocess.run(
+        [sys.executable, "report_benchmark.py", str(bench_path), str(results_path)],
+        cwd=str(TRAINING_DIR), capture_output=True, text=True,
+    )
+    check(
+        "report_benchmark.py CLI exits nonzero on a v2-acceptance probe missing both count rules",
+        out.returncode != 0,
+        f"returncode={out.returncode} stdout={out.stdout} stderr={out.stderr}",
+    )
+    check("... with a traceback mentioning the offending probe id", "sdi2-oops" in out.stderr, out.stderr)
+
+
 # ---------------------------------------------------------------------------
-# Part 3: v1 default path -- proven byte-for-byte unchanged
+# Part 4 (acceptance test 10, 12): v1 default path and CLI validation
 # ---------------------------------------------------------------------------
 
 def _pre_refactor_check_format_valid(generated: str) -> bool:
-    """Reference implementation, copied verbatim from the pre-refactor
-    version of run_benchmark.py (git history, commit before this round) --
-    an independent second copy to cross-check against, not just re-reading
-    the same code the refactor now calls."""
+    """Independent reference implementation, copied verbatim from the
+    pre-adapter version of run_benchmark.py -- a second copy to cross-
+    check against, not just re-reading the code the refactor now calls."""
     NARRATIVE_MARKER, BULLETS_MARKER, ACTIONS_MARKER = "###NARRATIVE###", "###BULLETS###", "###ACTIONS###"
     narrative_idx = generated.find(NARRATIVE_MARKER)
     bullets_idx = generated.find(BULLETS_MARKER)
@@ -165,84 +303,52 @@ def _pre_refactor_check_format_valid(generated: str) -> bool:
 
 
 def _pre_refactor_build_result_for_probe(probe: dict, generated: str) -> dict:
-    """Reference implementation of the exact dict construction the
-    pre-refactor run_benchmark.py had inline in its generation loop --
-    the ground truth this round's build_result_for_probe(probe, v1, ...)
-    must match exactly for every probe/generated pair below."""
     valid = _pre_refactor_check_format_valid(generated)
     return {
-        "id": probe["id"],
-        "category": probe["category"],
-        "kind": probe["kind"],
-        "status": probe.get("status"),
+        "id": probe["id"], "category": probe["category"], "kind": probe["kind"], "status": probe.get("status"),
         "required_semantic_dimensions": probe.get("required_semantic_dimensions", []),
-        "raw_output": generated,
-        "format_valid": valid,
-        "scores": {
-            "topic_completeness": None,
-            "attribution_accuracy": None,
-            "uncertainty_preservation": None,
-            "unsupported_addition_resistance": None,
-        },
-        "capability_checks": {check: None for check in probe.get("primary_checks", [])},
+        "raw_output": generated, "format_valid": valid,
+        "scores": {"topic_completeness": None, "attribution_accuracy": None, "uncertainty_preservation": None, "unsupported_addition_resistance": None},
+        "capability_checks": {c: None for c in probe.get("primary_checks", [])},
         "failure_labels": [],
     }
 
 
 V1_REGRESSION_CASES = [
-    (
-        {"id": "reg-1", "category": "direct", "kind": "direct", "status": "regression_guard",
-         "required_semantic_dimensions": ["topic_completeness"], "primary_checks": ["SOME_CHECK"]},
-        "###NARRATIVE###\nsome narrative text\n###BULLETS###\nfirst\nsecond\n###ACTIONS###\ntask one",
-    ),
-    (
-        # No primary_checks, no required_semantic_dimensions -- exercises
-        # the .get(..., []) defaults on both.
-        {"id": "reg-2", "category": "transfer", "kind": "transfer", "status": None},
-        "###NARRATIVE###\ntext\n###BULLETS###\n###ACTIONS###",
-    ),
-    (
-        # Malformed: markers out of order -> format_valid False.
-        {"id": "reg-3", "category": "adversarial", "kind": "adversarial", "status": "negative_example",
-         "required_semantic_dimensions": [], "primary_checks": ["A", "B"]},
-        "###BULLETS###\n###NARRATIVE###\ntext\n###ACTIONS###",
-    ),
-    (
-        # Empty narrative content -> format_valid False (narrative slice strips to "").
-        {"id": "reg-4", "category": "direct", "kind": "direct", "status": "acceptance_gate",
-         "required_semantic_dimensions": ["unsupported_addition_resistance"], "primary_checks": []},
-        "###NARRATIVE###   \n###BULLETS###\nx\n###ACTIONS###",
-    ),
-    (
-        # No markers at all.
-        {"id": "reg-5", "category": "direct", "kind": "direct"},
-        "just plain text with no structure whatsoever",
-    ),
+    ({"id": "reg-1", "category": "direct", "kind": "direct", "status": "regression_guard",
+      "required_semantic_dimensions": ["topic_completeness"], "primary_checks": ["SOME_CHECK"]},
+     "###NARRATIVE###\nsome narrative text\n###BULLETS###\nfirst\nsecond\n###ACTIONS###\ntask one"),
+    ({"id": "reg-2", "category": "transfer", "kind": "transfer", "status": None},
+     "###NARRATIVE###\ntext\n###BULLETS###\n###ACTIONS###"),
+    ({"id": "reg-3", "category": "adversarial", "kind": "adversarial", "status": "negative_example",
+      "required_semantic_dimensions": [], "primary_checks": ["A", "B"]},
+     "###BULLETS###\n###NARRATIVE###\ntext\n###ACTIONS###"),
+    ({"id": "reg-4", "category": "direct", "kind": "direct", "status": "acceptance_gate",
+      "required_semantic_dimensions": ["unsupported_addition_resistance"], "primary_checks": []},
+     "###NARRATIVE###   \n###BULLETS###\nx\n###ACTIONS###"),
+    ({"id": "reg-5", "category": "direct", "kind": "direct"}, "just plain text with no structure whatsoever"),
 ]
 
 
 def test_v1_build_result_matches_pre_refactor_reference_exactly():
+    # Narrower, accurate claim per the review's correction: this proves the
+    # per-probe v1 result scaffold is unchanged for these representative
+    # cases -- not that every aspect of runner behavior (stdout, import
+    # graph) is byte-for-byte identical, which it isn't and doesn't need
+    # to be.
     v1 = ca.select_contract_adapter("v1")
     for probe, generated in V1_REGRESSION_CASES:
         expected = _pre_refactor_build_result_for_probe(probe, generated)
         actual = rbm.build_result_for_probe(probe, v1, generated)
-        check(
-            f"v1 build_result_for_probe('{probe['id']}') matches pre-refactor reference exactly",
-            actual == expected,
-            f"expected={expected!r} actual={actual!r}",
-        )
+        check(f"v1 build_result_for_probe('{probe['id']}') matches pre-refactor reference exactly", actual == expected, f"expected={expected!r} actual={actual!r}")
         check(
             f"v1 build_result_for_probe('{probe['id']}') has no v2-only keys",
-            "contract" not in actual and "bullet_count_rule" not in actual and "bullet_count_result" not in actual,
+            "contract" not in actual and "bullet_count_rule" not in actual and "parsed_narrative" not in actual,
             str(actual.keys()),
         )
 
 
 def test_v1_adapter_check_format_valid_matches_prepare_data_directly():
-    # Extra rigor beyond the full-result comparison above: confirm the
-    # adapter's check_format_valid (prepare_data.check_format_valid) agrees
-    # with the independent reference implementation on every regression
-    # case's raw text, not just on the assembled result dict.
     v1 = ca.select_contract_adapter("v1")
     for probe, generated in V1_REGRESSION_CASES:
         check(
@@ -255,162 +361,193 @@ def test_v1_adapter_check_format_valid_matches_prepare_data_directly():
 def test_parse_args_default_contract_is_v1_and_positional_args_unaffected():
     positional, contract = rbm.parse_args(["bench.jsonl"])
     check("parse_args: single positional arg preserved, contract defaults to v1", positional == ["bench.jsonl"] and contract == "v1", (positional, contract))
-
     positional, contract = rbm.parse_args(["bench.jsonl", "ckpt_dir", "out.json"])
-    check(
-        "parse_args: three positional args preserved in order, contract defaults to v1",
-        positional == ["bench.jsonl", "ckpt_dir", "out.json"] and contract == "v1",
-        (positional, contract),
-    )
+    check("parse_args: three positional args preserved in order, contract defaults to v1", positional == ["bench.jsonl", "ckpt_dir", "out.json"] and contract == "v1", (positional, contract))
 
 
 def test_parse_args_extracts_contract_flag_from_any_position():
     positional, contract = rbm.parse_args(["--contract=v2", "bench.jsonl", "ckpt_dir"])
-    check(
-        "parse_args: --contract=v2 extracted from front, positionals intact",
-        positional == ["bench.jsonl", "ckpt_dir"] and contract == "v2",
-        (positional, contract),
-    )
+    check("parse_args: --contract=v2 extracted from front, positionals intact", positional == ["bench.jsonl", "ckpt_dir"] and contract == "v2", (positional, contract))
     positional, contract = rbm.parse_args(["bench.jsonl", "--contract=v2", "ckpt_dir"])
-    check(
-        "parse_args: --contract=v2 extracted from middle, positionals intact and in order",
-        positional == ["bench.jsonl", "ckpt_dir"] and contract == "v2",
-        (positional, contract),
-    )
+    check("parse_args: --contract=v2 extracted from middle, positionals intact and in order", positional == ["bench.jsonl", "ckpt_dir"] and contract == "v2", (positional, contract))
+
+
+def test_parse_args_rejects_malformed_cli_invocations():
+    malformed = [
+        (["--contract=v1", "bench.jsonl", "--contract=v2"], "repeated --contract flag"),
+        (["--contract=v2"], "no benchmark positional"),
+        (["bench.jsonl", "a", "b", "c"], "excess positional arguments"),
+        (["--contract="], "empty --contract value"),
+        (["--bogus-flag", "bench.jsonl"], "unrecognized flag"),
+    ]
+    for argv, name in malformed:
+        try:
+            result = rbm.parse_args(argv)
+            check(f"parse_args rejects: {name}", False, f"wrongly accepted -> {result}")
+        except ValueError as e:
+            check(f"parse_args rejects: {name}", True, str(e))
 
 
 # ---------------------------------------------------------------------------
-# Part 4: v2 adapter path (dummy-only)
+# Part 5: v2 result construction (dummy-only)
 # ---------------------------------------------------------------------------
 
-def test_v2_build_result_includes_count_fields_and_correct_counts():
+def test_v2_build_result_includes_full_structural_package():
     v2 = ca.select_contract_adapter("v2")
-    probe = {
-        "id": "sdi2-02", "category": "source_determined_items_v2", "kind": "direct", "status": "acceptance_gate",
-        "required_semantic_dimensions": ["topic_completeness"], "primary_checks": ["TASK_SURVIVED"],
-        "bullet_count_rule": {"operator": "exact", "value": 1},
-        "action_count_rule": {"operator": "exact", "value": 1},
-    }
-    generated = "###NARRATIVE### text ###BULLETS### ###BULLET### one idea ###ACTIONS### ###ACTION### one task"
-    result = rbm.build_result_for_probe(probe, v2, generated)
+    probe = _v2_probe("sdi2-02", bullet_rule={"operator": "exact", "value": 1}, action_rule={"operator": "exact", "value": 1})
+    result = rbm.build_result_for_probe(probe, v2, ONE_BULLET_ONE_ACTION)
     check("v2 result carries contract='v2'", result.get("contract") == "v2", result.get("contract"))
+    check("v2 result carries contract_version", result.get("contract_version") == v2.version, result.get("contract_version"))
+    check("v2 result carries contract_fingerprint", result.get("contract_fingerprint") == v2.expected_fingerprint, result.get("contract_fingerprint"))
+    check("v2 result carries parser_version", result.get("parser_version") == v2.parser_version, result.get("parser_version"))
+    check("v2 result carries parsed_narrative", result.get("parsed_narrative") == "text", result.get("parsed_narrative"))
+    check("v2 result carries parsed_bullets", result.get("parsed_bullets") == ["one idea"], result.get("parsed_bullets"))
+    check("v2 result carries parsed_actions", result.get("parsed_actions") == ["one task"], result.get("parsed_actions"))
     check("v2 result bullet_count_result actual=1, passed=True", result["bullet_count_result"] == {"actual": 1, "rule": probe["bullet_count_rule"], "passed": True}, result["bullet_count_result"])
-    check("v2 result action_count_result actual=1, passed=True", result["action_count_result"] == {"actual": 1, "rule": probe["action_count_rule"], "passed": True}, result["action_count_result"])
 
 
-def test_v2_unparseable_output_fails_count_rules_without_raising():
+def test_v2_unparseable_output_fails_count_rules_without_raising_and_nulls_parsed_fields():
     v2 = ca.select_contract_adapter("v2")
-    probe = {
-        "id": "sdi2-02", "category": "c", "kind": "direct",
-        "bullet_count_rule": {"operator": "exact", "value": 1},
-        "action_count_rule": {"operator": "exact", "value": 1},
-    }
+    probe = _v2_probe("sdi2-02", bullet_rule={"operator": "exact", "value": 1}, action_rule={"operator": "exact", "value": 1})
     result = rbm.build_result_for_probe(probe, v2, "not structured at all")
     check("unparseable v2 output: format_valid is False", result["format_valid"] is False)
+    check("unparseable v2 output: parsed_narrative is None", result["parsed_narrative"] is None)
     check("unparseable v2 output: bullet_count_result fails with actual=None (no raise)", result["bullet_count_result"] == {"actual": None, "rule": probe["bullet_count_rule"], "passed": False}, result["bullet_count_result"])
 
 
-def test_v2_probe_without_count_rules_gets_no_count_fields_populated_as_none():
+def test_v2_probe_without_count_rules_gets_none_for_count_fields():
     v2 = ca.select_contract_adapter("v2")
-    probe = {"id": "p", "category": "c", "kind": "direct"}
-    result = rbm.build_result_for_probe(probe, v2, "###NARRATIVE### t ###BULLETS### ###BULLET### a ###ACTIONS###")
+    probe = {"id": "p", "category": "direct", "kind": "direct"}
+    result = rbm.build_result_for_probe(probe, v2, ONE_BULLET_ONE_ACTION)
     check("v2 probe with no declared rules: bullet_count_rule is None", result["bullet_count_rule"] is None)
     check("v2 probe with no declared rules: bullet_count_result is None", result["bullet_count_result"] is None)
 
 
 # ---------------------------------------------------------------------------
-# Part 5: report_benchmark.py active structural recomputation
+# Part 6 (acceptance tests 4, 5, 6): structural integrity, field by field
 # ---------------------------------------------------------------------------
 
-def test_evaluate_v2_count_rules_no_op_true_when_probe_declares_no_rules():
-    check(
-        "evaluate_v2_count_rules: probe with no count rules is not-applicable (True)",
-        rb.evaluate_v2_count_rules({"id": "legacy"}, {"raw_output": "anything, doesn't matter"}) is True,
+def _consistent_v2_result():
+    v2 = ca.select_contract_adapter("v2")
+    probe = _v2_probe("sdi2-02", bullet_rule={"operator": "exact", "value": 1}, action_rule={"operator": "exact", "value": 1})
+    result = rbm.build_result_for_probe(probe, v2, ONE_BULLET_ONE_ACTION)
+    result["id"] = probe["id"]
+    return probe, _fully_score(result)
+
+
+def test_verify_v2_structural_integrity_passes_on_untampered_result():
+    probe, result = _consistent_v2_result()
+    try:
+        rb.verify_v2_structural_integrity(probe, result)
+        check("verify_v2_structural_integrity: untampered result passes", True)
+    except ValueError as e:
+        check("verify_v2_structural_integrity: untampered result passes", False, str(e))
+
+
+def test_verify_v2_structural_integrity_catches_every_tampered_field():
+    tamper_cases = {
+        "contract": "v1",
+        "contract_version": "wrong-version",
+        "contract_fingerprint": "0" * 64,
+        "parser_version": "wrong-parser-version",
+        "format_valid": "false",  # Finding 2 repro 3: string, not bool
+        "parsed_narrative": "a different narrative",
+        "parsed_bullets": ["a different bullet"],
+        "parsed_actions": ["a different action"],
+        "bullet_count_rule": {"operator": "exact", "value": 99},  # Finding 2 repro 1
+        "action_count_rule": {"operator": "max", "value": 5},
+        "bullet_count_result": {"actual": 1, "rule": {"operator": "exact", "value": 1}, "passed": False},
+        "action_count_result": {"actual": 1, "rule": {"operator": "exact", "value": 1}, "passed": False},
+    }
+    for field, bad_value in tamper_cases.items():
+        probe, result = _consistent_v2_result()
+        tampered = dict(result)
+        tampered[field] = bad_value
+        try:
+            rb.verify_v2_structural_integrity(probe, tampered)
+            check(f"verify_v2_structural_integrity catches tampered {field!r}", False, "did not raise")
+        except ValueError as e:
+            check(f"verify_v2_structural_integrity catches tampered {field!r}", True, str(e))
+
+
+def test_verify_v2_structural_integrity_catches_missing_fields():
+    required_fields = [
+        "contract", "contract_version", "contract_fingerprint", "parser_version",
+        "format_valid", "parsed_narrative", "parsed_bullets", "parsed_actions",
+        "bullet_count_rule", "action_count_rule", "bullet_count_result", "action_count_result",
+    ]
+    for field in required_fields:
+        probe, result = _consistent_v2_result()
+        del result[field]
+        try:
+            rb.verify_v2_structural_integrity(probe, result)
+            check(f"verify_v2_structural_integrity catches missing {field!r}", False, "did not raise")
+        except (ValueError, KeyError) as e:
+            check(f"verify_v2_structural_integrity catches missing {field!r}", True, str(e))
+
+
+# ---------------------------------------------------------------------------
+# Part 7 (acceptance tests 1, 2, 3): the actual report_benchmark.py CLI path
+# ---------------------------------------------------------------------------
+
+def _run_reporter_cli(probe: dict, result: dict) -> subprocess.CompletedProcess:
+    tmpdir = Path(tempfile.mkdtemp())
+    bench_path = tmpdir / "bench.jsonl"
+    results_path = tmpdir / "results.json"
+    bench_path.write_text(json.dumps(probe) + "\n", encoding="utf-8")
+    results_path.write_text(json.dumps([result]), encoding="utf-8")
+    return subprocess.run(
+        [sys.executable, "report_benchmark.py", str(bench_path), str(results_path)],
+        cwd=str(TRAINING_DIR), capture_output=True, text=True,
     )
 
 
-def test_evaluate_v2_count_rules_passes_when_consistent_and_satisfied():
+def test_report_cli_reports_failure_for_honestly_unmet_count_rule():
+    # The exact scenario ChatGPT's review reproduced against the old code:
+    # a fully-scored v2 case whose output has two bullets against an
+    # exact-one rule must report 0/1, not 1/1.
     v2 = ca.select_contract_adapter("v2")
-    probe = {
-        "id": "sdi2-02", "category": "c", "kind": "direct",
-        "bullet_count_rule": {"operator": "exact", "value": 1},
-        "action_count_rule": {"operator": "exact", "value": 1},
-    }
-    generated = "###NARRATIVE### text ###BULLETS### ###BULLET### one idea ###ACTIONS### ###ACTION### one task"
-    result = rbm.build_result_for_probe(probe, v2, generated)
-    check("evaluate_v2_count_rules: consistent + satisfied -> True", rb.evaluate_v2_count_rules(probe, result) is True)
+    probe = _v2_probe("sdi2-test", bullet_rule={"operator": "exact", "value": 1}, action_rule={"operator": "exact", "value": 0})
+    result = rbm.build_result_for_probe(probe, v2, TWO_BULLETS_ZERO_ACTIONS)
+    result["id"] = probe["id"]
+    _fully_score(result)
+    check("stored bullet_count_result correctly says passed=False", result["bullet_count_result"]["passed"] is False, result["bullet_count_result"])
+
+    out = _run_reporter_cli(probe, result)
+    check("report_benchmark.py CLI exits 0 for an honest (non-tampered) failing case", out.returncode == 0, out.stderr)
+    check("report_benchmark.py CLI: Overall pass rate: 0/1", "Overall pass rate: 0/1" in out.stdout, out.stdout)
+    check("report_benchmark.py CLI: Acceptance gates passed: 0/1", "Acceptance gates passed: 0/1" in out.stdout, out.stdout)
 
 
-def test_evaluate_v2_count_rules_fails_without_raising_when_genuinely_unsatisfied():
-    v2 = ca.select_contract_adapter("v2")
-    probe = {
-        "id": "sdi2-03", "category": "c", "kind": "direct",
-        "bullet_count_rule": {"operator": "exact", "value": 2},
-        "action_count_rule": {"operator": "exact", "value": 0},
-    }
-    # Only one bullet where the rule demands exactly two -- a genuine,
-    # honestly-reported failure, not tampering. Must return False, not raise.
-    generated = "###NARRATIVE### text ###BULLETS### ###BULLET### only one idea ###ACTIONS###"
-    result = rbm.build_result_for_probe(probe, v2, generated)
-    try:
-        outcome = rb.evaluate_v2_count_rules(probe, result)
-        check("evaluate_v2_count_rules: genuine unmet rule returns False without raising", outcome is False, outcome)
-    except ValueError as e:
-        check("evaluate_v2_count_rules: genuine unmet rule returns False without raising", False, f"raised instead: {e}")
-
-
-def test_evaluate_v2_count_rules_raises_on_tampered_stored_result():
-    v2 = ca.select_contract_adapter("v2")
-    probe = {
-        "id": "sdi2-02", "category": "c", "kind": "direct",
-        "bullet_count_rule": {"operator": "exact", "value": 1},
-        "action_count_rule": {"operator": "exact", "value": 1},
-    }
-    generated = "###NARRATIVE### text ###BULLETS### ###BULLET### one idea ###ACTIONS### ###ACTION### one task"
-    result = rbm.build_result_for_probe(probe, v2, generated)
+def test_report_cli_raises_on_tampered_stored_structural_result():
+    probe, result = _consistent_v2_result()
     tampered = dict(result)
-    tampered["action_count_result"] = {"actual": 1, "rule": probe["action_count_rule"], "passed": False}  # hand-edited to False
-    try:
-        rb.evaluate_v2_count_rules(probe, tampered)
-        check("evaluate_v2_count_rules: tampered stored result raises", False, "did not raise")
-    except ValueError as e:
-        check("evaluate_v2_count_rules: tampered stored result raises", "sdi2-02" in str(e) and "tampering" in str(e), str(e))
+    tampered["action_count_result"] = {"actual": 1, "rule": probe["action_count_rule"], "passed": False}
+    out = _run_reporter_cli(probe, tampered)
+    check("report_benchmark.py CLI exits nonzero on a tampered structural result", out.returncode != 0, out.stdout + out.stderr)
+    check("... traceback mentions the mismatch", "action_count_result" in out.stderr, out.stderr)
 
 
-def test_v2_result_passes_ands_probe_passes_and_count_rules():
+def test_report_cli_runs_structural_check_even_when_semantics_unscored():
+    # Not fully scored (semantics still null) AND structurally tampered --
+    # must still raise, proving structural verification isn't
+    # short-circuited away by probe_passes() already being False.
     v2 = ca.select_contract_adapter("v2")
-    probe = {
-        "id": "sdi2-02", "category": "c", "kind": "direct",
-        "required_semantic_dimensions": ["topic_completeness"], "primary_checks": ["TASK_SURVIVED"],
-        "bullet_count_rule": {"operator": "exact", "value": 1},
-        "action_count_rule": {"operator": "exact", "value": 1},
-    }
-    generated = "###NARRATIVE### text ###BULLETS### ###BULLET### one idea ###ACTIONS### ###ACTION### one task"
-    result = rbm.build_result_for_probe(probe, v2, generated)
-
-    # Count rules satisfied, but semantic scoring not yet filled in ->
-    # overall False (probe_passes' own fail-open-closed gate, untouched).
-    check("v2_result_passes: unscored semantics -> False even though counts pass", rb.v2_result_passes(probe, result) is False)
-
-    # Fully scored -> True.
-    result["scores"]["topic_completeness"] = 2
-    result["capability_checks"]["TASK_SURVIVED"] = True
-    check("v2_result_passes: fully scored + counts satisfied -> True", rb.v2_result_passes(probe, result) is True)
-
-    # Now break the count rule (still consistent, just genuinely unmet) -> False.
-    probe2 = dict(probe)
-    probe2["bullet_count_rule"] = {"operator": "exact", "value": 5}
-    result2 = rbm.build_result_for_probe(probe2, v2, generated)
-    result2["scores"]["topic_completeness"] = 2
-    result2["capability_checks"]["TASK_SURVIVED"] = True
-    check("v2_result_passes: fully scored but count rule unmet -> False", rb.v2_result_passes(probe2, result2) is False)
+    probe = _v2_probe("sdi2-test", bullet_rule={"operator": "exact", "value": 1}, action_rule={"operator": "exact", "value": 1})
+    result = rbm.build_result_for_probe(probe, v2, ONE_BULLET_ONE_ACTION)
+    result["id"] = probe["id"]
+    # Deliberately NOT calling _fully_score -- scores/capability_checks stay null.
+    tampered = dict(result)
+    tampered["contract"] = "v1"  # Finding 2 repro 2, on an unscored result
+    out = _run_reporter_cli(probe, tampered)
+    check(
+        "report_benchmark.py CLI raises on tampering even when semantics are unscored (no short-circuit)",
+        out.returncode != 0 and "contract" in out.stderr,
+        out.stdout + out.stderr,
+    )
 
 
 def test_probe_passes_itself_is_unmodified_by_this_round():
-    # Not a new test of probe_passes()'s own logic (test_report_benchmark.py
-    # already covers that exhaustively) -- just confirms it's still the
-    # exact same importable function report_benchmark.py has always
-    # exported, proving this round only added functions around it.
     result = {
         "id": "x", "format_valid": True,
         "scores": {"topic_completeness": None, "attribution_accuracy": None, "uncertainty_preservation": None, "unsupported_addition_resistance": None},
@@ -425,22 +562,31 @@ def main() -> None:
         test_select_v1_and_v2_succeed,
         test_unknown_contract_name_raises_before_any_model_import,
         test_fingerprint_mismatch_raises,
+        test_fresh_process_v1_selection_never_imports_v2_modules,
+        test_fresh_process_v2_selection_does_import_v2_modules,
         test_preflight_is_a_no_op_for_v1_even_with_garbage_rules,
         test_preflight_requires_both_rules_or_neither,
         test_preflight_rejects_unknown_operator,
         test_preflight_accepts_well_formed_rules,
+        test_preflight_rejects_duplicate_probe_ids,
+        test_preflight_rejects_malformed_rule_values,
+        test_preflight_requires_both_rules_for_v2_acceptance_category_even_if_both_absent,
+        test_preflight_accepts_protected_16_probes_under_v2_without_requiring_rules,
+        test_report_time_preflight_also_rejects_missing_rules_and_duplicates,
         test_v1_build_result_matches_pre_refactor_reference_exactly,
         test_v1_adapter_check_format_valid_matches_prepare_data_directly,
         test_parse_args_default_contract_is_v1_and_positional_args_unaffected,
         test_parse_args_extracts_contract_flag_from_any_position,
-        test_v2_build_result_includes_count_fields_and_correct_counts,
-        test_v2_unparseable_output_fails_count_rules_without_raising,
-        test_v2_probe_without_count_rules_gets_no_count_fields_populated_as_none,
-        test_evaluate_v2_count_rules_no_op_true_when_probe_declares_no_rules,
-        test_evaluate_v2_count_rules_passes_when_consistent_and_satisfied,
-        test_evaluate_v2_count_rules_fails_without_raising_when_genuinely_unsatisfied,
-        test_evaluate_v2_count_rules_raises_on_tampered_stored_result,
-        test_v2_result_passes_ands_probe_passes_and_count_rules,
+        test_parse_args_rejects_malformed_cli_invocations,
+        test_v2_build_result_includes_full_structural_package,
+        test_v2_unparseable_output_fails_count_rules_without_raising_and_nulls_parsed_fields,
+        test_v2_probe_without_count_rules_gets_none_for_count_fields,
+        test_verify_v2_structural_integrity_passes_on_untampered_result,
+        test_verify_v2_structural_integrity_catches_every_tampered_field,
+        test_verify_v2_structural_integrity_catches_missing_fields,
+        test_report_cli_reports_failure_for_honestly_unmet_count_rule,
+        test_report_cli_raises_on_tampered_stored_structural_result,
+        test_report_cli_runs_structural_check_even_when_semantics_unscored,
         test_probe_passes_itself_is_unmodified_by_this_round,
     ]
     for t in tests:

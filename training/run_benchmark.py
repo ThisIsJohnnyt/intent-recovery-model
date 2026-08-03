@@ -22,9 +22,11 @@ prompt_contract_vnext_static_final_review_and_branch_reconciliation.md's
 Disagreement 2 -- one runner with an adapter, not a second script, so
 scoring-safety logic (this file's result schema, report_benchmark.py's
 pass/fail logic) can never drift between a v1-only and a v2-only copy.
-An unrecognized --contract value, a prompt-template drift from the locked
-fingerprint, or a malformed count-rule declaration in the benchmark file
-all raise before any model is loaded -- see contract_adapters.py for why.
+An unrecognized --contract value, a duplicated/empty --contract flag, a
+missing or excess positional argument, a prompt-template drift from the
+locked fingerprint, or a malformed count-rule/duplicate-ID declaration in
+the benchmark file all raise before any model is loaded -- see
+contract_adapters.py and parse_args() below for why.
 
 This script does NOT score semantics -- topic completeness, attribution
 accuracy, uncertainty preservation, and unsupported-addition resistance all
@@ -42,6 +44,7 @@ from contract_adapters import (
     DEFAULT_CONTRACT,
     ContractAdapter,
     evaluate_count_rule,
+    known_contract_names,
     preflight_validate_count_rules,
     select_contract_adapter,
 )
@@ -55,18 +58,40 @@ def load_probes(path: Path) -> list[dict]:
 
 
 def parse_args(argv: list[str]) -> tuple[list[str], str]:
-    """Splits a leading --contract=X flag out of argv, leaving the
-    original positional-argument parsing below completely unchanged for
-    every existing invocation that doesn't pass it -- the whole point of
-    proving the v1 default path is byte-for-byte unaffected by this
-    refactor."""
+    """Splits a leading --contract=X flag out of argv, leaving positional-
+    argument parsing itself completely untouched for every well-formed
+    invocation -- the whole point of proving the v1 default path is
+    unaffected by this refactor.
+
+    Fail-closed per prompt_contract_vnext_adapter_structural_implementation_review.md's
+    Finding 6: raises ValueError (not a silent best-effort guess, not an
+    IndexError from unrelated code further down) on a repeated --contract
+    flag, an empty --contract value, an unrecognized flag, a missing
+    benchmark-file argument, or more than 3 positional arguments.
+    """
     positional = []
-    contract = DEFAULT_CONTRACT
+    contract = None
     for arg in argv:
         if arg.startswith("--contract="):
-            contract = arg[len("--contract=") :]
+            value = arg[len("--contract=") :]
+            if not value:
+                raise ValueError("--contract requires a non-empty value, e.g. --contract=v2")
+            if contract is not None:
+                raise ValueError(f"--contract specified more than once ({contract!r} and {value!r})")
+            contract = value
+        elif arg.startswith("--"):
+            raise ValueError(f"unrecognized flag: {arg}")
         else:
             positional.append(arg)
+    if contract is None:
+        contract = DEFAULT_CONTRACT
+    if not positional:
+        raise ValueError("missing required <benchmark.jsonl> argument")
+    if len(positional) > 3:
+        raise ValueError(
+            "too many positional arguments (expected at most 3: "
+            f"benchmark.jsonl [checkpoint_dir] [output.json]), got {len(positional)}: {positional}"
+        )
     return positional, contract
 
 
@@ -76,10 +101,17 @@ def build_result_for_probe(probe: dict, adapter: ContractAdapter, generated: str
     can be tested directly against synthetic `generated` strings (dummy
     data only, no inference) rather than only through a full model run.
 
-    For the v1 adapter (extract_counts is None) this produces exactly the
-    dict shape/values the pre-adapter version of this script always
-    produced -- no new keys are added. The count-rule fields only appear
-    when a counting-capable adapter (v2) is selected.
+    For the v1 adapter (parse is None) this produces exactly the dict
+    shape/values the pre-adapter version of this script always produced --
+    no new keys are added. For a counting-capable adapter (v2), stores the
+    complete structural package report_benchmark.py's structural-integrity
+    check independently re-derives and compares against: contract identity
+    (name/version/fingerprint/parser version), parse validity, the parsed
+    narrative/bullets/actions themselves (not just their counts), the
+    count rules copied from the probe, and each rule's evaluated result.
+    Storing more than just the final pass/fail is what makes independent
+    re-verification possible at report time instead of a bare trust-the-
+    stored-bool convention.
     """
     valid = adapter.check_format_valid(generated)
     result = {
@@ -111,18 +143,25 @@ def build_result_for_probe(probe: dict, adapter: ContractAdapter, generated: str
         "failure_labels": [],
     }
 
-    if adapter.extract_counts is not None:
+    if adapter.parse is not None:
         bullet_rule = probe.get("bullet_count_rule")
         action_rule = probe.get("action_count_rule")
-        if valid:
-            counts = adapter.extract_counts(generated)
-            actual_bullets, actual_actions = len(counts.bullets), len(counts.actions)
+        parsed = adapter.parse(generated) if valid else None
+        if parsed is not None:
+            actual_bullets, actual_actions = len(parsed.bullets), len(parsed.actions)
         else:
             # Output that doesn't even parse can't satisfy a declared count
             # rule -- evaluate_count_rule(rule, None) always fails it
             # rather than raising, distinct from a malformed operator.
             actual_bullets, actual_actions = None, None
+
         result["contract"] = adapter.name
+        result["contract_version"] = adapter.version
+        result["contract_fingerprint"] = adapter.expected_fingerprint
+        result["parser_version"] = adapter.parser_version
+        result["parsed_narrative"] = parsed.narrative if parsed is not None else None
+        result["parsed_bullets"] = parsed.bullets if parsed is not None else None
+        result["parsed_actions"] = parsed.actions if parsed is not None else None
         result["bullet_count_rule"] = bullet_rule
         result["action_count_rule"] = action_rule
         result["bullet_count_result"] = evaluate_count_rule(bullet_rule, actual_bullets)
@@ -134,7 +173,8 @@ def build_result_for_probe(probe: dict, adapter: ContractAdapter, generated: str
 def main() -> None:
     if len(sys.argv) < 2:
         print(
-            "Usage: python run_benchmark.py <benchmark.jsonl> [checkpoint_dir] [output.json] [--contract=v1|v2]",
+            "Usage: python run_benchmark.py <benchmark.jsonl> [checkpoint_dir] [output.json] "
+            f"[--contract={'|'.join(known_contract_names())}]",
             file=sys.stderr,
         )
         sys.exit(1)

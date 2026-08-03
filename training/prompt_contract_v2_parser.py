@@ -20,6 +20,16 @@ from prompt_contract_v2_candidate import (
 )
 
 
+# Bumped only if parse_output's structural rules change in a way that could
+# alter parsing results for previously-valid input. Stored per-result by
+# run_benchmark.py's v2 path and independently re-verified by
+# report_benchmark.py's structural-integrity check, so a parser change
+# between generation and reporting can't silently go undetected (per
+# prompt_contract_vnext_adapter_structural_implementation_review.md's
+# Finding 2, "parser version/binding").
+PARSER_VERSION = "v2-candidate-parser-1"
+
+
 class ParseError(ValueError):
     pass
 

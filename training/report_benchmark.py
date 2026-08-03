@@ -29,8 +29,14 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from contract_adapters import evaluate_count_rule
-from prompt_contract_v2_parser import ParseError, parse_output
+from contract_adapters import (
+    evaluate_count_rule,
+    preflight_validate_count_rules,
+    probe_requires_v2_structural_verification,
+    select_contract_adapter,
+)
+
+_MISSING = object()
 
 
 KNOWN_SEMANTIC_DIMENSIONS = {
@@ -73,70 +79,136 @@ def probe_passes(result: dict) -> bool:
     return True
 
 
-def evaluate_v2_count_rules(probe: dict, result: dict) -> bool:
+def verify_v2_structural_integrity(probe: dict, result: dict) -> None:
     """Active structural recomputation (per
     prompt_contract_vnext_static_final_review_and_branch_reconciliation.md's
-    Disagreement 1): reparses raw_output independently and recomputes both
-    count rules from scratch using the same evaluate_count_rule() the
-    runner used to write bullet_count_result/action_count_result in the
-    first place, rather than trusting those stored fields by convention.
+    Disagreement 1, tightened by
+    prompt_contract_vnext_adapter_structural_implementation_review.md's
+    Finding 2): independently re-derives the ENTIRE stored structural
+    package from `probe` (the frozen, trusted benchmark definition) and a
+    fresh reparse of `result["raw_output"]`, and requires every one of the
+    following to match exactly, raising ValueError on the first mismatch
+    or missing field rather than silently returning False:
 
-    A mismatch between the recomputed and stored value is a data-integrity
-    problem (a hand-edited or stale field), not an ordinary rule failure --
-    it raises rather than silently returning False, matching this
-    project's established fail-closed pattern (ParseError,
-    required_semantic_dimensions' unknown-name check in probe_passes()
-    above).
+    - contract name/version/fingerprint, parser version (re-selected via
+      select_contract_adapter("v2"), which itself re-verifies the live
+      fingerprint against the locked constant);
+    - format_valid, recomputed from raw_output, compared with an exact
+      boolean check (not truthiness -- a stored string "false" must not
+      slip past a bare `if not stored_value` check the way it does in
+      probe_passes(), which only ever sees real booleans from the v1 path
+      and is intentionally left alone here);
+    - parsed narrative/bullets/actions, recomputed from raw_output;
+    - bullet_count_rule/action_count_rule, compared against what `probe`
+      itself declares (not against another copy in `result` -- this is
+      what closes the reproduction where editing result["bullet_count_rule"]
+      had no effect on the old, narrower check, because that check never
+      read it either; now the frozen probe is the only source of truth for
+      what the rule *should* be, and the stored copy must match it exactly);
+    - bullet_count_result/action_count_result, recomputed via the same
+      evaluate_count_rule() the runner used to write them.
 
-    Returns True if the probe declares no count rules at all (not
-    applicable -- e.g. an ordinary v1/legacy probe run through this
-    function is a no-op), or if every declared rule is both satisfied and
-    consistent with what was stored.
+    Called unconditionally, as its own statement, before probe_passes() or
+    evaluate_v2_count_rules() run -- never as part of an `and` chain that
+    Python could short-circuit past when semantics already fail or are
+    unscored. That was Finding 2's ordering bug: a tampered structural
+    field went undetected whenever the result also happened to be
+    semantically unscored, because the old check only ran on the right-hand
+    side of `probe_passes(result) and ...`.
     """
-    bullet_rule = probe.get("bullet_count_rule")
-    action_rule = probe.get("action_count_rule")
-    if bullet_rule is None and action_rule is None:
-        return True
+    result_id = result.get("id", probe.get("id"))
+    adapter = select_contract_adapter("v2")
 
-    try:
-        parsed = parse_output(result.get("raw_output", ""))
-        actual_bullets: int | None = len(parsed.bullets)
-        actual_actions: int | None = len(parsed.actions)
-    except ParseError:
-        actual_bullets = None
-        actual_actions = None
+    stored_contract = result.get("contract", _MISSING)
+    if stored_contract != adapter.name:
+        raise ValueError(f"{result_id}: expected contract={adapter.name!r}, stored {stored_contract!r}")
 
-    recomputed_bullet = evaluate_count_rule(bullet_rule, actual_bullets)
-    recomputed_action = evaluate_count_rule(action_rule, actual_actions)
-    stored_bullet = result.get("bullet_count_result")
-    stored_action = result.get("action_count_result")
+    for field, expected in (
+        ("contract_version", adapter.version),
+        ("contract_fingerprint", adapter.expected_fingerprint),
+        ("parser_version", adapter.parser_version),
+    ):
+        stored = result.get(field, _MISSING)
+        if stored is _MISSING:
+            raise ValueError(f"{result_id}: missing required structural field {field!r}")
+        if stored != expected:
+            raise ValueError(f"{result_id}: {field} mismatch -- stored {stored!r}, expected {expected!r}")
 
-    if recomputed_bullet != stored_bullet:
+    raw_output = result.get("raw_output", "")
+    recomputed_valid = adapter.check_format_valid(raw_output)
+    stored_valid = result.get("format_valid", _MISSING)
+    if stored_valid is _MISSING or type(stored_valid) is not bool or stored_valid != recomputed_valid:
         raise ValueError(
-            f"{result.get('id')}: stored bullet_count_result {stored_bullet!r} does not "
-            f"match reparsed/recomputed {recomputed_bullet!r} -- possible tampering or a "
-            "stale field, not a normal rule failure"
-        )
-    if recomputed_action != stored_action:
-        raise ValueError(
-            f"{result.get('id')}: stored action_count_result {stored_action!r} does not "
-            f"match reparsed/recomputed {recomputed_action!r} -- possible tampering or a "
-            "stale field, not a normal rule failure"
+            f"{result_id}: format_valid mismatch or wrong type -- stored {stored_valid!r} "
+            f"({type(stored_valid).__name__}), recomputed {recomputed_valid!r}"
         )
 
-    return (recomputed_bullet is None or recomputed_bullet["passed"]) and (
-        recomputed_action is None or recomputed_action["passed"]
+    parsed = adapter.parse(raw_output) if recomputed_valid else None
+    if parsed is not None:
+        for field, expected in (
+            ("parsed_narrative", parsed.narrative),
+            ("parsed_bullets", parsed.bullets),
+            ("parsed_actions", parsed.actions),
+        ):
+            stored = result.get(field, _MISSING)
+            if stored is _MISSING or stored != expected:
+                raise ValueError(f"{result_id}: {field} mismatch -- stored {stored!r}, recomputed {expected!r}")
+        actual_bullets, actual_actions = len(parsed.bullets), len(parsed.actions)
+    else:
+        for field in ("parsed_narrative", "parsed_bullets", "parsed_actions"):
+            stored = result.get(field, _MISSING)
+            if stored is not None:
+                raise ValueError(f"{result_id}: {field} should be None when output doesn't parse, got {stored!r}")
+        actual_bullets, actual_actions = None, None
+
+    probe_bullet_rule = probe.get("bullet_count_rule")
+    probe_action_rule = probe.get("action_count_rule")
+    for field, expected in (("bullet_count_rule", probe_bullet_rule), ("action_count_rule", probe_action_rule)):
+        stored = result.get(field, _MISSING)
+        if stored is _MISSING or stored != expected:
+            raise ValueError(
+                f"{result_id}: {field} does not match the frozen probe's declared rule -- "
+                f"stored {stored!r}, probe declares {expected!r}"
+            )
+
+    recomputed_bullet_result = evaluate_count_rule(probe_bullet_rule, actual_bullets)
+    recomputed_action_result = evaluate_count_rule(probe_action_rule, actual_actions)
+    for field, expected in (
+        ("bullet_count_result", recomputed_bullet_result),
+        ("action_count_result", recomputed_action_result),
+    ):
+        stored = result.get(field, _MISSING)
+        if stored is _MISSING or stored != expected:
+            raise ValueError(
+                f"{result_id}: {field} does not match reparsed/recomputed value -- "
+                f"stored {stored!r}, recomputed {expected!r}"
+            )
+
+
+def evaluate_v2_count_rules(probe: dict, result: dict) -> bool:
+    """Assumes verify_v2_structural_integrity(probe, result) already ran
+    without raising -- v2_result_passes() always calls it first,
+    unconditionally. This just reads the now-verified-consistent stored
+    rule results and returns whether both are satisfied. Kept separate
+    from the integrity check so "genuinely unmet rule" (False) stays
+    distinct from "inconsistent record" (raise)."""
+    bullet_result = result.get("bullet_count_result")
+    action_result = result.get("action_count_result")
+    return (bullet_result is None or bullet_result["passed"]) and (
+        action_result is None or action_result["passed"]
     )
 
 
 def v2_result_passes(probe: dict, result: dict) -> bool:
-    """Combined pass condition for a v2 acceptance-gate probe: the
-    existing, unmodified probe_passes() gate (format validity, semantic
-    scores, capability checks) ANDed with the count-rule gate above.
-    probe_passes() itself is never touched by v2 concerns -- this only
-    wraps it, so the protected 16-probe/5-historical-case v1 schema is not
-    weakened by v2's additional requirement (per the acceptance-schema
-    review's Q1/Q3 answers)."""
+    """Combined pass condition for a v2-structural probe. Structural
+    integrity is verified FIRST, as its own statement -- not as the
+    left-hand operand of an `and` a failing/unscored semantic gate could
+    short-circuit past (Finding 2). Only after a clean structural
+    verification does this apply the existing, unmodified probe_passes()
+    gate ANDed with the count-rule gate. probe_passes() itself is never
+    touched by v2 concerns, so the protected 16-probe/5-historical-case v1
+    schema is not weakened by v2's additional requirements."""
+    verify_v2_structural_integrity(probe, result)
     return probe_passes(result) and evaluate_v2_count_rules(probe, result)
 
 
@@ -156,6 +228,17 @@ def main() -> None:
 
     probes = {p["id"]: p for p in load_jsonl(benchmark_path)}
     results = json.loads(results_path.read_text(encoding="utf-8"))
+
+    # Finding 5 fix: repeat the same preflight validation run_benchmark.py
+    # applies before generation -- so a benchmark file hand-edited after
+    # generation (or a results file produced by a different process that
+    # skipped runner-side preflight) can't bypass it and reach an
+    # unvalidated pass/fail computation below. Only imports/selects the v2
+    # adapter if this benchmark file actually contains a v2-structural
+    # probe -- an ordinary v1-only report run never touches v2 modules.
+    probe_list = list(probes.values())
+    if any(probe_requires_v2_structural_verification(p) for p in probe_list):
+        preflight_validate_count_rules(probe_list, select_contract_adapter("v2"))
 
     missing = set(probes) - {r["id"] for r in results}
     extra = {r["id"] for r in results} - set(probes)
@@ -184,7 +267,20 @@ def main() -> None:
         )
 
     total = len(results)
-    passes = {r["id"]: probe_passes(r) for r in results}
+    # Finding 1 fix: the actual pass computation must route a v2-structural
+    # probe's result through v2_result_passes() (structural integrity +
+    # count rules + semantics), not the plain probe_passes() gate alone --
+    # v2_result_passes() previously existed but nothing in main() ever
+    # called it. Routing is driven by the frozen `probes` entry, never by
+    # anything in `r` itself (a result claiming a contract it doesn't
+    # actually have must not be able to dodge this).
+    passes = {}
+    for r in results:
+        probe = probes.get(r["id"])
+        if probe is not None and probe_requires_v2_structural_verification(probe):
+            passes[r["id"]] = v2_result_passes(probe, r)
+        else:
+            passes[r["id"]] = probe_passes(r)
     overall_passed = sum(passes.values())
 
     print(f"=== Benchmark report: {benchmark_path.name} vs {results_path.name} ===\n")
