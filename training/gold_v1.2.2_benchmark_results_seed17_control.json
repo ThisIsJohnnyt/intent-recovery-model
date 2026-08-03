@@ -1,0 +1,178 @@
+[
+  {
+    "id": "01",
+    "category": "interrupted_thought_depth",
+    "kind": "direct",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### There is an unfinished thought about checking the basement freezer. Separately, Kira needs to be reminded to return the extension cord Sunday. ###BULLETS### Unfinished thought about checking the basement freezer Remind Kira to return the extension cord Sunday ###ACTIONS### Remind Kira to return the extension cord Sunday",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": null, "uncertainty_preservation": 2, "unsupported_addition_resistance": 2},
+    "capability_checks": {"INCOMPLETE_THOUGHT_REMAINED_INCOMPLETE": true, "TASK_SURVIVED": true},
+    "failure_labels": []
+  },
+  {
+    "id": "02",
+    "category": "interrupted_thought_depth",
+    "kind": "transfer",
+    "status": "negative_example",
+    "raw_output": "###NARRATIVE### Investigate why the tablet keeps returning to the tablet, putting the donation box by the front door. Separately, the screen goes black whenever the charger moves. ###BULLETS### Investigate why the tablet keeps returning to the tablet Put the donation box by the front door ###ACTIONS### Investigate why the tablet keeps returning to the tablet Put the donation box by the front door",
+    "format_valid": true,
+    "scores": {"topic_completeness": 1, "attribution_accuracy": null, "uncertainty_preservation": null, "unsupported_addition_resistance": 1},
+    "capability_checks": {"task completeness": false, "correct reconnection of interrupted fragments": false, "no excessive fragmentation": true},
+    "failure_labels": ["Topic Loss"]
+  },
+  {
+    "id": "03",
+    "category": "nested_boundary_depth",
+    "kind": "adversarial",
+    "status": "negative_example",
+    "raw_output": "###NARRATIVE### Celia should be asked whether the replacement cable arrived before the drive to the office. This is one combined task. Separately, the break-room clock is slow again. ###BULLETS### Ask Celia whether the replacement cable arrived before driving to the office The break-room clock is slow again ###ACTIONS### Ask Celia whether the replacement cable arrived before driving to the office",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": null, "uncertainty_preservation": null, "unsupported_addition_resistance": 2},
+    "capability_checks": {"COHERENT_TASK_REMAINED_UNSPLIT": true, "no unsupported action involving the clock": true},
+    "failure_labels": []
+  },
+  {
+    "id": "04",
+    "category": "multi_person_attribution",
+    "kind": "direct",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### Avery said that Morgan moved the boxes to storage. Morgan has the inventory sheet. Avery should be asked whether Morgan counted the damaged ones. ###BULLETS### Avery said Morgan moved the boxes to storage Morgan has the inventory sheet Ask Avery whether Morgan counted the damaged ones ###ACTIONS### Ask Avery whether Morgan counted the damaged ones",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": 2, "uncertainty_preservation": 2, "unsupported_addition_resistance": 2},
+    "capability_checks": {"ATTRIBUTION_CORRECT": true, "QUESTION_REMAINED_UNRESOLVED": true},
+    "failure_labels": []
+  },
+  {
+    "id": "05",
+    "category": "multi_person_attribution",
+    "kind": "transfer",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### Nina said that Cole left the charger with Priya. Cole said that Nina had already backed up the photos. Priya needs to be sent the folder link. It remains unclear whether Nina back up all the photos or only the edited ones. ###BULLETS### Nina said Cole left the charger with Priya Cole said Nina back up the photos Send Priya the folder link Unresolved question about whether Nina back up all photos or only the edited ones ###ACTIONS### Send Priya the folder link",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": 2, "uncertainty_preservation": 2, "unsupported_addition_resistance": 2},
+    "capability_checks": {"ATTRIBUTION_CORRECT": true, "TASK_SURVIVED": true, "QUESTION_REMAINED_UNRESOLVED": true},
+    "failure_labels": []
+  },
+  {
+    "id": "06",
+    "category": "multi_person_attribution",
+    "kind": "adversarial",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### Tessa told Rowan that the permit was approved after she asked about it. The note does not make clear whether Tessa or the inspector still needs the stamped copy. Rowan should be asked who needs it. ###BULLETS### Tell Rowan that the permit was approved Rowan needs the stamped copy Unresolved question about whether Tessa or the inspector needs the stamped copy Ask Rowan who needs the stamped copy ###ACTIONS### Ask Rowan who needs the stamped copy",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": 2, "uncertainty_preservation": 2, "unsupported_addition_resistance": 2},
+    "capability_checks": {"ambiguity preserved": true, "ATTRIBUTION_CORRECT": true, "no invented resolution": true},
+    "failure_labels": []
+  },
+  {
+    "id": "07",
+    "category": "open_question_preservation",
+    "kind": "direct",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### It is still unclear whether the refund reached the card. The confirmation page needs to be saved before closing the browser. ###BULLETS### Unresolved question about whether the refund reached the card Save the confirmation page before closing the browser ###ACTIONS### Save the confirmation page before closing the browser",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": null, "uncertainty_preservation": 2, "unsupported_addition_resistance": 2},
+    "capability_checks": {"QUESTION_REMAINED_UNRESOLVED": true, "TASK_SURVIVED": true},
+    "failure_labels": []
+  },
+  {
+    "id": "08",
+    "category": "open_question_preservation",
+    "kind": "transfer",
+    "status": "negative_example",
+    "raw_output": "###NARRATIVE### It remains unclear whether the wet spot from the window or the plant was the plant. The plant was dry again by lunchtime. Separately, the recycling needs to be put outside tonight. ###BULLETS### Unresolved question: whether the wet spot from the window or the plant was the plant The plant was dry again by lunchtime Put the recycling outside tonight ###ACTIONS### Put the recycling outside tonight",
+    "format_valid": true,
+    "scores": {"topic_completeness": 1, "attribution_accuracy": null, "uncertainty_preservation": 1, "unsupported_addition_resistance": 2},
+    "capability_checks": {"QUESTION_REMAINED_UNRESOLVED": true, "no invented causality": true, "TASK_SURVIVED": true},
+    "failure_labels": []
+  },
+  {
+    "id": "09",
+    "category": "open_question_preservation",
+    "kind": "adversarial",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### It remains unclear whether the revised schedule was sent to Imani or only saved the draft. The volunteer list needs to be checked. There is also an unfinished reference to the volunteer list. ###BULLETS### Unresolved question about whether the revised schedule was sent to Imani or only saved the draft Check the sent mail for confirmation Unfinished thought about the volunteer list ###ACTIONS### Check the sent mail",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": null, "uncertainty_preservation": 2, "unsupported_addition_resistance": 1},
+    "capability_checks": {"QUESTION_REMAINED_UNRESOLVED": true, "INCOMPLETE_THOUGHT_REMAINED_INCOMPLETE": false, "checking task remains connected to the question": true},
+    "failure_labels": ["Unsupported Addition"]
+  },
+  {
+    "id": "10",
+    "category": "buried_task_retention",
+    "kind": "direct",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### The rehearsal felt smoother, possibly because the transitions were shorter, although the final scene still dragged. Separately, the shipping label needs to be printed. ###BULLETS### The rehearsal felt smoother The shorter transitions may have helped The final scene still dragged ###ACTIONS###",
+    "format_valid": true,
+    "scores": {"topic_completeness": 1, "attribution_accuracy": null, "uncertainty_preservation": null, "unsupported_addition_resistance": 2},
+    "capability_checks": {"TASK_SURVIVED": false},
+    "failure_labels": ["Topic Loss"]
+  },
+  {
+    "id": "11",
+    "category": "standalone_task_retention",
+    "kind": "transfer",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### I have several separate things to track: pay the registration fee by Thursday, the garage light is flickering again, and I'm tired of dealing with it. I also need to text Jonah that I will call tomorrow. ###BULLETS### Pay registration fee by Thursday Garage light is flickering again Feeling tired of dealing with it Text Jonah that I will call tomorrow ###ACTIONS### Pay registration fee Text Jonah that I will call tomorrow",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": null, "uncertainty_preservation": null, "unsupported_addition_resistance": 2},
+    "capability_checks": {"both tasks survive": true, "repeated task deduplicated": true, "no unsupported repair task": true},
+    "failure_labels": []
+  },
+  {
+    "id": "12",
+    "category": "buried_task_retention",
+    "kind": "adversarial",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### The walkthrough ran late, and the settings explanation was confusing. The screenshots may need captions. It remains unclear whether Luca gave Erin the account list. Separately, the oil change needs to be scheduled, the room was too warm, and the smoke-detector battery needs to be replaced. ###BULLETS### The walkthrough ran late and the settings explanation was confusing The screenshots may need captions Unresolved question about whether Luca gave Erin the account list Schedule the oil change The room was too warm Replace the smoke-detector battery ###ACTIONS### Schedule the oil change Replace the smoke-detector battery",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": 2, "uncertainty_preservation": 2, "unsupported_addition_resistance": 2},
+    "capability_checks": {"both short tasks survive": true, "final task survives": true, "question remains unresolved": true, "names remain correctly attributed": true},
+    "failure_labels": []
+  },
+  {
+    "id": "13",
+    "category": "two_unrelated_tasks",
+    "kind": "regression",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### I need to pick up cat food after work. I also need to email the signed form to the school. ###BULLETS### Pick up cat food after work Email the signed form to the school ###ACTIONS### Pick up cat food Email the signed form to the school",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": null, "uncertainty_preservation": null, "unsupported_addition_resistance": 2},
+    "capability_checks": {},
+    "failure_labels": []
+  },
+  {
+    "id": "14",
+    "category": "zero_action_items",
+    "kind": "regression",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### The bedroom fan makes a clicking sound at the lowest setting. ###BULLETS### The bedroom fan makes a clicking sound at the lowest setting ###ACTIONS###",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": null, "uncertainty_preservation": null, "unsupported_addition_resistance": 2},
+    "capability_checks": {},
+    "failure_labels": []
+  },
+  {
+    "id": "15",
+    "category": "task_plus_idea",
+    "kind": "regression",
+    "status": "regression_guard",
+    "raw_output": "###NARRATIVE### One tentative idea is to build a simpler welcome screen with one large button. ###BULLETS### Possible idea: build a simpler welcome screen with one large button ###ACTIONS###",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": null, "uncertainty_preservation": null, "unsupported_addition_resistance": 2},
+    "capability_checks": {},
+    "failure_labels": []
+  },
+  {
+    "id": "16",
+    "category": "dangling_reference",
+    "kind": "regression",
+    "status": "negative_example",
+    "raw_output": "###NARRATIVE### There is a reminder to ask the two men about the other one. ###BULLETS### Ask them about the other one; both are unrelated ###ACTIONS### Ask them about the other one",
+    "format_valid": true,
+    "scores": {"topic_completeness": 2, "attribution_accuracy": null, "uncertainty_preservation": 2, "unsupported_addition_resistance": 0},
+    "capability_checks": {},
+    "failure_labels": ["Unsupported Addition"]
+  }
+]
