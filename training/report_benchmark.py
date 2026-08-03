@@ -29,6 +29,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from contract_adapters import evaluate_count_rule
+from prompt_contract_v2_parser import ParseError, parse_output
+
 
 KNOWN_SEMANTIC_DIMENSIONS = {
     "topic_completeness",
@@ -68,6 +71,73 @@ def probe_passes(result: dict) -> bool:
     if any(v is not True for v in checks.values()):
         return False
     return True
+
+
+def evaluate_v2_count_rules(probe: dict, result: dict) -> bool:
+    """Active structural recomputation (per
+    prompt_contract_vnext_static_final_review_and_branch_reconciliation.md's
+    Disagreement 1): reparses raw_output independently and recomputes both
+    count rules from scratch using the same evaluate_count_rule() the
+    runner used to write bullet_count_result/action_count_result in the
+    first place, rather than trusting those stored fields by convention.
+
+    A mismatch between the recomputed and stored value is a data-integrity
+    problem (a hand-edited or stale field), not an ordinary rule failure --
+    it raises rather than silently returning False, matching this
+    project's established fail-closed pattern (ParseError,
+    required_semantic_dimensions' unknown-name check in probe_passes()
+    above).
+
+    Returns True if the probe declares no count rules at all (not
+    applicable -- e.g. an ordinary v1/legacy probe run through this
+    function is a no-op), or if every declared rule is both satisfied and
+    consistent with what was stored.
+    """
+    bullet_rule = probe.get("bullet_count_rule")
+    action_rule = probe.get("action_count_rule")
+    if bullet_rule is None and action_rule is None:
+        return True
+
+    try:
+        parsed = parse_output(result.get("raw_output", ""))
+        actual_bullets: int | None = len(parsed.bullets)
+        actual_actions: int | None = len(parsed.actions)
+    except ParseError:
+        actual_bullets = None
+        actual_actions = None
+
+    recomputed_bullet = evaluate_count_rule(bullet_rule, actual_bullets)
+    recomputed_action = evaluate_count_rule(action_rule, actual_actions)
+    stored_bullet = result.get("bullet_count_result")
+    stored_action = result.get("action_count_result")
+
+    if recomputed_bullet != stored_bullet:
+        raise ValueError(
+            f"{result.get('id')}: stored bullet_count_result {stored_bullet!r} does not "
+            f"match reparsed/recomputed {recomputed_bullet!r} -- possible tampering or a "
+            "stale field, not a normal rule failure"
+        )
+    if recomputed_action != stored_action:
+        raise ValueError(
+            f"{result.get('id')}: stored action_count_result {stored_action!r} does not "
+            f"match reparsed/recomputed {recomputed_action!r} -- possible tampering or a "
+            "stale field, not a normal rule failure"
+        )
+
+    return (recomputed_bullet is None or recomputed_bullet["passed"]) and (
+        recomputed_action is None or recomputed_action["passed"]
+    )
+
+
+def v2_result_passes(probe: dict, result: dict) -> bool:
+    """Combined pass condition for a v2 acceptance-gate probe: the
+    existing, unmodified probe_passes() gate (format validity, semantic
+    scores, capability checks) ANDed with the count-rule gate above.
+    probe_passes() itself is never touched by v2 concerns -- this only
+    wraps it, so the protected 16-probe/5-historical-case v1 schema is not
+    weakened by v2's additional requirement (per the acceptance-schema
+    review's Q1/Q3 answers)."""
+    return probe_passes(result) and evaluate_v2_count_rules(probe, result)
 
 
 def pct(passed: int, total: int) -> str:
