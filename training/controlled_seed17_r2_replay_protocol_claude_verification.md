@@ -7,11 +7,11 @@
 **Compute performed:** none. Every check below is read-only (git diff/show/log, file hashing,
 `report_benchmark.py`/`contract_adapters.py` invocations that stop before any model load).
 
-## Readiness decision: **NOT READY**
+## Readiness decision: **NOT READY** (updated 2026-08-03, see Addendum below — §1 and §2 now resolved)
 
 Not because the frozen baseline evidence is defective — every substantive check below
-independently confirmed the protocol's claims. Blocked on two process items (§1, §2) that need
-a decision before ChatGPT's validity review is meaningful, plus one undone preflight step (§3.3).
+independently confirmed the protocol's claims. Originally blocked on two process items (§1, §2);
+both are now resolved per the Addendum. Remaining gap: one undone preflight step (§3.3).
 
 ## 1. BLOCKING — protocol document hash cannot be verified
 
@@ -176,6 +176,27 @@ and `prepare_v2_training_data.py` already exist as templates).
 Not assessed — no experiment identifier or output path has been chosen yet since §3.3 isn't built.
 Trivial to satisfy once that script exists, following the same "fail closed if path exists"
 pattern already used by `gold_v1.2.2_r2_derive_corpus.py` and `prepare_v2_training_data.py`.
+
+## Addendum (2026-08-03): §1 and §2 resolved
+
+**§1 resolved.** ChatGPT supplied a re-encoded protocol document (ASCII-only, LF line endings,
+mojibake em-dashes replaced with `--`), claimed SHA-256 `bcb72c22f19997f183312fdc4070acd086ebac8efe2b45799dd8ac494f2d759b`,
+15,391 bytes, 314 lines. Independently verified by writing the received text to a file and
+checking every claimed property directly, not just the hash: byte count `wc -c` → 15391 (exact
+match), line count `wc -l` → 314 (exact match), `sha256sum` → `bcb72c22...` (exact match), `grep -P
+'[^\x00-\x7F]'` → zero non-ASCII bytes (confirmed pure ASCII), CR count → zero (confirmed LF-only).
+All five independent checks agree, not just the headline hash. Added to the repository unmodified
+at the proposed path, `training/controlled_seed17_r2_replay_protocol.md`; hash re-confirmed
+identical after the copy. The earlier `909ca58d...` hash and its inline/mojibake source text are
+superseded and should not be cited going forward.
+
+**§2 status unchanged**: commit `2f7a101`'s mischaracterization stands corrected by this document
+(the main body above); `2f7a101` itself remains unrewritten, per Johnny's decision to treat this
+doc as the correction of record rather than amend pushed history.
+
+**Still open**: §3.3 (candidate-split derivation) has not been built. Per this project's
+established pattern — flag before extending tooling even during preflight, even though writing a
+data-prep script isn't itself compute — holding for explicit direction before building it.
 
 ## Summary for ChatGPT / Johnny
 
