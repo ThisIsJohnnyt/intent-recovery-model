@@ -51,7 +51,7 @@ stops using it — see "Category lifecycle" below.
 | `repeated_reminder_multi_topic` | Dedupe a reminder repeated under emphasis, not just simple restatement | expert | v1.2 | — |
 | `rapid_topic_switching_incomplete_sentences` | Very rapid topic changes with a genuinely unfinished sentence | expert | v1.2 | — |
 | `maximum_interleaving` | Combines rapid switching, an emotional aside, and a repeated mention at once | expert | v1.2 | — |
-| `interrupted_thought_depth` | Preserve an interrupted thought, connect an explicit return to the original topic, and avoid inventing the missing content | medium, hard | v1.2.1 | — |
+| `interrupted_thought_depth` | Preserve an interrupted thought, connect an explicit return to the original topic, and avoid inventing the missing content | medium, hard, expert | v1.2.1 | — |
 | `buried_task_retention` | Recover a brief task embedded in a longer narrative or interleaved note without allowing it to disappear | medium, hard, expert | v1.2.1 | — |
 | `nested_boundary_depth` | Keep qualifiers and governed clauses attached to one coherent intention while separating genuinely independent content | medium, hard | v1.2.1 | — |
 | `multi_person_attribution` | Preserve who said, did, has, needs, or receives each item when multiple people are mentioned; retain ambiguity when attribution is unresolved | medium, hard, expert | v1.2.1 | — |
@@ -125,6 +125,13 @@ introducing parallel labels, and adds only three genuinely new categories:
 See [`gold_v1.2.2_category_reference_proposals.md`](../../datasets/gold/gold_v1.2.2_category_reference_proposals.md)
 and [`gold_v1.2.2_review_report.md`](../../datasets/gold/gold_v1.2.2_review_report.md)
 for the full proposal and independent review.
+
+`gold_v1.2.3` (a compact corrective release targeting benchmark probes
+`02`, `08`, and `16`) reuses three existing categories
+(`interrupted_thought_depth`, `open_question_preservation`,
+`dangling_reference`) and introduces no new ones. It's the first batch to
+use `interrupted_thought_depth` at `expert` difficulty (reflected above).
+See [`gold_v1.2.3_review_report.md`](../../datasets/gold/gold_v1.2.3_review_report.md).
 
 ## Target categories not yet represented
 
