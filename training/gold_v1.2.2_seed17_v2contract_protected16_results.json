@@ -1,0 +1,642 @@
+[
+  {
+    "id": "01",
+    "category": "interrupted_thought_depth",
+    "kind": "direct",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### There is an unfinished thought about checking the basement freezer. Separately, Kira needs to be reminded to return the extension cord Sunday. ###BULLETS### ###BULLET### Unfinished thought about checking the basement freezer ###BULLET### Remind Kira to return the extension cord Sunday ###ACTIONS### ###ACTION### Remind Kira to return the extension cord Sunday",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "INCOMPLETE_THOUGHT_REMAINED_INCOMPLETE": null,
+      "TASK_SURVIVED": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "There is an unfinished thought about checking the basement freezer. Separately, Kira needs to be reminded to return the extension cord Sunday.",
+    "parsed_bullets": [
+      "Unfinished thought about checking the basement freezer",
+      "Remind Kira to return the extension cord Sunday"
+    ],
+    "parsed_actions": [
+      "Remind Kira to return the extension cord Sunday"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "02",
+    "category": "interrupted_thought_depth",
+    "kind": "transfer",
+    "status": "negative_example",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### There is an interrupted concern about the tablet's battery life. Separately, the donation box needs to be put by the front door. ###BULLETS### ###BULLET### Investigate the tablet's battery life ###BULLET### Put the donation box by the front door ###ACTIONS### ###ACTION### Investigate why the tablet keeps turning black ###ACTION### Put the donation box by the front door",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "task completeness": null,
+      "correct reconnection of interrupted fragments": null,
+      "no excessive fragmentation": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "There is an interrupted concern about the tablet's battery life. Separately, the donation box needs to be put by the front door.",
+    "parsed_bullets": [
+      "Investigate the tablet's battery life",
+      "Put the donation box by the front door"
+    ],
+    "parsed_actions": [
+      "Investigate why the tablet keeps turning black",
+      "Put the donation box by the front door"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "03",
+    "category": "nested_boundary_depth",
+    "kind": "adversarial",
+    "status": "negative_example",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### I need to ask Celia whether the replacement cable arrived before the drive to the office. This is one combined task. Separately, the break-room clock is slow again. ###BULLETS### ###BULLET### Ask Celia whether the replacement cable arrived before driving to the office ###BULLET### The break-room clock is slow again ###ACTIONS### ###ACTION### Ask Celia whether the replacement cable arrived before driving to the office",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "COHERENT_TASK_REMAINED_UNSPLIT": null,
+      "no unsupported action involving the clock": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "I need to ask Celia whether the replacement cable arrived before the drive to the office. This is one combined task. Separately, the break-room clock is slow again.",
+    "parsed_bullets": [
+      "Ask Celia whether the replacement cable arrived before driving to the office",
+      "The break-room clock is slow again"
+    ],
+    "parsed_actions": [
+      "Ask Celia whether the replacement cable arrived before driving to the office"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "04",
+    "category": "multi_person_attribution",
+    "kind": "direct",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "attribution_accuracy",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### Avery said that Morgan moved the boxes to storage. Morgan has the inventory sheet. Avery should be asked whether Morgan counted the damaged ones. ###BULLETS### ###BULLET### Avery said Morgan moved the boxes to storage ###BULLET### Morgan has the inventory sheet ###BULLET### Ask Avery whether Morgan counted the damaged ones ###ACTIONS### ###ACTION### Ask Avery whether Morgan counted the damaged ones",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "ATTRIBUTION_CORRECT": null,
+      "QUESTION_REMAINED_UNRESOLVED": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "Avery said that Morgan moved the boxes to storage. Morgan has the inventory sheet. Avery should be asked whether Morgan counted the damaged ones.",
+    "parsed_bullets": [
+      "Avery said Morgan moved the boxes to storage",
+      "Morgan has the inventory sheet",
+      "Ask Avery whether Morgan counted the damaged ones"
+    ],
+    "parsed_actions": [
+      "Ask Avery whether Morgan counted the damaged ones"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "05",
+    "category": "multi_person_attribution",
+    "kind": "transfer",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "attribution_accuracy",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### Nina said that Cole left the charger with Priya. Cole said that Nina had already backed up the photos. Priya needs to be sent the folder link. It remains unclear whether Nina backped up every photo or only the edited ones. ###BULLETS### ###BULLET### Nina said Cole left the charger with Priya ###BULLET### Cole said Nina had backed up the photos ###BULLET### Send Priya the folder link ###ACTIONS### ###ACTION### Send Priya the folder link",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "ATTRIBUTION_CORRECT": null,
+      "TASK_SURVIVED": null,
+      "QUESTION_REMAINED_UNRESOLVED": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "Nina said that Cole left the charger with Priya. Cole said that Nina had already backed up the photos. Priya needs to be sent the folder link. It remains unclear whether Nina backped up every photo or only the edited ones.",
+    "parsed_bullets": [
+      "Nina said Cole left the charger with Priya",
+      "Cole said Nina had backed up the photos",
+      "Send Priya the folder link"
+    ],
+    "parsed_actions": [
+      "Send Priya the folder link"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "06",
+    "category": "multi_person_attribution",
+    "kind": "adversarial",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "attribution_accuracy",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### Tessa told Rowan the permit was approved after Rowan asked about it. The note does not make clear whether Tessa or the inspector still needs the stamped copy. Rowan should be asked who needs it. ###BULLETS### ###BULLET### Tessa told Rowan the permit was approved ###BULLET### She still needs the stamped copy ###BULLET### Ask Rowan who needs the stamped copy ###ACTIONS### ###ACTION### Ask Rowan who needs the stamped copy",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "ambiguity preserved": null,
+      "ATTRIBUTION_CORRECT": null,
+      "no invented resolution": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "Tessa told Rowan the permit was approved after Rowan asked about it. The note does not make clear whether Tessa or the inspector still needs the stamped copy. Rowan should be asked who needs it.",
+    "parsed_bullets": [
+      "Tessa told Rowan the permit was approved",
+      "She still needs the stamped copy",
+      "Ask Rowan who needs the stamped copy"
+    ],
+    "parsed_actions": [
+      "Ask Rowan who needs the stamped copy"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "07",
+    "category": "open_question_preservation",
+    "kind": "direct",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### It is still unclear whether the refund reached the card. The confirmation page needs to be saved before closing the browser. ###BULLETS### ###BULLET### Unresolved question about whether the refund reached the card ###BULLET### Save the confirmation page before closing the browser ###ACTIONS### ###ACTION### Save the confirmation page before closing the browser",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "QUESTION_REMAINED_UNRESOLVED": null,
+      "TASK_SURVIVED": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "It is still unclear whether the refund reached the card. The confirmation page needs to be saved before closing the browser.",
+    "parsed_bullets": [
+      "Unresolved question about whether the refund reached the card",
+      "Save the confirmation page before closing the browser"
+    ],
+    "parsed_actions": [
+      "Save the confirmation page before closing the browser"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "08",
+    "category": "open_question_preservation",
+    "kind": "transfer",
+    "status": "negative_example",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### It remains unclear whether the wet spot from the window or the plant was the result of an underlying problem. The plant was dry again by lunchtime. Separately, the recycling needs to be put outside tonight. ###BULLETS### ###BULLET### Unresolved question: whether the wet spot from the window or the plant was the result of an underlying problem ###BULLET### The plant was dry again by lunchtime ###BULLET### Put the recycling outside tonight ###ACTIONS### ###ACTION### Put the recycling outside tonight",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "QUESTION_REMAINED_UNRESOLVED": null,
+      "no invented causality": null,
+      "TASK_SURVIVED": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "It remains unclear whether the wet spot from the window or the plant was the result of an underlying problem. The plant was dry again by lunchtime. Separately, the recycling needs to be put outside tonight.",
+    "parsed_bullets": [
+      "Unresolved question: whether the wet spot from the window or the plant was the result of an underlying problem",
+      "The plant was dry again by lunchtime",
+      "Put the recycling outside tonight"
+    ],
+    "parsed_actions": [
+      "Put the recycling outside tonight"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "09",
+    "category": "open_question_preservation",
+    "kind": "adversarial",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### It remains unclear whether the revised schedule was sent to Imani or only saved the draft. The email needs to be checked, and there is still an unfinished reference to the volunteer list. ###BULLETS### ###BULLET### Unresolved question about whether the revised schedule was sent to Imani ###BULLET### Check sent mail ###BULLET### Unfinished thought about the volunteer list ###ACTIONS### ###ACTION### Check sent mail",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "QUESTION_REMAINED_UNRESOLVED": null,
+      "INCOMPLETE_THOUGHT_REMAINED_INCOMPLETE": null,
+      "checking task remains connected to the question": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "It remains unclear whether the revised schedule was sent to Imani or only saved the draft. The email needs to be checked, and there is still an unfinished reference to the volunteer list.",
+    "parsed_bullets": [
+      "Unresolved question about whether the revised schedule was sent to Imani",
+      "Check sent mail",
+      "Unfinished thought about the volunteer list"
+    ],
+    "parsed_actions": [
+      "Check sent mail"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "10",
+    "category": "buried_task_retention",
+    "kind": "direct",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### The rehearsal felt smoother, possibly because the shorter transitions may have helped. The final scene still dragged. ###BULLETS### ###BULLET### The rehearsal felt smoother ###BULLET### The shorter transitions may have helped ###BULLET### The final scene still dragged ###ACTIONS### ###ACTION### Print the shipping label",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "TASK_SURVIVED": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "The rehearsal felt smoother, possibly because the shorter transitions may have helped. The final scene still dragged.",
+    "parsed_bullets": [
+      "The rehearsal felt smoother",
+      "The shorter transitions may have helped",
+      "The final scene still dragged"
+    ],
+    "parsed_actions": [
+      "Print the shipping label"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "11",
+    "category": "standalone_task_retention",
+    "kind": "transfer",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### I have several separate things to track: pay the registration fee, which includes the garage light, and text Jonah that I will call tomorrow. I also noted that the garage light is flickering again and feels tired. ###BULLETS### ###BULLET### Pay registration fee by Thursday; garage light is flickering again ###BULLET### Text Jonah that I will call tomorrow ###ACTIONS### ###ACTION### Pay registration fee ###ACTION### Text Jonah that I will call tomorrow",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "both tasks survive": null,
+      "repeated task deduplicated": null,
+      "no unsupported repair task": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "I have several separate things to track: pay the registration fee, which includes the garage light, and text Jonah that I will call tomorrow. I also noted that the garage light is flickering again and feels tired.",
+    "parsed_bullets": [
+      "Pay registration fee by Thursday; garage light is flickering again",
+      "Text Jonah that I will call tomorrow"
+    ],
+    "parsed_actions": [
+      "Pay registration fee",
+      "Text Jonah that I will call tomorrow"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "12",
+    "category": "buried_task_retention",
+    "kind": "adversarial",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "attribution_accuracy",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### The walkthrough ran late, and the settings explanation was confusing. The screenshots may need captions. It remains unclear whether Luca gave Erin the account list. Separately, the oil change needs to be scheduled, the room was too warm, and the smoke-detector battery needs to be replaced. ###BULLETS### ###BULLET### The walkthrough ran late ###BULLET### The settings explanation was confusing ###BULLET### The screenshots may need captions ###BULLET### Unresolved account question ###BULLET### Schedule the oil change ###BULLET### The room was too warm ###BULLET### Replace the smoke-detector battery ###ACTIONS### ###ACTION### Schedule the oil change ###ACTION### Replace the smoke-detector battery",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {
+      "both short tasks survive": null,
+      "final task survives": null,
+      "question remains unresolved": null,
+      "names remain correctly attributed": null
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "The walkthrough ran late, and the settings explanation was confusing. The screenshots may need captions. It remains unclear whether Luca gave Erin the account list. Separately, the oil change needs to be scheduled, the room was too warm, and the smoke-detector battery needs to be replaced.",
+    "parsed_bullets": [
+      "The walkthrough ran late",
+      "The settings explanation was confusing",
+      "The screenshots may need captions",
+      "Unresolved account question",
+      "Schedule the oil change",
+      "The room was too warm",
+      "Replace the smoke-detector battery"
+    ],
+    "parsed_actions": [
+      "Schedule the oil change",
+      "Replace the smoke-detector battery"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "13",
+    "category": "two_unrelated_tasks",
+    "kind": "regression",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### I need to pick up cat food after work, and email the signed form to the school. ###BULLETS### ###BULLET### Pick up cat food after work ###BULLET### Email the signed form to the school ###ACTIONS### ###ACTION### Pick up cat food after work ###ACTION### Email the signed form to the school",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {},
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "I need to pick up cat food after work, and email the signed form to the school.",
+    "parsed_bullets": [
+      "Pick up cat food after work",
+      "Email the signed form to the school"
+    ],
+    "parsed_actions": [
+      "Pick up cat food after work",
+      "Email the signed form to the school"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "14",
+    "category": "zero_action_items",
+    "kind": "regression",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### The bedroom fan makes a clicking sound at the lowest setting. ###BULLETS### ###BULLET### The bedroom fan makes a clicking sound at the lowest setting ###ACTIONS###",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {},
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "The bedroom fan makes a clicking sound at the lowest setting.",
+    "parsed_bullets": [
+      "The bedroom fan makes a clicking sound at the lowest setting"
+    ],
+    "parsed_actions": [],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "15",
+    "category": "task_plus_idea",
+    "kind": "regression",
+    "status": "regression_guard",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### One tentative idea is to build a simpler welcome screen with one large button. ###BULLETS### ###BULLET### Possible idea: build a simpler welcome screen with one large button ###ACTIONS###",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {},
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "One tentative idea is to build a simpler welcome screen with one large button.",
+    "parsed_bullets": [
+      "Possible idea: build a simpler welcome screen with one large button"
+    ],
+    "parsed_actions": [],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  },
+  {
+    "id": "16",
+    "category": "dangling_reference",
+    "kind": "regression",
+    "status": "negative_example",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### There is a reminder to ask the two men about the other one. ###BULLETS### ###BULLET### Ask them about the other one ###ACTIONS### ###ACTION### Ask them about the other one",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": null,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": null
+    },
+    "capability_checks": {},
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "There is a reminder to ask the two men about the other one.",
+    "parsed_bullets": [
+      "Ask them about the other one"
+    ],
+    "parsed_actions": [
+      "Ask them about the other one"
+    ],
+    "bullet_count_rule": null,
+    "action_count_rule": null,
+    "bullet_count_result": null,
+    "action_count_result": null
+  }
+]
