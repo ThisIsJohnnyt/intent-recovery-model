@@ -2,11 +2,15 @@
 ###ACTION###), replacing bare-newline item boundaries.
 
 NOT the live contract. PROMPT_CONTRACT_VERSION here is deliberately suffixed
-"-candidate" and this module is never imported by prepare_data.py, train.py,
-or run_benchmark.py -- it exists only for the static, no-GPU feasibility
-package requested in training/prompt_contract_vnext_joint_alignment_review.md.
-Do not wire this into the live pipeline until Johnny approves promoting a
-candidate past the feasibility stage.
+"-candidate". Never imported by prepare_data.py or train.py at all. As of
+contract_adapters.py's adapter refactor, run_benchmark.py/report_benchmark.py
+import this module only lazily, inside select_contract_adapter("v2") --
+selecting the default/v1 contract never imports it (confirmed by a fresh-
+subprocess test in test_run_benchmark_contract_adapters.py). This module
+exists only for the static, no-GPU feasibility package requested in
+training/prompt_contract_vnext_joint_alignment_review.md. Do not wire this
+into the live training/generation pipeline until Johnny approves promoting
+a candidate past the feasibility stage.
 
 Recommended shape, per ChatGPT's vNext decision proposal and the joint
 alignment review's Disagreement 1 (typed markers over dash-prefix -- see

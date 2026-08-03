@@ -43,8 +43,10 @@ from pathlib import Path
 from contract_adapters import (
     DEFAULT_CONTRACT,
     ContractAdapter,
+    ContractSelectionError,
     evaluate_count_rule,
     known_contract_names,
+    parse_contract_flag,
     preflight_validate_count_rules,
     select_contract_adapter,
 )
@@ -58,37 +60,32 @@ def load_probes(path: Path) -> list[dict]:
 
 
 def parse_args(argv: list[str]) -> tuple[list[str], str]:
-    """Splits a leading --contract=X flag out of argv, leaving positional-
-    argument parsing itself completely untouched for every well-formed
-    invocation -- the whole point of proving the v1 default path is
-    unaffected by this refactor.
+    """Splits a leading --contract=X flag out of argv (via the shared
+    parse_contract_flag(), also used by report_benchmark.py -- one
+    implementation of that validation, not two that could drift apart),
+    leaving positional-argument parsing itself completely untouched for
+    every well-formed invocation -- the whole point of proving the v1
+    default path is unaffected by this refactor.
 
     Fail-closed per prompt_contract_vnext_adapter_structural_implementation_review.md's
-    Finding 6: raises ValueError (not a silent best-effort guess, not an
-    IndexError from unrelated code further down) on a repeated --contract
-    flag, an empty --contract value, an unrecognized flag, a missing
-    benchmark-file argument, or more than 3 positional arguments.
+    Finding 6: raises ContractSelectionError (a ValueError subclass, not a
+    silent best-effort guess, not an IndexError from unrelated code
+    further down) on a repeated --contract flag, an empty --contract
+    value, an unrecognized flag, a missing benchmark-file argument, or
+    more than 3 positional arguments.
     """
-    positional = []
-    contract = None
-    for arg in argv:
-        if arg.startswith("--contract="):
-            value = arg[len("--contract=") :]
-            if not value:
-                raise ValueError("--contract requires a non-empty value, e.g. --contract=v2")
-            if contract is not None:
-                raise ValueError(f"--contract specified more than once ({contract!r} and {value!r})")
-            contract = value
-        elif arg.startswith("--"):
-            raise ValueError(f"unrecognized flag: {arg}")
-        else:
-            positional.append(arg)
+    remaining, contract = parse_contract_flag(argv)
     if contract is None:
         contract = DEFAULT_CONTRACT
+    positional = []
+    for arg in remaining:
+        if arg.startswith("--"):
+            raise ContractSelectionError(f"unrecognized flag: {arg}")
+        positional.append(arg)
     if not positional:
-        raise ValueError("missing required <benchmark.jsonl> argument")
+        raise ContractSelectionError("missing required <benchmark.jsonl> argument")
     if len(positional) > 3:
-        raise ValueError(
+        raise ContractSelectionError(
             "too many positional arguments (expected at most 3: "
             f"benchmark.jsonl [checkpoint_dir] [output.json]), got {len(positional)}: {positional}"
         )

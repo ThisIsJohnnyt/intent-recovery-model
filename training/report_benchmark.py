@@ -1,11 +1,37 @@
 """Turn a scored benchmark results file into release-gate statistics.
 
 Usage:
-    python report_benchmark.py <benchmark.jsonl> <results.json>
+    python report_benchmark.py <benchmark.jsonl> <results.json> [--contract=v1|v2] [--allow-partial]
+
+--contract selects which prompt-contract adapter (contract_adapters.py)
+this report is verified under -- v1 (default) applies the plain
+probe_passes() gate; v2 additionally requires and independently
+re-verifies the full structural package (contract identity, parsed
+structure, count rules) run_benchmark.py's v2 path stores. This is
+explicit, never inferred from a probe's shape (category or the presence
+of a count-rule field) -- an earlier version tried inference and it broke
+in both directions at once: the historical v1 five-case acceptance set
+also declares count-rule fields (predating v2) and got wrongly forced
+through v2 checks, while a protected-probe result genuinely generated
+under v2 has no count rules on the probe and wrongly skipped v2
+verification entirely. A benchmark file containing any
+source_determined_items_v2 case requires --contract=v2 explicitly; running
+it under v1 (default or explicit) raises rather than silently downgrading
+the gate.
+
+--allow-partial opts into a warn-only, non-release diagnostic mode for
+missing/extra result IDs; by default the benchmark and results ID sets
+must match exactly, or the report raises rather than silently scoring a
+subset as if it were complete.
 
 Reads probe definitions (category/kind/status) from the benchmark file and
 per-probe scores from a results file produced by run_benchmark.py and then
 scored (semantic score fields filled in -- see that script's docstring).
+Every copied identity/rubric field (category, kind, status,
+required_semantic_dimensions, the capability_checks key set) is bound to
+and verified against the frozen benchmark probe, not trusted from the
+result -- a scorer may change score/check VALUES, never which judgments
+are required or which release-gate bucket a result counts toward.
 Prints:
     - overall pass rate
     - pass rate by category
@@ -30,9 +56,13 @@ from collections import Counter
 from pathlib import Path
 
 from contract_adapters import (
+    DEFAULT_CONTRACT,
+    V2_ACCEPTANCE_CATEGORY,
+    ContractSelectionError,
     evaluate_count_rule,
+    parse_contract_flag,
     preflight_validate_count_rules,
-    probe_requires_v2_structural_verification,
+    reject_duplicate_ids,
     select_contract_adapter,
 )
 
@@ -79,6 +109,47 @@ def probe_passes(result: dict) -> bool:
     return True
 
 
+def verify_rubric_binding(probe: dict, result: dict) -> None:
+    """Binds every copied scoring/identity field to the canonical, frozen
+    probe -- per
+    prompt_contract_vnext_adapter_structural_focused_rereview.md's
+    Finding 2: verify_v2_structural_integrity bound the count-rule/
+    contract fields to the frozen probe, but required_semantic_dimensions,
+    the capability_checks key set, and category/kind/status were still
+    read straight from the (editable) result. Deleting
+    required_semantic_dimensions and capability_checks from a result
+    entirely reproduced the exact vacuous-truth pass that dimension was
+    originally introduced to prevent -- every score stays null, nothing is
+    required, probe_passes() returns True.
+
+    Raises ValueError on any mismatch. Applies to both v1 and v2 reporting
+    (called unconditionally in main() for every result) -- a scorer may
+    change score/capability_check VALUES, but must never be able to change
+    which judgments are required or which release-gate bucket (category,
+    kind, status) a result counts toward.
+    """
+    result_id = result.get("id", probe.get("id"))
+    for field in ("category", "kind", "status"):
+        if result.get(field) != probe.get(field):
+            raise ValueError(
+                f"{result_id}: {field} does not match the frozen probe -- "
+                f"stored {result.get(field)!r}, probe declares {probe.get(field)!r}"
+            )
+    if result.get("required_semantic_dimensions", []) != probe.get("required_semantic_dimensions", []):
+        raise ValueError(
+            f"{result_id}: required_semantic_dimensions does not match the frozen probe -- "
+            f"stored {result.get('required_semantic_dimensions', [])!r}, "
+            f"probe declares {probe.get('required_semantic_dimensions', [])!r}"
+        )
+    stored_check_keys = set(result.get("capability_checks", {}).keys())
+    expected_check_keys = set(probe.get("primary_checks", []))
+    if stored_check_keys != expected_check_keys:
+        raise ValueError(
+            f"{result_id}: capability_checks keys do not match the frozen probe's primary_checks -- "
+            f"stored {sorted(stored_check_keys)}, probe declares {sorted(expected_check_keys)}"
+        )
+
+
 def verify_v2_structural_integrity(probe: dict, result: dict) -> None:
     """Active structural recomputation (per
     prompt_contract_vnext_static_final_review_and_branch_reconciliation.md's
@@ -119,6 +190,17 @@ def verify_v2_structural_integrity(probe: dict, result: dict) -> None:
     result_id = result.get("id", probe.get("id"))
     adapter = select_contract_adapter("v2")
 
+    # Finding 4 fix (prompt_contract_vnext_adapter_structural_focused_rereview.md):
+    # raw_output is the source evidence every recomputation below depends
+    # on -- result.get("raw_output", "") let a result with the key deleted
+    # entirely be silently treated as an honest empty-string output, which
+    # could spuriously "match" a genuinely-empty parse. Required, and must
+    # actually be a string (not e.g. null or a number that happened to be
+    # written by a bug elsewhere).
+    raw_output = result.get("raw_output", _MISSING)
+    if raw_output is _MISSING or not isinstance(raw_output, str):
+        raise ValueError(f"{result_id}: raw_output must be a literal string, got {raw_output!r}")
+
     stored_contract = result.get("contract", _MISSING)
     if stored_contract != adapter.name:
         raise ValueError(f"{result_id}: expected contract={adapter.name!r}, stored {stored_contract!r}")
@@ -134,7 +216,6 @@ def verify_v2_structural_integrity(probe: dict, result: dict) -> None:
         if stored != expected:
             raise ValueError(f"{result_id}: {field} mismatch -- stored {stored!r}, expected {expected!r}")
 
-    raw_output = result.get("raw_output", "")
     recomputed_valid = adapter.check_format_valid(raw_output)
     stored_valid = result.get("format_valid", _MISSING)
     if stored_valid is _MISSING or type(stored_valid) is not bool or stored_valid != recomputed_valid:
@@ -218,44 +299,117 @@ def pct(passed: int, total: int) -> str:
     return f"{passed}/{total} ({100 * passed / total:.0f}%)"
 
 
+def parse_report_args(argv: list[str]) -> tuple[list[str], str, bool]:
+    """CLI parsing for report_benchmark.py. --contract=v1|v2 is explicit
+    and required-to-be-correct, never inferred from probe shape (Finding 1:
+    inferring from category/count-rule presence broke both directions at
+    once -- see contract_adapters.py's V2_ACCEPTANCE_CATEGORY comment).
+    --allow-partial opts into the old warn-only behavior for missing/extra
+    result IDs, for diagnostic use only -- strict exact-match is the
+    default (Finding 3)."""
+    remaining, contract = parse_contract_flag(argv)
+    if contract is None:
+        contract = DEFAULT_CONTRACT
+    positional = []
+    allow_partial = False
+    for arg in remaining:
+        if arg == "--allow-partial":
+            if allow_partial:
+                raise ContractSelectionError("--allow-partial specified more than once")
+            allow_partial = True
+        elif arg.startswith("--"):
+            raise ContractSelectionError(f"unrecognized flag: {arg}")
+        else:
+            positional.append(arg)
+    if len(positional) != 2:
+        raise ContractSelectionError(
+            "expected exactly 2 positional arguments (benchmark.jsonl results.json), "
+            f"got {len(positional)}: {positional}"
+        )
+    return positional, contract, allow_partial
+
+
 def main() -> None:
-    if len(sys.argv) != 3:
-        print("Usage: python report_benchmark.py <benchmark.jsonl> <results.json>", file=sys.stderr)
+    try:
+        positional, contract_name, allow_partial = parse_report_args(sys.argv[1:])
+    except ContractSelectionError as e:
+        print(
+            "Usage: python report_benchmark.py <benchmark.jsonl> <results.json> "
+            "[--contract=v1|v2] [--allow-partial]",
+            file=sys.stderr,
+        )
+        print(str(e), file=sys.stderr)
         sys.exit(1)
 
-    benchmark_path = Path(sys.argv[1])
-    results_path = Path(sys.argv[2])
+    benchmark_path = Path(positional[0])
+    results_path = Path(positional[1])
 
-    probes = {p["id"]: p for p in load_jsonl(benchmark_path)}
+    # Fail-closed, explicit contract selection -- see contract_adapters.py.
+    adapter = select_contract_adapter(contract_name)
+    print(f"Reporting under contract adapter: {adapter.name} ({adapter.version})")
+
+    # Finding 3 fix: validate the RAW list for duplicates before collapsing
+    # it into an {id: probe} dict -- {p["id"]: p for p in probe_list}
+    # silently keeps only the last of any duplicate, which is exactly what
+    # let two same-ID benchmark rows through undetected before.
+    probe_list = load_jsonl(benchmark_path)
+    reject_duplicate_ids(probe_list, "benchmark file")
+    probes = {p["id"]: p for p in probe_list}
+
+    # Finding 1 fix: a v2-acceptance-category case run/reported under
+    # anything but --contract=v2 is a silent release-gate downgrade, not a
+    # legitimate v1 report -- reject it outright rather than let a
+    # forgotten flag quietly weaken the gate.
+    v2_acceptance_ids = [p["id"] for p in probe_list if p.get("category") == V2_ACCEPTANCE_CATEGORY]
+    if v2_acceptance_ids and adapter.name != "v2":
+        raise ContractSelectionError(
+            f"benchmark file contains {len(v2_acceptance_ids)} {V2_ACCEPTANCE_CATEGORY} "
+            f"case(s) ({v2_acceptance_ids}) but --contract={adapter.name!r} was selected -- "
+            "these require --contract=v2 explicitly; a default/inferred v1 report would "
+            "silently skip their structural verification"
+        )
+    if adapter.parse is not None:
+        preflight_validate_count_rules(probe_list, adapter)
+
     results = json.loads(results_path.read_text(encoding="utf-8"))
+    if not isinstance(results, list):
+        raise ContractSelectionError("results file must contain a JSON array of result objects")
+    reject_duplicate_ids(results, "results file")
+    results_by_id = {r["id"]: r for r in results}
 
-    # Finding 5 fix: repeat the same preflight validation run_benchmark.py
-    # applies before generation -- so a benchmark file hand-edited after
-    # generation (or a results file produced by a different process that
-    # skipped runner-side preflight) can't bypass it and reach an
-    # unvalidated pass/fail computation below. Only imports/selects the v2
-    # adapter if this benchmark file actually contains a v2-structural
-    # probe -- an ordinary v1-only report run never touches v2 modules.
-    probe_list = list(probes.values())
-    if any(probe_requires_v2_structural_verification(p) for p in probe_list):
-        preflight_validate_count_rules(probe_list, select_contract_adapter("v2"))
+    benchmark_ids = set(probes)
+    result_ids = set(results_by_id)
+    missing = benchmark_ids - result_ids
+    extra = result_ids - benchmark_ids
+    if missing or extra:
+        if not allow_partial:
+            raise ContractSelectionError(
+                "benchmark/results ID sets do not match exactly -- pass --allow-partial for a "
+                f"non-release diagnostic report. Missing from results: {sorted(missing)}. "
+                f"Extra in results (not in benchmark): {sorted(extra)}."
+            )
+        if missing:
+            print(f"WARNING: (--allow-partial) benchmark file has probes missing from results: {sorted(missing)}", file=sys.stderr)
+        if extra:
+            print(f"WARNING: (--allow-partial) results file has probes not in the benchmark file: {sorted(extra)}", file=sys.stderr)
 
-    missing = set(probes) - {r["id"] for r in results}
-    extra = {r["id"] for r in results} - set(probes)
-    if missing:
-        print(f"WARNING: benchmark file has probes missing from results: {sorted(missing)}", file=sys.stderr)
-    if extra:
-        print(f"WARNING: results file has probes not in the benchmark file: {sorted(extra)}", file=sys.stderr)
+    # Finding 3 fix: aggregate over the benchmark's own canonical order and
+    # count, not the (editable, reorderable, previously-incomplete-without-
+    # raising) results list. Pairing probe+result here also gives every
+    # check below the frozen probe it needs for verify_rubric_binding/
+    # verify_v2_structural_integrity, instead of trusting anything in `r`
+    # about its own identity.
+    scored_pairs = [(p, results_by_id[p["id"]]) for p in probe_list if p["id"] in results_by_id]
 
     def has_unscored_field(r: dict) -> bool:
         return any(v is None for v in r.get("scores", {}).values()) or any(
             v is None for v in r.get("capability_checks", {}).values()
         )
 
-    unscored = [r["id"] for r in results if has_unscored_field(r)]
+    unscored = [r["id"] for _, r in scored_pairs if has_unscored_field(r)]
     still_null = [
         r["id"]
-        for r in results
+        for _, r in scored_pairs
         if all(v is None for v in r.get("scores", {}).values())
         and all(v is None for v in r.get("capability_checks", {}).values())
     ]
@@ -266,50 +420,54 @@ def main() -> None:
             file=sys.stderr,
         )
 
-    total = len(results)
-    # Finding 1 fix: the actual pass computation must route a v2-structural
-    # probe's result through v2_result_passes() (structural integrity +
-    # count rules + semantics), not the plain probe_passes() gate alone --
-    # v2_result_passes() previously existed but nothing in main() ever
-    # called it. Routing is driven by the frozen `probes` entry, never by
-    # anything in `r` itself (a result claiming a contract it doesn't
-    # actually have must not be able to dodge this).
-    passes = {}
-    for r in results:
-        probe = probes.get(r["id"])
-        if probe is not None and probe_requires_v2_structural_verification(probe):
+    total = len(scored_pairs)
+    passes: dict = {}
+    for probe, r in scored_pairs:
+        verify_rubric_binding(probe, r)
+        if adapter.name == "v2":
             passes[r["id"]] = v2_result_passes(probe, r)
         else:
+            # Finding 1's "in v1 mode, unexpected v2 structural fields
+            # should raise rather than be ignored" -- a result carrying a
+            # "contract" claim while being reported in v1 mode means
+            # either the wrong --contract was passed or the result was
+            # generated under v2 and is being silently downgraded.
+            if r.get("contract") is not None:
+                raise ContractSelectionError(
+                    f"{r['id']}: result has contract={r.get('contract')!r} but this report is "
+                    "running in v1 mode -- pass --contract=v2 if this result was generated "
+                    "under the v2 contract"
+                )
             passes[r["id"]] = probe_passes(r)
     overall_passed = sum(passes.values())
 
-    print(f"=== Benchmark report: {benchmark_path.name} vs {results_path.name} ===\n")
+    print(f"\n=== Benchmark report: {benchmark_path.name} vs {results_path.name} ===\n")
     print(f"Overall pass rate: {pct(overall_passed, total)}")
-    print(f"Format-validity rate: {pct(sum(r['format_valid'] for r in results), total)}\n")
+    print(f"Format-validity rate: {pct(sum(r['format_valid'] for _, r in scored_pairs), total)}\n")
 
     print("Pass rate by category:")
     by_category = Counter()
     passed_by_category = Counter()
-    for r in results:
-        by_category[r["category"]] += 1
+    for probe, r in scored_pairs:
+        by_category[probe["category"]] += 1
         if passes[r["id"]]:
-            passed_by_category[r["category"]] += 1
+            passed_by_category[probe["category"]] += 1
     for category in sorted(by_category):
         print(f"  {category}: {pct(passed_by_category[category], by_category[category])}")
 
     print("\nPass rate by probe kind:")
     by_kind = Counter()
     passed_by_kind = Counter()
-    for r in results:
-        by_kind[r["kind"]] += 1
+    for probe, r in scored_pairs:
+        by_kind[probe["kind"]] += 1
         if passes[r["id"]]:
-            passed_by_kind[r["kind"]] += 1
+            passed_by_kind[probe["kind"]] += 1
     for kind in sorted(by_kind):
         print(f"  {kind}: {pct(passed_by_kind[kind], by_kind[kind])}")
 
     print("\nFailure count by taxonomy label:")
     label_counts = Counter()
-    for r in results:
+    for _, r in scored_pairs:
         for label in r.get("failure_labels", []):
             label_counts[label] += 1
     if label_counts:
@@ -318,29 +476,29 @@ def main() -> None:
     else:
         print("  (none recorded)")
 
-    regression_guards = [r for r in results if r.get("status") == "regression_guard"]
-    guards_passed = sum(passes[r["id"]] for r in regression_guards)
+    regression_guards = [(p, r) for p, r in scored_pairs if p.get("status") == "regression_guard"]
+    guards_passed = sum(passes[r["id"]] for _, r in regression_guards)
     print(f"\nRegression guards passed: {pct(guards_passed, len(regression_guards))}")
     if guards_passed < len(regression_guards):
-        failed_guards = [r["id"] for r in regression_guards if not passes[r["id"]]]
+        failed_guards = [r["id"] for _, r in regression_guards if not passes[r["id"]]]
         print(f"  REGRESSION: previously-passing guard(s) now failing: {failed_guards}")
 
-    negative_examples = [r for r in results if r.get("status") == "negative_example"]
-    negatives_resolved = sum(passes[r["id"]] for r in negative_examples)
+    negative_examples = [(p, r) for p, r in scored_pairs if p.get("status") == "negative_example"]
+    negatives_resolved = sum(passes[r["id"]] for _, r in negative_examples)
     print(f"\nNegative examples resolved: {pct(negatives_resolved, len(negative_examples))}")
     if negatives_resolved:
-        resolved_ids = [r["id"] for r in negative_examples if passes[r["id"]]]
+        resolved_ids = [r["id"] for _, r in negative_examples if passes[r["id"]]]
         print(f"  Known limitation(s) now fixed -- reclassify to regression_guard: {resolved_ids}")
 
     # acceptance_gate: a new capability being checked for the first time, with
     # no established prior-passing baseline -- unlike regression_guard, a
     # first-run failure here is not a "regression," so it gets its own count
     # instead of being folded into either existing category.
-    acceptance_gates = [r for r in results if r.get("status") == "acceptance_gate"]
-    gates_passed = sum(passes[r["id"]] for r in acceptance_gates)
+    acceptance_gates = [(p, r) for p, r in scored_pairs if p.get("status") == "acceptance_gate"]
+    gates_passed = sum(passes[r["id"]] for _, r in acceptance_gates)
     print(f"\nAcceptance gates passed: {pct(gates_passed, len(acceptance_gates))}")
     if gates_passed < len(acceptance_gates):
-        failed_gates = [r["id"] for r in acceptance_gates if not passes[r["id"]]]
+        failed_gates = [r["id"] for _, r in acceptance_gates if not passes[r["id"]]]
         print(f"  Not yet passing: {failed_gates}")
 
     if unscored:

@@ -38,6 +38,34 @@ being fixed (see that review and the commit message for detail):
     forced to declare acceptance-only count rules.
 12. Malformed/duplicate CLI contract selection fails with a clear domain
     error.
+
+Also covers the 10 minimum focused re-review gates from
+prompt_contract_vnext_adapter_structural_focused_rereview.md, all
+independently reproduced against the pre-fix code before being fixed:
+
+1. The historical five-case v1 scored artifact reports successfully under
+   default v1 (using the real committed files, not a synthetic stand-in --
+   this is exactly the file/scored-result pair the review's reproduction
+   used).
+2. Every protected 16-probe v2 result receives structural verification
+   despite having no count rules, because report_benchmark.py now takes
+   --contract explicitly rather than inferring per-probe from shape.
+3. A v2 acceptance benchmark cannot be reported under v1/default downgrade
+   -- raises rather than silently skipping structural verification.
+4. Tampering or removing required_semantic_dimensions/capability_checks
+   keys raises (verify_rubric_binding).
+5. category/kind/status edits raise (also verify_rubric_binding).
+6. Duplicate benchmark IDs raise before the {id: probe} map is built.
+7. Duplicate, missing, or extra result IDs raise before scoring (strict
+   by default; --allow-partial opts into the old warn-only behavior).
+8. Missing or non-string raw_output raises.
+9. Default v1 imports still do not load v2 modules (re-verified against
+   the new report_benchmark.py flow, including the v2-acceptance-under-v1
+   rejection path itself never needing to import v2 modules).
+10. Existing v1 scaffold and protected strict scoring remain unchanged for
+    valid artifacts (re-verified end-to-end against the real historical
+    5-case file: still exactly 1/5, matching the known-good result from
+    before this whole adapter/structural-validation project started).
 """
 import json
 import subprocess
@@ -270,7 +298,7 @@ def test_report_time_preflight_also_rejects_missing_rules_and_duplicates():
     bench_path.write_text(json.dumps({"id": "sdi2-oops", "category": "source_determined_items_v2"}) + "\n", encoding="utf-8")
     results_path.write_text("[]", encoding="utf-8")
     out = subprocess.run(
-        [sys.executable, "report_benchmark.py", str(bench_path), str(results_path)],
+        [sys.executable, "report_benchmark.py", str(bench_path), str(results_path), "--contract=v2"],
         cwd=str(TRAINING_DIR), capture_output=True, text=True,
     )
     check(
@@ -428,8 +456,15 @@ def test_v2_probe_without_count_rules_gets_none_for_count_fields():
 # ---------------------------------------------------------------------------
 
 def _consistent_v2_result():
+    # required_semantic_dimensions/primary_checks are deliberately non-empty
+    # here (not _v2_probe's bare default of []/[]) -- a gate-4/5 test tampers
+    # these down to []/{} and needs that to be a real, detectable change,
+    # not a no-op against an already-empty rubric.
     v2 = ca.select_contract_adapter("v2")
-    probe = _v2_probe("sdi2-02", bullet_rule={"operator": "exact", "value": 1}, action_rule={"operator": "exact", "value": 1})
+    probe = _v2_probe(
+        "sdi2-02", bullet_rule={"operator": "exact", "value": 1}, action_rule={"operator": "exact", "value": 1},
+        required_semantic_dimensions=["topic_completeness"], primary_checks=["TASK_SURVIVED"],
+    )
     result = rbm.build_result_for_probe(probe, v2, ONE_BULLET_ONE_ACTION)
     result["id"] = probe["id"]
     return probe, _fully_score(result)
@@ -490,14 +525,14 @@ def test_verify_v2_structural_integrity_catches_missing_fields():
 # Part 7 (acceptance tests 1, 2, 3): the actual report_benchmark.py CLI path
 # ---------------------------------------------------------------------------
 
-def _run_reporter_cli(probe: dict, result: dict) -> subprocess.CompletedProcess:
+def _run_reporter_cli(probe: dict, result: dict, contract: str = "v2", extra_args: list = ()) -> subprocess.CompletedProcess:
     tmpdir = Path(tempfile.mkdtemp())
     bench_path = tmpdir / "bench.jsonl"
     results_path = tmpdir / "results.json"
     bench_path.write_text(json.dumps(probe) + "\n", encoding="utf-8")
     results_path.write_text(json.dumps([result]), encoding="utf-8")
     return subprocess.run(
-        [sys.executable, "report_benchmark.py", str(bench_path), str(results_path)],
+        [sys.executable, "report_benchmark.py", str(bench_path), str(results_path), f"--contract={contract}", *extra_args],
         cwd=str(TRAINING_DIR), capture_output=True, text=True,
     )
 
@@ -556,6 +591,201 @@ def test_probe_passes_itself_is_unmodified_by_this_round():
     check("probe_passes: unchanged legacy no-required-dimensions behavior still holds", rb.probe_passes(result) is True)
 
 
+# ---------------------------------------------------------------------------
+# Part 8: prompt_contract_vnext_adapter_structural_focused_rereview.md's
+# 10 minimum focused re-review gates. All 4 findings behind these gates
+# were independently reproduced against the pre-fix commit before being
+# fixed (same reproductions as the review itself, re-run here as
+# permanent regression tests, not just checked once by hand).
+# ---------------------------------------------------------------------------
+
+HISTORICAL_V1_BENCHMARK = TRAINING_DIR.parent / "datasets" / "benchmark" / "source_determined_bullets_acceptance.jsonl"
+HISTORICAL_V1_SCORED_RESULTS = TRAINING_DIR / "gold_v1.2.2_seed17_newprompt_candidate_bullets_acceptance_scored_chatgpt.json"
+
+
+def test_gate1_historical_v1_five_case_artifact_reports_under_default_v1():
+    # Finding 1A's exact reproduction: sdb-01..05 declare only
+    # bullet_count_rule (predating v2), which used to get force-routed
+    # through v2 preflight by shape-based inference and broke outright.
+    out = subprocess.run(
+        [sys.executable, "report_benchmark.py", str(HISTORICAL_V1_BENCHMARK), str(HISTORICAL_V1_SCORED_RESULTS)],
+        cwd=str(TRAINING_DIR), capture_output=True, text=True,
+    )
+    check("gate 1: historical v1 5-case artifact reports successfully under default (no --contract)", out.returncode == 0, out.stdout + out.stderr)
+    check("gate 1: reports under the v1 adapter", "Reporting under contract adapter: v1" in out.stdout, out.stdout)
+
+
+def test_gate10_historical_v1_pass_rate_is_unchanged_from_before_this_project():
+    # The known-good number from the seed-17 compatibility study, recorded
+    # in memory/provenance docs well before this adapter/structural-
+    # validation work started: 1/5 (only sdb-03 passes). If this ever
+    # reports anything else, either a real regression was introduced or
+    # the historical artifact was edited -- both worth stopping on.
+    out = subprocess.run(
+        [sys.executable, "report_benchmark.py", str(HISTORICAL_V1_BENCHMARK), str(HISTORICAL_V1_SCORED_RESULTS)],
+        cwd=str(TRAINING_DIR), capture_output=True, text=True,
+    )
+    check("gate 10: historical v1 5-case pass rate unchanged (1/5)", "Overall pass rate: 1/5" in out.stdout, out.stdout)
+
+
+def test_gate2_protected_16_probes_under_explicit_v2_receive_structural_verification():
+    # Finding 1B's exact reproduction: a protected probe (no count rules,
+    # wrong category for the old shape-based inference) run under explicit
+    # --contract=v2 must still have its parsed structure independently
+    # re-verified, not skipped because the probe "doesn't look like v2."
+    v2 = ca.select_contract_adapter("v2")
+    probes = rbm.load_probes(TRAINING_DIR.parent / "datasets" / "benchmark" / "gold_v1.2.1_probes.jsonl")
+    probe = probes[0]
+    result = rbm.build_result_for_probe(probe, v2, ONE_BULLET_ONE_ACTION)
+    result["id"] = probe["id"]
+    _fully_score(result)
+    tampered = dict(result)
+    tampered["parsed_bullets"] = ["a fabricated bullet that was never really there"]
+    out = _run_reporter_cli(probe, tampered, contract="v2")
+    check(
+        "gate 2: a protected (no-count-rule) probe's tampered v2 result still raises under --contract=v2",
+        out.returncode != 0 and "parsed_bullets" in out.stderr,
+        out.stdout + out.stderr,
+    )
+
+
+def test_gate3_v2_acceptance_benchmark_rejects_v1_downgrade():
+    # A source_determined_items_v2 case must never be silently scored
+    # under a default/v1 report -- that would skip its structural
+    # verification entirely without anyone noticing.
+    probe = _v2_probe("sdi2-01", bullet_rule={"operator": "exact", "value": 1}, action_rule={"operator": "exact", "value": 0})
+    result = {"id": "sdi2-01"}  # doesn't even need to be well-formed -- must reject before scoring
+    for contract, args in (("v1", ()), (None, ())):  # None => default, no --contract flag at all
+        tmpdir = Path(tempfile.mkdtemp())
+        bench_path, results_path = tmpdir / "bench.jsonl", tmpdir / "results.json"
+        bench_path.write_text(json.dumps(probe) + "\n", encoding="utf-8")
+        results_path.write_text(json.dumps([result]), encoding="utf-8")
+        cmd = [sys.executable, "report_benchmark.py", str(bench_path), str(results_path)]
+        if contract is not None:
+            cmd.append(f"--contract={contract}")
+        out = subprocess.run(cmd, cwd=str(TRAINING_DIR), capture_output=True, text=True)
+        label = contract or "default (no flag)"
+        check(f"gate 3: v2-acceptance case rejected under {label}", out.returncode != 0 and "source_determined_items_v2" in out.stderr, out.stdout + out.stderr)
+
+
+def test_gate4_and_5_rubric_binding_catches_every_tampered_field():
+    for field, bad_value in (
+        ("required_semantic_dimensions", []),
+        ("capability_checks", {}),
+        ("category", "some-other-category"),
+        ("kind", "some-other-kind"),
+        ("status", "some-other-status"),
+    ):
+        probe, result = _consistent_v2_result()
+        tampered = dict(result)
+        tampered[field] = bad_value
+        try:
+            rb.verify_rubric_binding(probe, tampered)
+            check(f"gate 4/5: verify_rubric_binding catches tampered {field!r}", False, "did not raise")
+        except ValueError as e:
+            check(f"gate 4/5: verify_rubric_binding catches tampered {field!r}", True, str(e))
+    probe, result = _consistent_v2_result()
+    try:
+        rb.verify_rubric_binding(probe, result)
+        check("gate 4/5: verify_rubric_binding accepts an untampered result", True)
+    except ValueError as e:
+        check("gate 4/5: verify_rubric_binding accepts an untampered result", False, str(e))
+
+
+def test_gate6_duplicate_benchmark_ids_raise_before_map_construction():
+    dup_rule = {"operator": "exact", "value": 1}
+    probe = _v2_probe("dup", bullet_rule=dup_rule, action_rule=dup_rule)
+    tmpdir = Path(tempfile.mkdtemp())
+    bench_path, results_path = tmpdir / "bench.jsonl", tmpdir / "results.json"
+    bench_path.write_text(json.dumps(probe) + "\n" + json.dumps(dict(probe)) + "\n", encoding="utf-8")
+    results_path.write_text("[]", encoding="utf-8")
+    out = subprocess.run(
+        [sys.executable, "report_benchmark.py", str(bench_path), str(results_path), "--contract=v2"],
+        cwd=str(TRAINING_DIR), capture_output=True, text=True,
+    )
+    check("gate 6: duplicate benchmark IDs raise", out.returncode != 0 and "duplicate id in benchmark file" in out.stderr, out.stdout + out.stderr)
+
+
+def test_gate7_duplicate_missing_extra_result_ids():
+    probe, result = _consistent_v2_result()
+
+    def run(probes: list, results: list, extra_args=()) -> subprocess.CompletedProcess:
+        tmpdir = Path(tempfile.mkdtemp())
+        bench_path, results_path = tmpdir / "bench.jsonl", tmpdir / "results.json"
+        bench_path.write_text("\n".join(json.dumps(p) for p in probes) + "\n", encoding="utf-8")
+        results_path.write_text(json.dumps(results), encoding="utf-8")
+        return subprocess.run(
+            [sys.executable, "report_benchmark.py", str(bench_path), str(results_path), "--contract=v2", *extra_args],
+            cwd=str(TRAINING_DIR), capture_output=True, text=True,
+        )
+
+    out = run([probe], [result, dict(result)])
+    check("gate 7: duplicate result IDs raise", out.returncode != 0 and "duplicate id in results file" in out.stderr, out.stdout + out.stderr)
+
+    out = run([probe], [])
+    check("gate 7: missing result (strict default) raises", out.returncode != 0 and "do not match exactly" in out.stderr, out.stdout + out.stderr)
+
+    probe2, result2 = _consistent_v2_result()
+    result2["id"] = "not-in-benchmark"
+    out = run([probe], [result2])
+    check("gate 7: extra result not in benchmark (strict default) raises", out.returncode != 0 and "do not match exactly" in out.stderr, out.stdout + out.stderr)
+
+    out = run([probe], [], extra_args=["--allow-partial"])
+    check(
+        "gate 7: --allow-partial permits a missing result as a diagnostic (non-release) report",
+        out.returncode == 0 and "n/a (0 probes)" in out.stdout,
+        out.stdout + out.stderr,
+    )
+
+
+def test_gate8_missing_or_non_string_raw_output_raises():
+    for label, mutate in (
+        ("missing", lambda d: d.pop("raw_output")),
+        ("null", lambda d: d.__setitem__("raw_output", None)),
+        ("a number", lambda d: d.__setitem__("raw_output", 12345)),
+    ):
+        probe, result = _consistent_v2_result()
+        tampered = dict(result)
+        mutate(tampered)
+        try:
+            rb.verify_v2_structural_integrity(probe, tampered)
+            check(f"gate 8: raw_output ({label}) raises", False, "did not raise")
+        except ValueError as e:
+            check(f"gate 8: raw_output ({label}) raises", "raw_output" in str(e), str(e))
+
+
+def test_gate9_default_v1_still_never_imports_v2_modules_including_the_rejection_path():
+    # Re-verified against the new report_benchmark.py flow specifically:
+    # even the "v2-acceptance case rejected under v1" error path (gate 3)
+    # must not need to import v2 modules to detect and raise that error.
+    script = (
+        "import sys, json, tempfile\n"
+        "from pathlib import Path\n"
+        "tmpdir = Path(tempfile.mkdtemp())\n"
+        "bench = tmpdir / 'bench.jsonl'\n"
+        "results = tmpdir / 'results.json'\n"
+        "bench.write_text(json.dumps({'id': 'x', 'category': 'source_determined_items_v2'}) + '\\n', encoding='utf-8')\n"
+        "results.write_text('[]', encoding='utf-8')\n"
+        "import report_benchmark\n"
+        "try:\n"
+        "    import sys as _s\n"
+        "    sys.argv = ['report_benchmark.py', str(bench), str(results)]\n"
+        "    report_benchmark.main()\n"
+        "except SystemExit:\n"
+        "    pass\n"
+        "except Exception:\n"
+        "    pass\n"
+        "present = [m for m in sys.modules if 'prompt_contract_v2' in m]\n"
+        "print('PRESENT:' + repr(present))\n"
+    )
+    out = subprocess.run([sys.executable, "-c", script], cwd=str(TRAINING_DIR), capture_output=True, text=True)
+    check(
+        "gate 9: the v2-acceptance-under-v1 rejection path itself never imports v2 modules",
+        "PRESENT:[]" in out.stdout,
+        out.stdout + out.stderr,
+    )
+
+
 def main() -> None:
     tests = [
         test_v1_is_the_default_contract,
@@ -588,6 +818,15 @@ def main() -> None:
         test_report_cli_raises_on_tampered_stored_structural_result,
         test_report_cli_runs_structural_check_even_when_semantics_unscored,
         test_probe_passes_itself_is_unmodified_by_this_round,
+        test_gate1_historical_v1_five_case_artifact_reports_under_default_v1,
+        test_gate10_historical_v1_pass_rate_is_unchanged_from_before_this_project,
+        test_gate2_protected_16_probes_under_explicit_v2_receive_structural_verification,
+        test_gate3_v2_acceptance_benchmark_rejects_v1_downgrade,
+        test_gate4_and_5_rubric_binding_catches_every_tampered_field,
+        test_gate6_duplicate_benchmark_ids_raise_before_map_construction,
+        test_gate7_duplicate_missing_extra_result_ids,
+        test_gate8_missing_or_non_string_raw_output_raises,
+        test_gate9_default_v1_still_never_imports_v2_modules_including_the_rejection_path,
     ]
     for t in tests:
         t()

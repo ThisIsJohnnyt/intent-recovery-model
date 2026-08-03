@@ -178,6 +178,19 @@ def select_contract_adapter(name: str) -> ContractAdapter:
 # count rules at all and must keep working under v2 without acquiring them
 # (per prompt_contract_vnext_adapter_structural_implementation_review.md's
 # Finding 3).
+#
+# NOT used to infer which contract report_benchmark.py should verify a
+# result under -- an earlier round tried that (a
+# probe_requires_v2_structural_verification() helper keyed off this
+# category or the presence of a count-rule field) and it broke both
+# directions at once: the historical v1 five-case acceptance set declares
+# bullet_count_rule too (predating v2), so it got wrongly forced through
+# v2 preflight; and a protected 16-probe result genuinely generated under
+# --contract=v2 has no count rules on the probe, so it wrongly skipped v2
+# structural verification entirely. Per
+# prompt_contract_vnext_adapter_structural_focused_rereview.md's Finding 1,
+# report_benchmark.py now takes --contract explicitly and routes every
+# result the same way, rather than inferring per-probe from shape.
 V2_ACCEPTANCE_CATEGORY = "source_determined_items_v2"
 
 
@@ -204,23 +217,46 @@ def _validate_rule_shape(probe_id: object, rule_name: str, rule: object) -> None
         raise ContractSelectionError(f"{probe_id}: {rule_name}'s value must be non-negative, got {value!r}")
 
 
-def probe_requires_v2_structural_verification(probe: dict) -> bool:
-    """True if this probe's results must be routed through v2 structural
-    verification (report_benchmark.py's verify_v2_structural_integrity) --
-    driven entirely by the frozen, trusted probe definition, never by
-    anything a result claims about itself (per
-    prompt_contract_vnext_adapter_structural_implementation_review.md's
-    Finding 2 reproduction #2: a result's own "contract" field must never
-    be the thing that decides whether it gets checked). True whenever the
-    probe is in the dedicated v2 acceptance category, or declares either
-    count rule (covers any future non-acceptance probe that still opts
-    into count checking).
+def reject_duplicate_ids(items: list[dict], description: str) -> None:
+    """Generic collection-integrity check, used for both benchmark-probe
+    lists and scored-results lists: raises if any two items share an "id".
+
+    Must run against the RAW list, before anything collapses it into an
+    {id: item} dict -- {p["id"]: p for p in items} silently keeps only the
+    last of any duplicate and makes the duplicate invisible to any check
+    that only sees the resulting dict. This was
+    prompt_contract_vnext_adapter_structural_focused_rereview.md's
+    Finding 3: report_benchmark.py used to build that dict before this
+    check ever ran, so two same-ID benchmark rows collapsed to one before
+    a duplicate could be detected at all.
     """
-    return (
-        probe.get("category") == V2_ACCEPTANCE_CATEGORY
-        or probe.get("bullet_count_rule") is not None
-        or probe.get("action_count_rule") is not None
-    )
+    seen: set = set()
+    for item in items:
+        item_id = item.get("id")
+        if item_id in seen:
+            raise ContractSelectionError(f"duplicate id in {description}: {item_id!r}")
+        seen.add(item_id)
+
+
+def parse_contract_flag(argv: list[str]) -> tuple[list[str], Optional[str]]:
+    """Shared --contract=X extraction for both run_benchmark.py and
+    report_benchmark.py's CLI parsing -- one implementation of the
+    repeated-flag/empty-value validation, not two copies that could drift
+    apart. Returns (remaining_args, contract_name_or_None); the caller
+    decides the default when None, at its own call site."""
+    remaining = []
+    contract: Optional[str] = None
+    for arg in argv:
+        if arg.startswith("--contract="):
+            value = arg[len("--contract=") :]
+            if not value:
+                raise ContractSelectionError("--contract requires a non-empty value, e.g. --contract=v2")
+            if contract is not None:
+                raise ContractSelectionError(f"--contract specified more than once ({contract!r} and {value!r})")
+            contract = value
+        else:
+            remaining.append(arg)
+    return remaining, contract
 
 
 def preflight_validate_count_rules(probes: list[dict], adapter: ContractAdapter) -> None:
@@ -233,18 +269,19 @@ def preflight_validate_count_rules(probes: list[dict], adapter: ContractAdapter)
     explicitly; the protected 16-probe benchmark is unaffected since it
     declares neither. No-op for adapters that don't support structural
     parsing (v1) -- called with the v1 adapter, this function does nothing
-    at all, regardless of what the benchmark file contains.
+    at all, regardless of what the benchmark file contains. Only reachable
+    at all when v2 is explicitly selected (never inferred from probe
+    shape), so a historical v1-era file that happens to declare only one
+    of the two rule fields (predating this requirement) is never run
+    through this function unless someone explicitly asks to report it
+    under --contract=v2, which would be a genuine misuse of that file.
     """
     if adapter.parse is None:
         return
 
-    seen_ids: set = set()
+    reject_duplicate_ids(probes, "benchmark file")
     for probe in probes:
         pid = probe.get("id")
-        if pid in seen_ids:
-            raise ContractSelectionError(f"duplicate probe id in benchmark file: {pid!r}")
-        seen_ids.add(pid)
-
         bullet_rule = probe.get("bullet_count_rule")
         action_rule = probe.get("action_count_rule")
         requires_rules = probe.get("category") == V2_ACCEPTANCE_CATEGORY
