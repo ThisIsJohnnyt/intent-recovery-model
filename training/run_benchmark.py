@@ -48,6 +48,7 @@ from contract_adapters import (
     known_contract_names,
     parse_contract_flag,
     preflight_validate_count_rules,
+    reject_duplicate_ids,
     select_contract_adapter,
 )
 
@@ -191,6 +192,13 @@ def main() -> None:
     print(f"Using contract adapter: {adapter.name} ({adapter.version})")
 
     probes = load_probes(benchmark_path)
+    # Finding 3 fix (prompt_contract_vnext_final_boundary_rereview.md):
+    # duplicate-ID checking must not depend on which contract is selected
+    # -- preflight_validate_count_rules early-returns entirely for v1, so
+    # a duplicate-ID v1 benchmark file used to sail through here and only
+    # get caught later by report_benchmark.py, after a full (potentially
+    # expensive) generation run. Adapter-independent, always runs.
+    reject_duplicate_ids(probes, "benchmark file")
     preflight_validate_count_rules(probes, adapter)
 
     import torch

@@ -786,6 +786,132 @@ def test_gate9_default_v1_still_never_imports_v2_modules_including_the_rejection
     )
 
 
+# ---------------------------------------------------------------------------
+# Part 9: prompt_contract_vnext_final_boundary_rereview.md's 3 findings.
+# All independently reproduced against the pre-fix code before being fixed.
+# ---------------------------------------------------------------------------
+
+def test_final1_v1_downgrade_guard_checks_field_presence_not_contract_value():
+    # The exact reproduction: nulling only "contract" (not removing it, and
+    # not touching any other v2-only field) used to be enough to evade the
+    # old `r.get("contract") is not None` check entirely.
+    v2 = ca.select_contract_adapter("v2")
+    probes = rbm.load_probes(TRAINING_DIR.parent / "datasets" / "benchmark" / "gold_v1.2.1_probes.jsonl")
+    probe = probes[0]
+    result = rbm.build_result_for_probe(probe, v2, ONE_BULLET_ONE_ACTION)
+    result["id"] = probe["id"]
+    _fully_score(result)
+
+    nulled_contract = dict(result)
+    nulled_contract["contract"] = None
+    out = _run_reporter_cli(probe, nulled_contract, contract="v1")
+    check(
+        "final finding 1: contract=None (not removed) still raises under v1 mode",
+        out.returncode != 0 and "v2-only structural field" in out.stderr,
+        out.stdout + out.stderr,
+    )
+
+    # Each remaining v2-only field, present alone on top of an otherwise
+    # complete and valid v1 result (so the v2-only-field check is the only
+    # thing that can fire -- not an earlier check reacting to some other
+    # missing v1 field), must also individually trigger rejection.
+    v1 = ca.select_contract_adapter("v1")
+    v1_shaped = rbm.build_result_for_probe(probe, v1, "###NARRATIVE###\nx\n###BULLETS###\n###ACTIONS###")
+    v1_shaped["id"] = probe["id"]
+    _fully_score(v1_shaped)
+    other_v2_only_fields = [f for f in rb.V2_ONLY_STRUCTURAL_FIELDS if f != "contract"]
+    for field in other_v2_only_fields:
+        with_one_v2_field = dict(v1_shaped)
+        with_one_v2_field[field] = result[field]
+        out = _run_reporter_cli(probe, with_one_v2_field, contract="v1")
+        check(
+            f"final finding 1: {field!r} present alone (on an otherwise-valid v1 result) still raises under v1 mode",
+            out.returncode != 0 and "v2-only structural field" in out.stderr,
+            out.stdout + out.stderr,
+        )
+
+
+def test_final2_format_valid_must_be_a_literal_boolean_for_both_contracts():
+    for label, bad_value in (("missing", None), ("null", None), ("a number", 1), ("string true", "true"), ("string false", "false")):
+        result = {
+            "id": "v1-test", "category": "direct", "kind": "direct", "status": "regression_guard",
+            "required_semantic_dimensions": [],
+            "scores": {"topic_completeness": None, "attribution_accuracy": None, "uncertainty_preservation": None, "unsupported_addition_resistance": None},
+            "capability_checks": {},
+        }
+        if label != "missing":
+            result["format_valid"] = bad_value
+        try:
+            rb.require_format_valid_is_boolean(result)
+            check(f"final finding 2: format_valid ({label}) raises", False, "did not raise")
+        except ValueError as e:
+            check(f"final finding 2: format_valid ({label}) raises", "format_valid" in str(e), str(e))
+
+    for real_bool in (True, False):
+        result = {"id": "v1-test", "format_valid": real_bool}
+        try:
+            rb.require_format_valid_is_boolean(result)
+            check(f"final finding 2: literal {real_bool} is accepted", True)
+        except ValueError as e:
+            check(f"final finding 2: literal {real_bool} is accepted", False, str(e))
+
+
+def test_final2_report_cli_rejects_string_format_valid_end_to_end():
+    probe = {
+        "id": "v1-test", "category": "direct", "kind": "direct", "status": "regression_guard",
+        "required_semantic_dimensions": ["topic_completeness"], "primary_checks": [],
+    }
+    result = {
+        "id": "v1-test", "category": "direct", "kind": "direct", "status": "regression_guard",
+        "required_semantic_dimensions": ["topic_completeness"], "format_valid": "false",
+        "scores": {"topic_completeness": 2, "attribution_accuracy": None, "uncertainty_preservation": None, "unsupported_addition_resistance": None},
+        "capability_checks": {},
+    }
+    out = _run_reporter_cli(probe, result, contract="v1")
+    check(
+        "final finding 2: report_benchmark.py CLI rejects a string format_valid under v1",
+        out.returncode != 0 and "format_valid" in out.stderr,
+        out.stdout + out.stderr,
+    )
+
+
+def test_final3_v1_runner_preflight_rejects_duplicate_ids_before_torch_import():
+    tmpdir = Path(tempfile.mkdtemp())
+    bench_path = tmpdir / "bench.jsonl"
+    dup = {"id": "dup", "input": "x", "category": "c", "kind": "direct"}
+    bench_path.write_text(json.dumps(dup) + "\n" + json.dumps(dict(dup, input="y")) + "\n", encoding="utf-8")
+    out = subprocess.run(
+        [sys.executable, "run_benchmark.py", str(bench_path), "ckpt", "out.json"],
+        cwd=str(TRAINING_DIR), capture_output=True, text=True,
+    )
+    check(
+        "final finding 3: duplicate-ID v1 benchmark fails before the torch import",
+        out.returncode != 0 and "duplicate id in benchmark file" in out.stderr and "torch" not in out.stderr,
+        out.stdout + out.stderr,
+    )
+
+
+def test_final3_ordinary_v1_runner_preflight_still_reaches_torch_import_unchanged():
+    # Confirms the fix didn't add a false-positive rejection for the
+    # normal, non-duplicate case -- must get past contract selection and
+    # the new unconditional duplicate check without complaint. What it
+    # fails on next is environment-dependent (this project's base Python
+    # has no torch installed at all and fails on that import; the venv
+    # has torch but no real "ckpt" checkpoint directory and fails trying
+    # to load a tokenizer from it) -- either is fine; a "duplicate id"
+    # rejection is the only wrong outcome here.
+    out = subprocess.run(
+        [sys.executable, "run_benchmark.py",
+         str(TRAINING_DIR.parent / "datasets" / "benchmark" / "gold_v1.2.1_probes.jsonl"), "ckpt", "out.json"],
+        cwd=str(TRAINING_DIR), capture_output=True, text=True,
+    )
+    check(
+        "final finding 3: ordinary (non-duplicate) v1 benchmark isn't falsely rejected as a duplicate",
+        out.returncode != 0 and "duplicate id" not in out.stderr,
+        out.stdout + out.stderr,
+    )
+
+
 def main() -> None:
     tests = [
         test_v1_is_the_default_contract,
@@ -827,6 +953,11 @@ def main() -> None:
         test_gate7_duplicate_missing_extra_result_ids,
         test_gate8_missing_or_non_string_raw_output_raises,
         test_gate9_default_v1_still_never_imports_v2_modules_including_the_rejection_path,
+        test_final1_v1_downgrade_guard_checks_field_presence_not_contract_value,
+        test_final2_format_valid_must_be_a_literal_boolean_for_both_contracts,
+        test_final2_report_cli_rejects_string_format_valid_end_to_end,
+        test_final3_v1_runner_preflight_rejects_duplicate_ids_before_torch_import,
+        test_final3_ordinary_v1_runner_preflight_still_reaches_torch_import_unchanged,
     ]
     for t in tests:
         t()

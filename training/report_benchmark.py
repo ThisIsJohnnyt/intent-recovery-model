@@ -76,6 +76,27 @@ KNOWN_SEMANTIC_DIMENSIONS = {
     "unsupported_addition_resistance",
 }
 
+# Every field run_benchmark.py's v2 path stores that a v1 result never has
+# (per prompt_contract_vnext_final_boundary_rereview.md's Finding 1). A v1-
+# mode report must reject a result carrying ANY of these -- checking key
+# PRESENCE, not `.get(field) is not None` -- because a v2 result with just
+# "contract" nulled out (JSON null, not removed) still carries every other
+# field in this set and was previously accepted as an ordinary v1 result
+# once only the value of "contract" was checked.
+V2_ONLY_STRUCTURAL_FIELDS = (
+    "contract",
+    "contract_version",
+    "contract_fingerprint",
+    "parser_version",
+    "parsed_narrative",
+    "parsed_bullets",
+    "parsed_actions",
+    "bullet_count_rule",
+    "action_count_rule",
+    "bullet_count_result",
+    "action_count_result",
+)
+
 
 def load_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -107,6 +128,27 @@ def probe_passes(result: dict) -> bool:
     if any(v is not True for v in checks.values()):
         return False
     return True
+
+
+def require_format_valid_is_boolean(result: dict) -> None:
+    """Per prompt_contract_vnext_final_boundary_rereview.md's Finding 2:
+    probe_passes() gates on `if not result.get("format_valid")`, a
+    truthiness check -- the non-empty string "false" is truthy in Python,
+    so it slips past that check exactly as "false" (the boolean) does not.
+    verify_v2_structural_integrity already closes this for v2 by
+    recomputing format_valid from a fresh reparse and requiring an exact
+    boolean match; v1 has no equivalent recomputation path (no structural
+    parser to reparse against), so this is the minimum fix available for
+    it: format_valid must be present and must actually be a bool, for
+    every result regardless of contract. Called unconditionally in
+    main(), alongside verify_rubric_binding -- not folded into
+    probe_passes() itself, which stays untouched."""
+    stored = result.get("format_valid", _MISSING)
+    if stored is _MISSING or type(stored) is not bool:
+        raise ValueError(
+            f"{result.get('id')}: format_valid must be a literal boolean, "
+            f"got {stored!r} ({type(stored).__name__})"
+        )
 
 
 def verify_rubric_binding(probe: dict, result: dict) -> None:
@@ -423,20 +465,26 @@ def main() -> None:
     total = len(scored_pairs)
     passes: dict = {}
     for probe, r in scored_pairs:
+        require_format_valid_is_boolean(r)
         verify_rubric_binding(probe, r)
         if adapter.name == "v2":
             passes[r["id"]] = v2_result_passes(probe, r)
         else:
             # Finding 1's "in v1 mode, unexpected v2 structural fields
-            # should raise rather than be ignored" -- a result carrying a
-            # "contract" claim while being reported in v1 mode means
-            # either the wrong --contract was passed or the result was
-            # generated under v2 and is being silently downgraded.
-            if r.get("contract") is not None:
+            # should raise rather than be ignored" -- a result carrying any
+            # v2-only structural field while being reported in v1 mode
+            # means either the wrong --contract was passed or the result
+            # was generated under v2 and is being silently downgraded.
+            # Presence, not value: an earlier version only checked
+            # `r.get("contract") is not None`, which a v2 result survives
+            # by having just "contract" nulled to JSON null while every
+            # other v2-only field stays present.
+            present_v2_fields = [f for f in V2_ONLY_STRUCTURAL_FIELDS if f in r]
+            if present_v2_fields:
                 raise ContractSelectionError(
-                    f"{r['id']}: result has contract={r.get('contract')!r} but this report is "
-                    "running in v1 mode -- pass --contract=v2 if this result was generated "
-                    "under the v2 contract"
+                    f"{r['id']}: result has v2-only structural field(s) present "
+                    f"({present_v2_fields}) but this report is running in v1 mode -- pass "
+                    "--contract=v2 if this result was generated under the v2 contract"
                 )
             passes[r["id"]] = probe_passes(r)
     overall_passed = sum(passes.values())
