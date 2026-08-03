@@ -6,11 +6,13 @@ Covers items 1, 3, 4, 5, 6(partial), 8 of the static feasibility package
 requested in prompt_contract_vnext_joint_alignment_review.md. Item 2
 (browser-runtime parity) and the TypeScript half of item 3/4 are covered by
 thought-organizer-app/src/services/promptContractV2Parser.test.ts, which
-consumes the same frozen fixture file (byte-identity checked here too).
+consumes the same frozen fixture file (canonical-JSON fingerprint checked
+against a locked shared hash here too, not a cross-repo path read).
 Item 7 (cross-repo prompt fingerprint parity) is in
 test_prompt_contract_v2_fingerprint_parity.py. Item 6 (mechanical dataset
 migration) is a separate script, prompt_contract_v2_migrate.py.
 """
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -20,10 +22,21 @@ from prompt_contract_v2_parser import ParseError, parse_output
 
 FAILURES = []
 FIXTURES_PATH = Path(__file__).parent / "prompt_contract_v2_parser_fixtures.json"
-APP_FIXTURES_PATH = (
-    Path(__file__).parent.parent.parent / "thought-organizer-app" / "src" / "services"
-    / "prompt_contract_v2_parser_fixtures.json"
-)
+
+# Finding 5 fix (prompt_contract_vnext_static_package_chatgpt_review.md): a
+# cross-repo relative-path read (../../thought-organizer-app/...) breaks
+# under any machine layout or worktree where the two repos aren't checked
+# out as siblings with matching names -- confirmed by ChatGPT reproducing
+# exactly this failure. Fixed by comparing a canonical-JSON SHA-256
+# fingerprint (sorted object keys, preserved array order, matching
+# separators/encoding across both languages) against a single locked value,
+# computed independently in each repo -- no path dependency at all.
+EXPECTED_FIXTURES_FINGERPRINT = "52867b1c6920a00b835cab1c8bc4bf495a4f54b8cf6d80df401b5a5f39969948"
+
+
+def canonical_json_fingerprint(data) -> str:
+    canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def check(name: str, condition: bool, detail: str = "") -> None:
@@ -33,20 +46,14 @@ def check(name: str, condition: bool, detail: str = "") -> None:
         FAILURES.append(name)
 
 
-def test_fixture_file_is_content_identical_across_repos():
-    # Structural (parsed JSON) comparison, not raw bytes: the training
-    # repo's committed copy gets CRLF-normalized by Windows git autocrlf on
-    # checkout while the app repo's copy (not committed through the same
-    # path) stays LF -- confirmed directly, a real line-ending difference,
-    # not a content one. Byte-identity was the wrong check for what this
-    # test actually needs to guarantee (same logical fixture cases in both
-    # repos), so it compares parsed content instead.
-    if not APP_FIXTURES_PATH.exists():
-        check("fixture file content-identical across repos", False, f"app-side copy not found at {APP_FIXTURES_PATH}")
-        return
-    training_data = json.loads(FIXTURES_PATH.read_text(encoding="utf-8"))
-    app_data = json.loads(APP_FIXTURES_PATH.read_text(encoding="utf-8"))
-    check("fixture file content-identical across repos", training_data == app_data)
+def test_fixture_file_matches_locked_canonical_fingerprint():
+    data = json.loads(FIXTURES_PATH.read_text(encoding="utf-8"))
+    fingerprint = canonical_json_fingerprint(data)
+    check(
+        "fixture file matches locked canonical cross-repo fingerprint",
+        fingerprint == EXPECTED_FIXTURES_FINGERPRINT,
+        fingerprint,
+    )
 
 
 def test_valid_fixture_cases_parse_as_expected():
@@ -97,6 +104,70 @@ def test_tokenizer_round_trip_preserves_typed_markers():
     )
 
 
+MARKER_COLLISION_MARKERS = (
+    v2.NARRATIVE_MARKER, v2.BULLETS_MARKER, v2.BULLET_ITEM_MARKER,
+    v2.ACTIONS_MARKER, v2.ACTION_ITEM_MARKER,
+)
+MARKER_COLLISION_HASH_RUN_LENGTHS = (3, 4, 5, 7, 22)
+MARKER_COLLISION_RAW = " | ".join(
+    [f"copied literally: {m}" for m in MARKER_COLLISION_MARKERS]
+    + [f"hash run: {'#' * n} end" for n in MARKER_COLLISION_HASH_RUN_LENGTHS]
+)
+
+# Locked 2026-08-02 against the actual production JS runtime
+# (@xenova/transformers, thoughtorganizer-flan-t5's real deployed tokenizer
+# files) decoding the same sanitized MARKER_COLLISION_RAW string -- confirmed
+# byte-identical to this Python decode at lock time. If either tokenizer's
+# vocabulary/normalization ever changes, both this value and the app-side
+# copy in promptContractV2RuntimeParity.test.ts must change together.
+EXPECTED_MARKER_COLLISION_DECODED = (
+    "copied literally: ## #NARRATIVE## # | copied literally: ## #BULLETS## # "
+    "| copied literally: ## #BULLET## # | copied literally: ## #ACTIONS## # "
+    "| copied literally: ## #ACTION## # | hash run: ## # end | hash run: ## ## end "
+    "| hash run: ## ## # end | hash run: ## ## ## # end "
+    "| hash run: ## ## ## ## ## ## ## ## ## ## ## end"
+)
+
+
+def test_sanitized_marker_collisions_survive_real_tokenizer_round_trip():
+    # Finding 2 fix (prompt_contract_vnext_static_package_chatgpt_review.md):
+    # the sanitizer tests above only ever operated on raw strings -- this
+    # closes the gap by actually encoding/decoding the sanitized text
+    # through the real seed-17 checkpoint tokenizer, for every marker
+    # literal plus every tested '#' run length in one combined string.
+    import re
+
+    from transformers import AutoTokenizer
+
+    sanitized = v2.sanitize_marker_like_text(MARKER_COLLISION_RAW)
+    tok = AutoTokenizer.from_pretrained(
+        str(Path(__file__).parent / "checkpoints" / "gold_v1.2.2-newprompt-seed17" / "final")
+    )
+    decoded = tok.decode(tok(sanitized)["input_ids"], skip_special_tokens=True)
+
+    # A real, non-obvious tokenizer behavior found by running this, not
+    # assumed: the SentencePiece tokenizer does not preserve the ZWNJ
+    # (U+200C) separator byte-for-byte -- it decodes as a plain space. The
+    # anti-collision property still holds (a space is just as effective a
+    # separator as a ZWNJ at breaking up a '#' run), so this is checked as
+    # an invariant on the decoded text, not as decoded == sanitized.
+    check(
+        "no real marker substring survives sanitized-input tokenizer round-trip",
+        not any(m in decoded for m in MARKER_COLLISION_MARKERS),
+        decoded,
+    )
+    check(
+        "no 3+ '#' run survives sanitized-input tokenizer round-trip",
+        not re.search(r"#{3,}", decoded),
+        decoded,
+    )
+    check(
+        "decoded sanitized text matches the locked cross-runtime value (Python/JS parity)",
+        decoded == EXPECTED_MARKER_COLLISION_DECODED,
+        decoded,
+    )
+
+
 def test_sanitizer_defangs_all_run_lengths():
     import re
 
@@ -131,10 +202,11 @@ def test_sanitized_input_cannot_reach_parser_as_a_real_marker():
 
 def main() -> None:
     tests = [
-        test_fixture_file_is_content_identical_across_repos,
+        test_fixture_file_matches_locked_canonical_fingerprint,
         test_valid_fixture_cases_parse_as_expected,
         test_error_fixture_cases_fail_closed,
         test_tokenizer_round_trip_preserves_typed_markers,
+        test_sanitized_marker_collisions_survive_real_tokenizer_round_trip,
         test_sanitizer_defangs_all_run_lengths,
         test_sanitized_input_cannot_reach_parser_as_a_real_marker,
     ]

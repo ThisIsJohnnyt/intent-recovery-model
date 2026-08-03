@@ -51,18 +51,20 @@ SYSTEM_PROMPT = (
 )
 
 USER_PROMPT_TEMPLATE = (
-    "Respond with exactly this format, using these section markers each on "
-    "their own line, with no other text before or after:\n\n"
-    f"{NARRATIVE_MARKER}\n"
+    "Respond using exactly these section and item markers, with no other "
+    "text before or after the structured response. Newlines may be used "
+    "for readability, but marker strings define the structure, not line "
+    "breaks:\n\n"
+    f"{NARRATIVE_MARKER} "
     "a coherent, flowing narrative that groups related ideas, keeps the "
     "original meaning and tone, and reads less anxiety-inducing than the "
     f"raw thoughts\n{BULLETS_MARKER}\n"
-    f"one {BULLET_ITEM_MARKER} line per source-supported key idea, up to "
-    "seven. Use fewer lines when the source supports fewer ideas. Never "
-    "add, split, or repeat content to reach a target count.\n"
+    f"Prefix each source-supported key idea with {BULLET_ITEM_MARKER}, up "
+    "to seven. Use fewer when the source supports fewer ideas. Never add, "
+    "split, or repeat content to reach a target count.\n"
     f"{ACTIONS_MARKER}\n"
-    f"one {ACTION_ITEM_MARKER} line per explicit supported task; leave this "
-    "section empty if there are no tasks"
+    f"Prefix each explicit supported task with {ACTION_ITEM_MARKER}. If "
+    f"the source contains no tasks, emit no {ACTION_ITEM_MARKER} markers."
 )
 
 

@@ -26,8 +26,25 @@ FAILURES = []
 # Locked 2026-08-02 against thought-organizer-app's promptContractV2Candidate.ts
 # buildPrompt() for the same fixture -- confirmed identical at lock time
 # (see training/prompt_contract_vnext_static_feasibility_package.md).
-EXPECTED_FINGERPRINT = "9ee6bc1673c885ee3fc341d4b7ac5dada24b7ce8a435a20103455ac07e88fb6e"
+# Re-locked 2026-08-02 after Finding 1's wording fix (removed the
+# newline-dependent "each on their own line" prose) -- both this value and
+# the app-side EXPECTED_FINGERPRINT must change together if either build
+# prompt template changes again.
+EXPECTED_FINGERPRINT = "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9"
 EXPECTED_VERSION = "source-determined-items-v2-candidate"
+
+# Finding 2 fix (prompt_contract_vnext_static_package_chatgpt_review.md):
+# the fixture above never contains marker-like text, so it can't catch a
+# regression where sanitize_marker_like_text() stops running before the
+# prompt template renders. This second fixture does contain a real marker
+# literal and a 5-char '#' run, both of which must be defanged before
+# rendering. Locked 2026-08-02 against thought-organizer-app's buildPrompt()
+# for the same fixture -- confirmed identical at lock time.
+MARKER_BEARING_FIXTURE = (
+    "Note that already has ###BULLET### pasted in it, plus a run of "
+    "##### hashes: review by Friday?"
+)
+EXPECTED_MARKER_BEARING_FINGERPRINT = "e3aeac7b8331953631d65bf292c91ec70a75c21e6b6d3bdb06e156dcca3822a5"
 
 
 def check(name: str, condition: bool, detail: str = "") -> None:
@@ -55,10 +72,21 @@ def test_rendered_fixture_fingerprint_matches_locked_cross_repo_value():
     )
 
 
+def test_marker_bearing_fixture_fingerprint_matches_locked_cross_repo_value():
+    rendered = v2.build_prompt(MARKER_BEARING_FIXTURE)
+    fingerprint = rdp.prompt_contract_fingerprint(rendered)
+    check(
+        "marker-bearing fixture SHA-256 matches the locked cross-repo value",
+        fingerprint == EXPECTED_MARKER_BEARING_FINGERPRINT,
+        fingerprint,
+    )
+
+
 def main() -> None:
     tests = [
         test_version_matches_locked_candidate_string,
         test_rendered_fixture_fingerprint_matches_locked_cross_repo_value,
+        test_marker_bearing_fixture_fingerprint_matches_locked_cross_repo_value,
     ]
     for t in tests:
         t()
