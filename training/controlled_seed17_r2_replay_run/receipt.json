@@ -1,0 +1,65 @@
+{
+  "timestamp_utc": "2026-08-03T20:56:06.128683+00:00",
+  "git": {
+    "head_commit": "5c3bc1337836300e5ecf9cc435aaa3f6b1bf5673",
+    "origin_main_commit": "5c3bc1337836300e5ecf9cc435aaa3f6b1bf5673",
+    "head_matches_origin_main": true,
+    "working_tree_clean": true,
+    "working_tree_status_raw": ""
+  },
+  "planned_commands": [
+    "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe train.py --seed 17 --data-dir data/processed_gold_v1.2.2_r2_v2contract_seed17 --output-dir controlled_seed17_r2_replay_run\\checkpoint",
+    "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/gold_v1.2.1_probes.jsonl controlled_seed17_r2_replay_run\\checkpoint\\final controlled_seed17_r2_replay_run\\protected16_results.json --contract=v2",
+    "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl controlled_seed17_r2_replay_run\\checkpoint\\final controlled_seed17_r2_replay_run\\acceptance10_results.json --contract=v2"
+  ],
+  "environment": {
+    "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "torch": "2.11.0+cu128",
+    "transformers": "4.57.6",
+    "datasets": "5.0.0",
+    "accelerate": "1.14.0",
+    "sentencepiece": "0.2.2",
+    "huggingface_hub": "0.36.2",
+    "cuda_available": true
+  },
+  "resolved_configuration": {
+    "seed": 17,
+    "data_dir": "data/processed_gold_v1.2.2_r2_v2contract_seed17",
+    "checkpoint_dir": "controlled_seed17_r2_replay_run\\checkpoint",
+    "contract": "v2",
+    "governing_protocol": "training/controlled_seed17_r2_replay_protocol.md",
+    "governing_manifest": "training/controlled_seed17_r2_replay_frozen_manifest.md"
+  },
+  "base_model": {
+    "repo_id": "google/flan-t5-base",
+    "pinned_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "file_fingerprints": {
+      "config.json": "7c1853dbfa0e4aac093eb109a358b6ab25fe86b7c15185a91322f0ed26f0f940",
+      "generation_config.json": "f5a1c7e2be8092018d8835128987edf0111637dd98e90599cc80310fef75d95a",
+      "model.safetensors": "1dfb70afdcedceb9f9fae2f9b68e004ad934361fb35b9b2bd50b45ea90790fc8",
+      "special_tokens_map.json": "5c87151ef0f72a99d1f766a4c418bd2a1f90aaa30a8e22fe5eca9641daebb64f",
+      "spiece.model": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86",
+      "tokenizer.json": "fe2ebbbbde2985be723e0ce18217853e4020c5e9d35bd07be2c27ab9d3ead57a",
+      "tokenizer_config.json": "4c55124402e4ce48c7125d04b9af152a125eda9e7c80829f8f99f2ec69f3f68d"
+    }
+  },
+  "executable_code_fingerprints": {
+    "train.py": "730f7a388830cd3ac6092983a3474ef9f570203cc5ea83cd37c6c60bccd93217",
+    "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
+    "report_benchmark.py": "8b14f3436b4920eeaade8ad1dc39e898c4bdcfe6fca594251b3e56dfeb1de042",
+    "contract_adapters.py": "c28a774941580bba3984b9c6d6d5ebf7c8d159afa10af20fe4cd4e4e2d89950e",
+    "prompt_contract_v2_candidate.py": "2069c6508cd3f342151f6c545598264c183e61dd1a66341ef5ea06fb56aa03ba",
+    "prompt_contract_v2_parser.py": "343699dad193d8b00c2d6c66ac66bc03bc966b1eeb9d96969195c4f02a687101",
+    "prepare_v2_r2_training_data.py": "2cc769b9762c467569891b417d856c1da71f0032194b882c0c3b6a401cba7cda",
+    "run_seed17_r2_replay.py": "a5ec073371bf821b420d4dddbf1936db516b0697ffb78f2cc56bed5948b7d6eb"
+  },
+  "governing_input_fingerprints": {
+    "gold_v1.2.2_r2_derived_candidate.jsonl": "197adb3578b27c8b76bdbb33b3dcb35398ccd980932f0f718a5fedd732b9c1ac",
+    "prompt_contract_v2_migrated_targets_DRAFT.jsonl": "1bef1b0476c372b35dd08a89f7e767e25c46ff1ace202d90ffbb5a3d7e4c0307",
+    "split_manifest.json": "24610be8c5b91be13b064acaaab4f8bbae59b0ec175e66d1fb8ccb94cd049485",
+    "data/processed_gold_v1.2.2_r2_v2contract_seed17/train.jsonl": "ed7989f7abb9df64162f26f3d331824770a86649b7587ec3644a969f6e965e68",
+    "data/processed_gold_v1.2.2_r2_v2contract_seed17/val.jsonl": "83abbc796187860b511b2c18c964b0757df4bc343ace50862ea15bd590715294",
+    "../datasets/benchmark/gold_v1.2.1_probes.jsonl": "044708641c8dd584f334f16bde21ed89550bb7c464160827433f825eb0c48e94",
+    "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+  }
+}
