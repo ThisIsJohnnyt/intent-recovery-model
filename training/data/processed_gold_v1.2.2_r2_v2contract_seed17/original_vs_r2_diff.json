@@ -1,0 +1,95 @@
+{
+  "ti-001": {
+    "input_hash": "b314914e28568a4c38062a66c44e9813b0adede52ffe04ba1e662838407fad21",
+    "input_excerpt": "update the router firmware. check the thing in the blue folder. what did my daug",
+    "baseline_output": {
+      "narrative": "I need to update the router's firmware and check the contents of the blue folder for that specific item. I also need to recall or ask my daughter what she mentioned about her plans for this Friday.",
+      "bullets": [
+        "Update router firmware",
+        "Review item in the blue folder",
+        "Follow up on daughter's Friday plans"
+      ],
+      "action_items": [
+        "Update router firmware",
+        "Check the blue folder",
+        "Ask daughter about Friday"
+      ]
+    },
+    "candidate_output": {
+      "narrative": "I need to update the router firmware and check the thing in the blue folder. It remains unclear what my daughter said about Friday.",
+      "bullets": [
+        "Update router firmware",
+        "Check the thing in the blue folder",
+        "Unresolved question about what my daughter said about Friday"
+      ],
+      "action_items": [
+        "Update router firmware",
+        "Check the thing in the blue folder"
+      ]
+    }
+  },
+  "ti-002": {
+    "input_hash": "0b778d450a85284bde042ebd21473c5da4070df191e5ccab90783209a8b80dca",
+    "input_excerpt": "keys, wallet, phone. wait the report. no the meeting first. gas is low. call the",
+    "baseline_output": {
+      "narrative": "A rundown of scattered things: keys, wallet, and phone to grab; the meeting comes before the report; gas is low; something about calling the landlord, left unfinished; and lunch with Dana at noon.",
+      "bullets": [
+        "Grab keys, wallet, phone",
+        "Meeting takes priority over the report",
+        "Gas is low",
+        "Call the landlord about something (unfinished)",
+        "Lunch with Dana at noon"
+      ],
+      "action_items": [
+        "Grab keys, wallet, and phone",
+        "Attend the meeting",
+        "Get gas",
+        "Call the landlord",
+        "Lunch with Dana at noon"
+      ]
+    },
+    "candidate_output": {
+      "narrative": "A rundown of scattered things: keys, wallet, and phone to grab; the meeting comes before the report; gas is low; something about calling the landlord, left unfinished; and lunch with Dana at noon.",
+      "bullets": [
+        "Grab keys, wallet, phone",
+        "Meeting takes priority over the report",
+        "Gas is low",
+        "Call the landlord about something (unfinished)",
+        "Lunch with Dana at noon"
+      ],
+      "action_items": [
+        "Grab keys, wallet, and phone"
+      ]
+    }
+  },
+  "ti-003": {
+    "input_hash": "d465f20edc074b9536e6fcde489c22c93c3eb96c2b2573b22f909faf0ba4f2fb",
+    "input_excerpt": "Submit the mileage form, I know, mileage form before Friday, and the kitchen sin",
+    "baseline_output": {
+      "narrative": "The mileage form needs to be submitted before Friday and is emphasized repeatedly. Separately, the kitchen sink is dripping again and feels exhausting. Bea needs to be told that the writer will be ten minutes late.",
+      "bullets": [
+        "Submit the mileage form before Friday; this is emphasized repeatedly",
+        "The kitchen sink is dripping again",
+        "The dripping sink feels exhausting",
+        "Text Bea that the writer will be ten minutes late"
+      ],
+      "action_items": [
+        "Submit the mileage form before Friday",
+        "Text Bea that the writer will be ten minutes late"
+      ]
+    },
+    "candidate_output": {
+      "narrative": "The mileage form needs to be submitted before Friday and is emphasized repeatedly. Separately, the kitchen sink is dripping again, and the writer is tired of dealing with it. Bea needs to be told that the writer will be ten minutes late.",
+      "bullets": [
+        "Submit the mileage form before Friday; this is emphasized repeatedly",
+        "The kitchen sink is dripping again",
+        "The writer is tired of dealing with the dripping sink",
+        "Text Bea that the writer will be ten minutes late"
+      ],
+      "action_items": [
+        "Submit the mileage form before Friday",
+        "Text Bea that the writer will be ten minutes late"
+      ]
+    }
+  }
+}
