@@ -1,0 +1,118 @@
+{
+  "parent_record_count": 66,
+  "proposal_record_count": 12,
+  "candidate_record_count": 78,
+  "parent_content_fingerprint": "42b250a92446569fab2cf44b57130749ecdb42626b7c1c335122daaec6ff281b",
+  "candidate_content_fingerprint": "0dc9a30e2d92ed825212b8b1b648b3bed2fa291eff8d689613e791ec6cf984bf",
+  "candidate_corpus_file_fingerprint": "f738f9eba2e85086bf6019bffdd27410b7add5c566c086a1b3627703e14ad52b",
+  "appended_records_in_order": [
+    {
+      "label": "P2-001",
+      "input_hash": "9af202d9efea0f292f705dadb22855e0bb9262da1e8985c3d1cc1204997bd913",
+      "input_excerpt": "I haven't picked the corkboard or the magnetic strip for the entryway. The after",
+      "category": "open_question_preservation",
+      "difficulty": "hard",
+      "bullets": 2,
+      "actions": 0
+    },
+    {
+      "label": "P2-002",
+      "input_hash": "ec1623f3d9ad6a0b22f83417bb51f7f56c32dc3fea8f657d138b08b9c059fc54",
+      "input_excerpt": "Before leaving for the hike, choose either the paper trail map or the offline ma",
+      "category": "idea_action_boundary",
+      "difficulty": "hard",
+      "bullets": 2,
+      "actions": 1
+    },
+    {
+      "label": "P2-003",
+      "input_hash": "cdf3bf1b96c159c64fa414637d417d963a3d5e3e9ff269c386119ebc83d95fde",
+      "input_excerpt": "Send the cracked display's warranty paperwork before Friday. Need to get that da",
+      "category": "repeated_reminder",
+      "difficulty": "hard",
+      "bullets": 1,
+      "actions": 1
+    },
+    {
+      "label": "P2-004",
+      "input_hash": "d7b6a9463fe1e7d211fceabca5a9ab458ee30c35a46a90b6e9efebc0ed9ce506",
+      "input_excerpt": "Arrange a piano tuning before the recital. Still need to book the instrument ser",
+      "category": "repeated_reminder",
+      "difficulty": "hard",
+      "bullets": 1,
+      "actions": 1
+    },
+    {
+      "label": "P2-005",
+      "input_hash": "cce1ea4ed012b12fd9d2eed597fa7bb6210a76cb002bd39cb801c3a64987c8ed",
+      "input_excerpt": "return the borrowed projector; order replacement name badges; post the room numb",
+      "category": "simple_list",
+      "difficulty": "hard",
+      "bullets": 5,
+      "actions": 5
+    },
+    {
+      "label": "P2-006",
+      "input_hash": "e411ac6da59e7db6b221e0ef9b83b3be5d2c4fb1331074e9c9881c2acfec87f9",
+      "input_excerpt": "renew parking permit, launder reusable tablecloths, catalog the archive boxes, p",
+      "category": "simple_list",
+      "difficulty": "hard",
+      "bullets": 6,
+      "actions": 6
+    },
+    {
+      "label": "P2-007",
+      "input_hash": "0ca59f2a65c37d8bf3d86bb5396fd74a47616465e508accdaff16fe20aa07131",
+      "input_excerpt": "water rooftop planters / update the emergency contact sheet / request the van fo",
+      "category": "simple_list",
+      "difficulty": "expert",
+      "bullets": 7,
+      "actions": 7
+    },
+    {
+      "label": "P2-008",
+      "input_hash": "39cb44e0a70fd5dd3eee2bdfc4f8083ba6637bacbf39f51dac823d0d7a57dab3",
+      "input_excerpt": "inventory the display easels; replenish packing paper; document the repaired fra",
+      "category": "simple_list",
+      "difficulty": "expert",
+      "bullets": 7,
+      "actions": 8
+    },
+    {
+      "label": "P2-009",
+      "input_hash": "6182fdd8a35f07235073e8526473b9b885aa3a69788d4391162eaacc2d2ec100",
+      "input_excerpt": "Before the open house doors unlock, upload the revised floor plan and call the l",
+      "category": "cross_field_completeness",
+      "difficulty": "expert",
+      "bullets": 6,
+      "actions": 2
+    },
+    {
+      "label": "P2-010",
+      "input_hash": "325eff8b7f1e8c3cf5f3841948ddd592fd94510f42286137b8900b00818f6996",
+      "input_excerpt": "Jae reported that the north gate code had been changed by the security vendor. B",
+      "category": "cross_field_completeness",
+      "difficulty": "expert",
+      "bullets": 6,
+      "actions": 2
+    },
+    {
+      "label": "P2-011",
+      "input_hash": "fff1c11f62d502a7e8110569684bedac1452f9c19e6f6630411f7c7b1a462383",
+      "input_excerpt": "Drop off the repaired headphones while the copy center is open; volunteer roster",
+      "category": "two_unrelated_tasks",
+      "difficulty": "easy",
+      "bullets": 2,
+      "actions": 2
+    },
+    {
+      "label": "P2-012",
+      "input_hash": "f76517132340eb87d68fca553e83357408bf06537b33fa07b1e7c92852c82464",
+      "input_excerpt": "Label the equipment crate for the rental desk. Label the costume box for the the",
+      "category": "two_unrelated_tasks",
+      "difficulty": "medium",
+      "bullets": 2,
+      "actions": 2
+    }
+  ]
+}
