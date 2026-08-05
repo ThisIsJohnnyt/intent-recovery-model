@@ -1,0 +1,117 @@
+{
+  "timestamp_utc": "2026-08-05T11:00:33.014878+00:00",
+  "git": {
+    "head_commit": "d90fc13add15be1ce67ea7b2bb4429e978305e74",
+    "origin_main_commit": "d90fc13add15be1ce67ea7b2bb4429e978305e74",
+    "head_matches_origin_main": true,
+    "head_parent_commit": "8d2ac63f3ebbe180a83be7645c4b9a2239b2336b",
+    "changed_files_since_parent": [],
+    "working_tree_clean": false,
+    "working_tree_status_raw": "?? training/controlled_seed17_phase2_replay_chatgpt_handoff.md\n?? training/controlled_seed17_phase2_replay_frozen_fingerprints.json\n?? training/controlled_seed17_phase2_replay_frozen_manifest.md\n?? training/controlled_seed17_r2_replay_run/acceptance10_log.txt\n?? training/controlled_seed17_r2_replay_run/checkpoint/\n?? training/controlled_seed17_r2_replay_run/protected16_log.txt\n?? training/controlled_seed17_r2_replay_run/train_log.txt\n?? training/phase2_balanced_curriculum_chatgpt_handoff.md\n?? training/phase2_seed17_replay_interpretation_and_outcome_matrix_chatgpt.md\n?? training/run_seed17_phase2_replay.py\n?? training/test_run_seed17_phase2_replay.py"
+  },
+  "package_commit": "d90fc13add15be1ce67ea7b2bb4429e978305e74",
+  "package_commit_parent": "d90fc13add15be1ce67ea7b2bb4429e978305e74",
+  "planned_commands": {
+    "primary": [
+      "C:\\Users\\thisi\\AppData\\Local\\Programs\\Python\\Python311\\python.exe train.py --seed 17 --data-dir data/processed_gold_v1.2.2_phase2_v2contract_seed17 --output-dir controlled_seed17_phase2_replay_run\\primary\\checkpoint",
+      "C:\\Users\\thisi\\AppData\\Local\\Programs\\Python\\Python311\\python.exe run_benchmark.py ../datasets/benchmark/gold_v1.2.1_probes.jsonl controlled_seed17_phase2_replay_run\\primary\\checkpoint\\final controlled_seed17_phase2_replay_run\\primary\\protected16_results.json --contract=v2",
+      "C:\\Users\\thisi\\AppData\\Local\\Programs\\Python\\Python311\\python.exe run_benchmark.py ../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl controlled_seed17_phase2_replay_run\\primary\\checkpoint\\final controlled_seed17_phase2_replay_run\\primary\\acceptance10_results.json --contract=v2"
+    ],
+    "control": [
+      "C:\\Users\\thisi\\AppData\\Local\\Programs\\Python\\Python311\\python.exe train.py --seed 17 --data-dir data/processed_gold_v1.2.2_phase2_v2contract_seed17 --output-dir controlled_seed17_phase2_replay_run\\control\\checkpoint --max-steps 600",
+      "C:\\Users\\thisi\\AppData\\Local\\Programs\\Python\\Python311\\python.exe run_benchmark.py ../datasets/benchmark/gold_v1.2.1_probes.jsonl controlled_seed17_phase2_replay_run\\control\\checkpoint\\final controlled_seed17_phase2_replay_run\\control\\protected16_results.json --contract=v2",
+      "C:\\Users\\thisi\\AppData\\Local\\Programs\\Python\\Python311\\python.exe run_benchmark.py ../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl controlled_seed17_phase2_replay_run\\control\\checkpoint\\final controlled_seed17_phase2_replay_run\\control\\acceptance10_results.json --contract=v2"
+    ]
+  },
+  "environment": {
+    "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "torch": null,
+    "transformers": null,
+    "datasets": null,
+    "accelerate": null,
+    "sentencepiece": null,
+    "huggingface_hub": null,
+    "cuda_available": null
+  },
+  "shared_configuration": {
+    "seed": 17,
+    "data_dir": "data/processed_gold_v1.2.2_phase2_v2contract_seed17",
+    "contract": "v2",
+    "base_model": "google/flan-t5-base",
+    "base_model_snapshot_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "batch_size": 4,
+    "learning_rate": "3e-4",
+    "weight_decay": 0.01,
+    "num_train_epochs": 40,
+    "protected_benchmark": "../datasets/benchmark/gold_v1.2.1_probes.jsonl",
+    "acceptance_benchmark": "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl"
+  },
+  "declared_differences": {
+    "primary": {
+      "max_steps": null,
+      "expected_steps": 720,
+      "role": "sole decision-bearing Phase-2 candidate"
+    },
+    "control": {
+      "max_steps": 600,
+      "expected_steps": 600,
+      "role": "step-budget diagnostic control, never a substitute for the primary"
+    }
+  },
+  "gate6_required_pass_set": [
+    "01",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "09",
+    "10",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16"
+  ],
+  "governing_document": "training/phase2_seed17_replay_interpretation_and_outcome_matrix_chatgpt.md",
+  "resolved_configuration": {
+    "primary_checkpoint_dir": "controlled_seed17_phase2_replay_run\\primary\\checkpoint",
+    "control_checkpoint_dir": "controlled_seed17_phase2_replay_run\\control\\checkpoint"
+  },
+  "base_model": {
+    "repo_id": "google/flan-t5-base",
+    "pinned_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "file_fingerprints": {
+      "config.json": "7c1853dbfa0e4aac093eb109a358b6ab25fe86b7c15185a91322f0ed26f0f940",
+      "generation_config.json": "f5a1c7e2be8092018d8835128987edf0111637dd98e90599cc80310fef75d95a",
+      "model.safetensors": "1dfb70afdcedceb9f9fae2f9b68e004ad934361fb35b9b2bd50b45ea90790fc8",
+      "special_tokens_map.json": "5c87151ef0f72a99d1f766a4c418bd2a1f90aaa30a8e22fe5eca9641daebb64f",
+      "spiece.model": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86",
+      "tokenizer.json": "fe2ebbbbde2985be723e0ce18217853e4020c5e9d35bd07be2c27ab9d3ead57a",
+      "tokenizer_config.json": "4c55124402e4ce48c7125d04b9af152a125eda9e7c80829f8f99f2ec69f3f68d"
+    }
+  },
+  "executable_code_fingerprints": {
+    "real_data_manifest.py": "ea39bc7a29ee6a13b2f61ff9fb53dc02f0ddd99d7b55198712e1f5210019b1ce",
+    "prompt_contract_v2_candidate.py": "2069c6508cd3f342151f6c545598264c183e61dd1a66341ef5ea06fb56aa03ba",
+    "prepare_data.py": "2e620cf82a4dbfbc60fa71b9df914aab3086fdd4b2c33afde9685ec5a60480cc",
+    "contract_adapters.py": "c28a774941580bba3984b9c6d6d5ebf7c8d159afa10af20fe4cd4e4e2d89950e",
+    "train.py": "730f7a388830cd3ac6092983a3474ef9f570203cc5ea83cd37c6c60bccd93217",
+    "evaluate_real_validation.py": "3ee74f4a49aeae52bcf1067088073e4164fda826aa9c4d0433163abde3740ff8",
+    "run_seed17_phase2_replay.py": "8cc3eacb018e744a7419ab25e1205703978b8005f238d510b9849aa623099250",
+    "real_data_eval_logging.py": "f2470e7856bd500a11a4a8d020863478fb1417f752733a71fbda78bfd0ab903c",
+    "prompt_contract_v2_parser.py": "343699dad193d8b00c2d6c66ac66bc03bc966b1eeb9d96969195c4f02a687101",
+    "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
+    "real_data_private.py": "8a5e20fe78846c8b1436c817e8cfa31e6c6564b1d72d8c8679d7a3140d23f47d",
+    "report_benchmark.py": "8b14f3436b4920eeaade8ad1dc39e898c4bdcfe6fca594251b3e56dfeb1de042"
+  },
+  "governing_input_fingerprints": {
+    "gold_v1.2.2_phase2_derived_candidate.jsonl": "f738f9eba2e85086bf6019bffdd27410b7add5c566c086a1b3627703e14ad52b",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/train.jsonl": "02d81b3891a517a41cf3261b733f70f5268710b79b18e3b3819e8dbbcdd7cafb",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/val.jsonl": "83abbc796187860b511b2c18c964b0757df4bc343ace50862ea15bd590715294",
+    "../datasets/benchmark/gold_v1.2.1_probes.jsonl": "044708641c8dd584f334f16bde21ed89550bb7c464160827433f825eb0c48e94",
+    "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+  },
+  "real_validation_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "_NOTE": "DRY-RUN SAMPLE ONLY -- demonstrates the receipt mechanism, not tied to any real execution. The actual pre-execution receipt for a real run is generated fresh, immediately before that run starts, by run_seed17_phase2_replay.py main() itself, after every preflight check in Section 4 of the frozen manifest has already passed (including the post-commit verify_package_commit() check, which this dry-run sample cannot demonstrate passing since the package is not yet committed -- see the wrapper test suite for a real scratch-git-repository proof that check works). This sample was generated under the lightweight tooling environment (no torch/transformers installed, matching this whole package staying genuinely dummy-only) -- environment.torch/transformers/datasets/accelerate/sentencepiece/cuda_available show as null here for that reason. A real execution runs inside the actual training venv and its receipt would show real values there, exactly as controlled_seed17_r2_replay_manifest_dryrun_receipt_sample.json already demonstrated for the R2 replay."
+}

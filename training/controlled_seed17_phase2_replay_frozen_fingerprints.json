@@ -1,0 +1,32 @@
+{
+  "_purpose": "External fingerprint lock for run_seed17_phase2_replay.py, kept separate so the wrapper file itself can be pinned here without the self-reference problem of a file asserting its own hash inside itself. executable_code is the full recursively-computed repo-local import closure (see compute_import_closure), not a manually curated list.",
+  "executable_code": {
+    "contract_adapters.py": "c28a774941580bba3984b9c6d6d5ebf7c8d159afa10af20fe4cd4e4e2d89950e",
+    "evaluate_real_validation.py": "3ee74f4a49aeae52bcf1067088073e4164fda826aa9c4d0433163abde3740ff8",
+    "prepare_data.py": "2e620cf82a4dbfbc60fa71b9df914aab3086fdd4b2c33afde9685ec5a60480cc",
+    "prompt_contract_v2_candidate.py": "2069c6508cd3f342151f6c545598264c183e61dd1a66341ef5ea06fb56aa03ba",
+    "prompt_contract_v2_parser.py": "343699dad193d8b00c2d6c66ac66bc03bc966b1eeb9d96969195c4f02a687101",
+    "real_data_eval_logging.py": "f2470e7856bd500a11a4a8d020863478fb1417f752733a71fbda78bfd0ab903c",
+    "real_data_manifest.py": "ea39bc7a29ee6a13b2f61ff9fb53dc02f0ddd99d7b55198712e1f5210019b1ce",
+    "real_data_private.py": "8a5e20fe78846c8b1436c817e8cfa31e6c6564b1d72d8c8679d7a3140d23f47d",
+    "report_benchmark.py": "8b14f3436b4920eeaade8ad1dc39e898c4bdcfe6fca594251b3e56dfeb1de042",
+    "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
+    "run_seed17_phase2_replay.py": "8cc3eacb018e744a7419ab25e1205703978b8005f238d510b9849aa623099250",
+    "train.py": "730f7a388830cd3ac6092983a3474ef9f570203cc5ea83cd37c6c60bccd93217"
+  },
+  "governing_inputs": {
+    "gold_v1.2.2_phase2_derived_candidate.jsonl": "f738f9eba2e85086bf6019bffdd27410b7add5c566c086a1b3627703e14ad52b",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/train.jsonl": "02d81b3891a517a41cf3261b733f70f5268710b79b18e3b3819e8dbbcdd7cafb",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/val.jsonl": "83abbc796187860b511b2c18c964b0757df4bc343ace50862ea15bd590715294",
+    "../datasets/benchmark/gold_v1.2.1_probes.jsonl": "044708641c8dd584f334f16bde21ed89550bb7c464160827433f825eb0c48e94",
+    "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+  },
+  "real_validation_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "dependency_versions": {
+    "torch": "2.11.0+cu128",
+    "transformers": "4.57.6",
+    "datasets": "5.0.0",
+    "accelerate": "1.14.0",
+    "sentencepiece": "0.2.2"
+  }
+}
