@@ -1,0 +1,123 @@
+{
+  "raw_inputs": {
+    "primary/protected16": {
+      "path": "protected16_results.json",
+      "sha256": "024d9f20f92cd6340404fd29d7439cbd2b3eac65afe5c3d935e464c2966ea59f"
+    },
+    "primary/acceptance10": {
+      "path": "acceptance10_results.json",
+      "sha256": "6b90f54456c59330518608a6d23996e7b7c13804baf939cd549522e643ce4c69"
+    },
+    "control/protected16": {
+      "path": "protected16_results(1).json",
+      "sha256": "f9ca51334414426255a6babf8f9d16375e2956acae516e1619d0214f8785a36f"
+    },
+    "control/acceptance10": {
+      "path": "acceptance10_results(1).json",
+      "sha256": "414e75468392cdde61f312b34117e09c37df7bf5324c4754d1dce54ade628cf4"
+    }
+  },
+  "scored_outputs": {
+    "primary/protected16": {
+      "path": "phase2_seed17_primary720_protected16_scored_chatgpt.json",
+      "sha256": "ea0864b26df3ea5d207d1f736a486ec1d3910728597a445334562a7f2b1dacc9"
+    },
+    "primary/acceptance10": {
+      "path": "phase2_seed17_primary720_acceptance10_scored_chatgpt.json",
+      "sha256": "a9a47ac42c50009ac36b2788bf889a5e74d1e5ad07c980396487783075a1fb89"
+    },
+    "control/protected16": {
+      "path": "phase2_seed17_control600_protected16_scored_chatgpt.json",
+      "sha256": "8fb5829f2c472ef4c3ede234d68af2b2c57ecd89891d346db9ff8792417f129b"
+    },
+    "control/acceptance10": {
+      "path": "phase2_seed17_control600_acceptance10_scored_chatgpt.json",
+      "sha256": "900c6b44ee4fef50ffc06ef5011bdb213761d1bf91bfedd3bc6ef052026c2c29"
+    }
+  },
+  "aggregates": {
+    "primary/protected16": {
+      "format_valid": "16/16",
+      "semantic_strict_pass": "12/16",
+      "semantic_pass_set": [
+        "01",
+        "03",
+        "04",
+        "05",
+        "07",
+        "09",
+        "10",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16"
+      ],
+      "count_rule_conformance": null,
+      "combined_strict_pass": null,
+      "combined_pass_set": null
+    },
+    "primary/acceptance10": {
+      "format_valid": "10/10",
+      "semantic_strict_pass": "6/10",
+      "semantic_pass_set": [
+        "sdi2-01",
+        "sdi2-02",
+        "sdi2-04",
+        "sdi2-05",
+        "sdi2-08",
+        "sdi2-09"
+      ],
+      "count_rule_conformance": "6/10",
+      "combined_strict_pass": "5/10",
+      "combined_pass_set": [
+        "sdi2-01",
+        "sdi2-02",
+        "sdi2-04",
+        "sdi2-05",
+        "sdi2-09"
+      ]
+    },
+    "control/protected16": {
+      "format_valid": "16/16",
+      "semantic_strict_pass": "11/16",
+      "semantic_pass_set": [
+        "01",
+        "03",
+        "04",
+        "05",
+        "07",
+        "10",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16"
+      ],
+      "count_rule_conformance": null,
+      "combined_strict_pass": null,
+      "combined_pass_set": null
+    },
+    "control/acceptance10": {
+      "format_valid": "10/10",
+      "semantic_strict_pass": "6/10",
+      "semantic_pass_set": [
+        "sdi2-01",
+        "sdi2-02",
+        "sdi2-04",
+        "sdi2-05",
+        "sdi2-08",
+        "sdi2-09"
+      ],
+      "count_rule_conformance": "5/10",
+      "combined_strict_pass": "5/10",
+      "combined_pass_set": [
+        "sdi2-01",
+        "sdi2-02",
+        "sdi2-04",
+        "sdi2-05",
+        "sdi2-09"
+      ]
+    }
+  }
+}

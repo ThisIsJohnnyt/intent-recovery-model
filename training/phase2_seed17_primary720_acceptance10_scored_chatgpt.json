@@ -1,0 +1,624 @@
+[
+  {
+    "id": "sdi2-01",
+    "category": "source_determined_items_v2",
+    "kind": "direct",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### The wind chimes sounded softer after the rain. ###BULLETS### ###BULLET### The wind chimes sounded softer after the rain ###ACTIONS###",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "OBSERVATION_NOT_PROMOTED_TO_ACTION": true,
+      "NO_INVENTED_CAUSE_OR_ADVICE": true
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "The wind chimes sounded softer after the rain.",
+    "parsed_bullets": [
+      "The wind chimes sounded softer after the rain"
+    ],
+    "parsed_actions": [],
+    "bullet_count_rule": {
+      "operator": "exact",
+      "value": 1
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 0
+    },
+    "bullet_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 1
+      },
+      "passed": true
+    },
+    "action_count_result": {
+      "actual": 0,
+      "rule": {
+        "operator": "exact",
+        "value": 0
+      },
+      "passed": true
+    }
+  },
+  {
+    "id": "sdi2-02",
+    "category": "source_determined_items_v2",
+    "kind": "direct",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### Before Wednesday's workshop, upload the seating chart to the shared drive. ###BULLETS### ###BULLET### Upload the seating chart to the shared drive before Wednesday's workshop. ###ACTIONS### ###ACTION### Upload the seating chart to the shared drive before Wednesday's workshop.",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "TASK_SURVIVED": true,
+      "DEADLINE_SURVIVED": true,
+      "DESTINATION_SURVIVED": true,
+      "NO_INVENTED_STEPS": true
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "Before Wednesday's workshop, upload the seating chart to the shared drive.",
+    "parsed_bullets": [
+      "Upload the seating chart to the shared drive before Wednesday's workshop."
+    ],
+    "parsed_actions": [
+      "Upload the seating chart to the shared drive before Wednesday's workshop."
+    ],
+    "bullet_count_rule": {
+      "operator": "exact",
+      "value": 1
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 1
+    },
+    "bullet_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 1
+      },
+      "passed": true
+    },
+    "action_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 1
+      },
+      "passed": true
+    }
+  },
+  {
+    "id": "sdi2-03",
+    "category": "source_determined_items_v2",
+    "kind": "transfer",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### The sourdough starter rose faster today, and the blue scarf is still in the guest room. ###BULLETS### ###BULLET### The sourdough starter rose faster today ###BULLET### The blue scarf is still in the guest room ###ACTIONS### ###ACTION### Buy the sourdough starter and place it in the guest room",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 0
+    },
+    "capability_checks": {
+      "NO_TOPIC_MERGE": false,
+      "OBSERVATIONS_NOT_PROMOTED_TO_ACTION": false
+    },
+    "failure_labels": [
+      "Topic Merge",
+      "Unsupported Addition"
+    ],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "The sourdough starter rose faster today, and the blue scarf is still in the guest room.",
+    "parsed_bullets": [
+      "The sourdough starter rose faster today",
+      "The blue scarf is still in the guest room"
+    ],
+    "parsed_actions": [
+      "Buy the sourdough starter and place it in the guest room"
+    ],
+    "bullet_count_rule": {
+      "operator": "exact",
+      "value": 2
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 0
+    },
+    "bullet_count_result": {
+      "actual": 2,
+      "rule": {
+        "operator": "exact",
+        "value": 2
+      },
+      "passed": true
+    },
+    "action_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 0
+      },
+      "passed": false
+    }
+  },
+  {
+    "id": "sdi2-04",
+    "category": "source_determined_items_v2",
+    "kind": "transfer",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### The hallway paint looks darker at dusk. Separately, the fabric samples need to be brought to the decorator on Monday. ###BULLETS### ###BULLET### The hallway paint looks darker at dusk ###BULLET### Bring the fabric samples to the decorator on Monday ###ACTIONS### ###ACTION### Bring the fabric samples to the decorator on Monday",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "TASK_SURVIVED": true,
+      "DEADLINE_SURVIVED": true,
+      "OBSERVATION_NOT_PROMOTED_TO_ACTION": true
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "The hallway paint looks darker at dusk. Separately, the fabric samples need to be brought to the decorator on Monday.",
+    "parsed_bullets": [
+      "The hallway paint looks darker at dusk",
+      "Bring the fabric samples to the decorator on Monday"
+    ],
+    "parsed_actions": [
+      "Bring the fabric samples to the decorator on Monday"
+    ],
+    "bullet_count_rule": {
+      "operator": "exact",
+      "value": 2
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 1
+    },
+    "bullet_count_result": {
+      "actual": 2,
+      "rule": {
+        "operator": "exact",
+        "value": 2
+      },
+      "passed": true
+    },
+    "action_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 1
+      },
+      "passed": true
+    }
+  },
+  {
+    "id": "sdi2-05",
+    "category": "source_determined_items_v2",
+    "kind": "direct",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### One tentative idea is to place the herb pots on the back shelf. ###BULLETS### ###BULLET### Possible idea: place the herb pots on the back shelf ###ACTIONS###",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": 2,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "TENTATIVE_IDEA_REMAINED_TENTATIVE": true,
+      "IDEA_NOT_PROMOTED_TO_ACTION": true
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "One tentative idea is to place the herb pots on the back shelf.",
+    "parsed_bullets": [
+      "Possible idea: place the herb pots on the back shelf"
+    ],
+    "parsed_actions": [],
+    "bullet_count_rule": {
+      "operator": "exact",
+      "value": 1
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 0
+    },
+    "bullet_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 1
+      },
+      "passed": true
+    },
+    "action_count_result": {
+      "actual": 0,
+      "rule": {
+        "operator": "exact",
+        "value": 0
+      },
+      "passed": true
+    }
+  },
+  {
+    "id": "sdi2-06",
+    "category": "source_determined_items_v2",
+    "kind": "adversarial",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### I was undecided between the linen cover and the woven cover for the photo album. By noon, the craft room had become quiet. ###BULLETS### ###BULLET### Still undecided between the linen cover and the woven cover for the photo album ###BULLET### The craft room had become quiet ###ACTIONS###",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": 1,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "BOTH_ALTERNATIVES_SURVIVED": true,
+      "CHOICE_REMAINED_UNRESOLVED": true,
+      "LATER_OBSERVATION_NOT_TREATED_AS_ANSWER": true
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "I was undecided between the linen cover and the woven cover for the photo album. By noon, the craft room had become quiet.",
+    "parsed_bullets": [
+      "Still undecided between the linen cover and the woven cover for the photo album",
+      "The craft room had become quiet"
+    ],
+    "parsed_actions": [],
+    "bullet_count_rule": {
+      "operator": "exact",
+      "value": 2
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 0
+    },
+    "bullet_count_result": {
+      "actual": 2,
+      "rule": {
+        "operator": "exact",
+        "value": 2
+      },
+      "passed": true
+    },
+    "action_count_result": {
+      "actual": 0,
+      "rule": {
+        "operator": "exact",
+        "value": 0
+      },
+      "passed": true
+    }
+  },
+  {
+    "id": "sdi2-07",
+    "category": "source_determined_items_v2",
+    "kind": "adversarial",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### The community room needs to be reserved for the reunion by Tuesday. Separately, the reminder needs to be book that reunion room before Tuesday. ###BULLETS### ###BULLET### Reserve the community room for the reunion by Tuesday. ###BULLET### Same reminder ###BULLET### Book that reunion room before Tuesday. ###ACTIONS### ###ACTION### Book that reunion room before Tuesday.",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 1
+    },
+    "capability_checks": {
+      "RESTATED_TASK_DEDUPLICATED": false,
+      "DEADLINE_SURVIVED": true,
+      "PURPOSE_SURVIVED": true
+    },
+    "failure_labels": [
+      "Excessive Fragmentation",
+      "Unsupported Addition"
+    ],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "The community room needs to be reserved for the reunion by Tuesday. Separately, the reminder needs to be book that reunion room before Tuesday.",
+    "parsed_bullets": [
+      "Reserve the community room for the reunion by Tuesday.",
+      "Same reminder",
+      "Book that reunion room before Tuesday."
+    ],
+    "parsed_actions": [
+      "Book that reunion room before Tuesday."
+    ],
+    "bullet_count_rule": {
+      "operator": "exact",
+      "value": 1
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 1
+    },
+    "bullet_count_result": {
+      "actual": 3,
+      "rule": {
+        "operator": "exact",
+        "value": 1
+      },
+      "passed": false
+    },
+    "action_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 1
+      },
+      "passed": true
+    }
+  },
+  {
+    "id": "sdi2-08",
+    "category": "source_determined_items_v2",
+    "kind": "adversarial",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### Sharpen the garden shears, refill the bird feeder, label the pantry jars, wash the picnic blanket, replace the bicycle bell, mail the library donation form, freeze the berry puree, and charge the camera batteries. ###BULLETS### ###BULLET### Sharpen the garden shears. ###BULLET### Refill the bird feeder. ###BULLET### Label the pantry jars. ###BULLET### Wash the picnic blanket. ###BULLET### Replace the bicycle bell. ###BULLET### Mail the library donation form. ###BULLET### Freeze the berry puree. ###BULLET### Charge the camera batteries. ###ACTIONS### ###ACTION### Sharpen the garden shears. ###ACTION### Refill the bird feeder. ###ACTION### Label the pantry jars. ###ACTION### Wash the picnic blanket. ###ACTION### Replace the bicycle bell. ###ACTION### Mail the library donation form. ###ACTION### Freeze the berry puree. ###ACTION### Charge the camera batteries.",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": null,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "ALL_EIGHT_TASKS_SURVIVED": true,
+      "NO_TASK_MERGE": true,
+      "NO_INVENTED_TASK": true
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "Sharpen the garden shears, refill the bird feeder, label the pantry jars, wash the picnic blanket, replace the bicycle bell, mail the library donation form, freeze the berry puree, and charge the camera batteries.",
+    "parsed_bullets": [
+      "Sharpen the garden shears.",
+      "Refill the bird feeder.",
+      "Label the pantry jars.",
+      "Wash the picnic blanket.",
+      "Replace the bicycle bell.",
+      "Mail the library donation form.",
+      "Freeze the berry puree.",
+      "Charge the camera batteries."
+    ],
+    "parsed_actions": [
+      "Sharpen the garden shears.",
+      "Refill the bird feeder.",
+      "Label the pantry jars.",
+      "Wash the picnic blanket.",
+      "Replace the bicycle bell.",
+      "Mail the library donation form.",
+      "Freeze the berry puree.",
+      "Charge the camera batteries."
+    ],
+    "bullet_count_rule": {
+      "operator": "max",
+      "value": 7
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 8
+    },
+    "bullet_count_result": {
+      "actual": 8,
+      "rule": {
+        "operator": "max",
+        "value": 7
+      },
+      "passed": false
+    },
+    "action_count_result": {
+      "actual": 8,
+      "rule": {
+        "operator": "exact",
+        "value": 8
+      },
+      "passed": true
+    }
+  },
+  {
+    "id": "sdi2-09",
+    "category": "source_determined_items_v2",
+    "kind": "transfer",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### I need to put the smaller one beside theirs after it arrives. ###BULLETS### ###BULLET### Put the smaller one beside theirs after it arrives. ###ACTIONS### ###ACTION### Put the smaller one beside theirs after it arrives.",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 2,
+      "attribution_accuracy": null,
+      "uncertainty_preservation": 2,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "TASK_SURVIVED": true,
+      "UNRESOLVED_REFERENCES_PRESERVED": true,
+      "CLEAN_STOP_AFTER_SUPPORTED_CONTENT": true
+    },
+    "failure_labels": [],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "I need to put the smaller one beside theirs after it arrives.",
+    "parsed_bullets": [
+      "Put the smaller one beside theirs after it arrives."
+    ],
+    "parsed_actions": [
+      "Put the smaller one beside theirs after it arrives."
+    ],
+    "bullet_count_rule": {
+      "operator": "exact",
+      "value": 1
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 1
+    },
+    "bullet_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 1
+      },
+      "passed": true
+    },
+    "action_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 1
+      },
+      "passed": true
+    }
+  },
+  {
+    "id": "sdi2-10",
+    "category": "source_determined_items_v2",
+    "kind": "adversarial",
+    "status": "acceptance_gate",
+    "required_semantic_dimensions": [
+      "topic_completeness",
+      "attribution_accuracy",
+      "uncertainty_preservation",
+      "unsupported_addition_resistance"
+    ],
+    "raw_output": "###NARRATIVE### The studio coordinator said the glaze samples were delivered by the courier to the gallery assistant. The kiln cooled unevenly overnight. One tentative idea is to add padding under the display stand. Before Saturday, the gallery assistant needs to be sent the pickup code and pack the two finished bowls. It is still unknown whether the courier counted the cracked tiles. ###BULLETS### ###BULLET### The studio coordinator said the glaze samples were delivered by the courier to the gallery assistant. ###BULLET### The kiln cooled unevenly overnight. ###BULLET### Possible idea: add padding under the display stand. ###BULLET### Send the gallery assistant the pickup code and pack the two finished bowls. ###ACTIONS### ###ACTION### Send the gallery assistant the pickup code and pack the two finished bowls.",
+    "format_valid": true,
+    "scores": {
+      "topic_completeness": 1,
+      "attribution_accuracy": 2,
+      "uncertainty_preservation": 2,
+      "unsupported_addition_resistance": 2
+    },
+    "capability_checks": {
+      "ATTRIBUTION_CORRECT": true,
+      "BOTH_TASKS_SURVIVED": true,
+      "DEADLINE_SURVIVED": true,
+      "TENTATIVE_IDEA_REMAINED_TENTATIVE": true,
+      "QUESTION_REMAINED_UNRESOLVED": true,
+      "NON_TASKS_NOT_PROMOTED_TO_ACTION": true
+    },
+    "failure_labels": [
+      "Topic Loss",
+      "Topic Merge",
+      "Over-Summarization"
+    ],
+    "contract": "v2",
+    "contract_version": "source-determined-items-v2-candidate",
+    "contract_fingerprint": "e691fd12ee51b322b93311cf483d2fbb4bb921ac8a1319e07420fae098ea0cb9",
+    "parser_version": "v2-candidate-parser-1",
+    "parsed_narrative": "The studio coordinator said the glaze samples were delivered by the courier to the gallery assistant. The kiln cooled unevenly overnight. One tentative idea is to add padding under the display stand. Before Saturday, the gallery assistant needs to be sent the pickup code and pack the two finished bowls. It is still unknown whether the courier counted the cracked tiles.",
+    "parsed_bullets": [
+      "The studio coordinator said the glaze samples were delivered by the courier to the gallery assistant.",
+      "The kiln cooled unevenly overnight.",
+      "Possible idea: add padding under the display stand.",
+      "Send the gallery assistant the pickup code and pack the two finished bowls."
+    ],
+    "parsed_actions": [
+      "Send the gallery assistant the pickup code and pack the two finished bowls."
+    ],
+    "bullet_count_rule": {
+      "operator": "exact",
+      "value": 6
+    },
+    "action_count_rule": {
+      "operator": "exact",
+      "value": 2
+    },
+    "bullet_count_result": {
+      "actual": 4,
+      "rule": {
+        "operator": "exact",
+        "value": 6
+      },
+      "passed": false
+    },
+    "action_count_result": {
+      "actual": 1,
+      "rule": {
+        "operator": "exact",
+        "value": 2
+      },
+      "passed": false
+    }
+  }
+]
