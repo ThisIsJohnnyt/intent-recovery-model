@@ -1,0 +1,7 @@
+{
+  "train_count": 76,
+  "val_count": 6,
+  "byte_identical_to_existing_r2_val": true,
+  "parent_training_data_fingerprint": "e294c29f0497800d85fc7a15fdd8341471413e98627b5b86ab202fb22e386abc",
+  "candidate_training_data_fingerprint": "62bbee12130ea54f6cae3777eb990a9d54a35411ceeba75030755569c44982ae"
+}
