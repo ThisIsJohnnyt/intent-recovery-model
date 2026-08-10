@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "package_parent_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
+  "governing_document": "training/seed17_contrastive_replay_design_chatgpt.md",
+  "note": "All fingerprints in this file were independently recomputed by Claude from committed git blobs at the pinned parent commit, never copied from the design draft's own citations -- three of which were Windows-checkout bytes, corrected here.",
+  "executable_code": {
+    "contract_adapters.py": "c28a774941580bba3984b9c6d6d5ebf7c8d159afa10af20fe4cd4e4e2d89950e",
+    "evaluate_real_validation.py": "3ee74f4a49aeae52bcf1067088073e4164fda826aa9c4d0433163abde3740ff8",
+    "prepare_data.py": "2e620cf82a4dbfbc60fa71b9df914aab3086fdd4b2c33afde9685ec5a60480cc",
+    "prompt_contract_v2_candidate.py": "2069c6508cd3f342151f6c545598264c183e61dd1a66341ef5ea06fb56aa03ba",
+    "prompt_contract_v2_parser.py": "343699dad193d8b00c2d6c66ac66bc03bc966b1eeb9d96969195c4f02a687101",
+    "real_data_eval_logging.py": "f2470e7856bd500a11a4a8d020863478fb1417f752733a71fbda78bfd0ab903c",
+    "real_data_manifest.py": "ea39bc7a29ee6a13b2f61ff9fb53dc02f0ddd99d7b55198712e1f5210019b1ce",
+    "real_data_private.py": "8a5e20fe78846c8b1436c817e8cfa31e6c6564b1d72d8c8679d7a3140d23f47d",
+    "report_benchmark.py": "8b14f3436b4920eeaade8ad1dc39e898c4bdcfe6fca594251b3e56dfeb1de042",
+    "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
+    "run_seed17_contrastive_replay.py": "986fde38731906c300a5d78d0ade71d6bfe12f88242a28919db518275fde36d0",
+    "train.py": "730f7a388830cd3ac6092983a3474ef9f570203cc5ea83cd37c6c60bccd93217"
+  },
+  "governing_inputs_canonical_lf": {
+    "gold_v1.2.2_phase2_contrastive_derived_candidate.jsonl": "7760f377dcd7ab35b54fe6c2c274e6615a5641acaa73ec0a30da64d78db9df2d",
+    "data/processed_gold_v1.2.2_phase2_contrastive_v2contract_seed17/train.jsonl": "597b61202b4cc805dfc9eb3376e15d10583c13f41d8a44b7d9d13139acd5c658",
+    "data/processed_gold_v1.2.2_phase2_contrastive_v2contract_seed17/val.jsonl": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4",
+    "phase2_contrastive_attribution_composite_proposal.jsonl": "519823faf69bda2dcf74b816c63f15ecc16e5e902bc8f8bdee73a559326fba9c",
+    "gold_v1.2.2_phase2_derived_candidate.jsonl": "6e9e5f1bea8fc3cbcb615376a1d055bd273605d0f8c1e40a8c120720c8cb836c",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/train.jsonl": "8760378519365c4fe2ae4dcebdc6379214cc0fcf93442521f64d6d4508bafae6",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/val.jsonl": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4",
+    "../datasets/benchmark/gold_v1.2.1_probes.jsonl": "767fe21a1097b51cef38728dcff0ff9ca4cf280bde8e65a7d885729f40990c0f",
+    "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+  },
+  "corrections_from_design_draft": {
+    "gold_v1.2.2_phase2_derived_candidate.jsonl": {"draft_cited": "f738f9eba2e85086bf6019bffdd27410b7add5c566c086a1b3627703e14ad52b", "corrected_to": "6e9e5f1bea8fc3cbcb615376a1d055bd273605d0f8c1e40a8c120720c8cb836c", "reason": "draft value was the Windows CRLF-checkout hash, not the canonical git blob"},
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/train.jsonl": {"draft_cited": "02d81b3891a517a41cf3261b733f70f5268710b79b18e3b3819e8dbbcdd7cafb", "corrected_to": "8760378519365c4fe2ae4dcebdc6379214cc0fcf93442521f64d6d4508bafae6", "reason": "draft value was the Windows CRLF-checkout hash, not the canonical git blob"},
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/val.jsonl": {"draft_cited": "83abbc796187860b511b2c18c964b0757df4bc343ace50862ea15bd590715294", "corrected_to": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4", "reason": "draft value was the Windows CRLF-checkout hash, not the canonical git blob"},
+    "../datasets/benchmark/gold_v1.2.1_probes.jsonl": {"draft_cited": "044708641c8dd584f334f16bde21ed89550bb7c464160827433f825eb0c48e94", "corrected_to": "767fe21a1097b51cef38728dcff0ff9ca4cf280bde8e65a7d885729f40990c0f", "reason": "not cited under this specific key in the design draft, but this working-tree-checkout hash is the value every prior script in this repo (including the still-uncorrected corpus-derivation script) has pinned; it is not the canonical git blob"}
+  },
+  "training_data_fingerprints": {
+    "treatment": "62bbee12130ea54f6cae3777eb990a9d54a35411ceeba75030755569c44982ae",
+    "comparator": "9d6817152087685b653830ad671f9304e4226b095a202ca57f5ca52bc3a14c1f"
+  },
+  "dependency_versions": {
+    "torch": "2.11.0+cu128",
+    "transformers": "4.57.6",
+    "datasets": "5.0.0",
+    "accelerate": "1.14.0",
+    "sentencepiece": "0.2.2"
+  },
+  "base_model": {
+    "repo_id": "google/flan-t5-base",
+    "pinned_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2"
+  },
+  "real_validation_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "status": "draft_for_claude_independent_review_no_compute",
+  "repository": "ThisIsJohnnyt/intent-recovery-model",
+  "pinned_implementation_milestone": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
+  "seed": 17,
+  "contract": "v2",
+  "arms": {
+    "treatment": {
+      "role": "sole_decision_bearing_candidate",
+      "candidate_path": "training/gold_v1.2.2_phase2_contrastive_derived_candidate.jsonl",
+      "candidate_record_count": 82,
+      "candidate_canonical_lf_sha256": "7760f377dcd7ab35b54fe6c2c274e6615a5641acaa73ec0a30da64d78db9df2d",
+      "data_dir": "training/data/processed_gold_v1.2.2_phase2_contrastive_v2contract_seed17",
+      "train_count": 76,
+      "train_canonical_lf_sha256": "597b61202b4cc805dfc9eb3376e15d10583c13f41d8a44b7d9d13139acd5c658",
+      "val_count": 6,
+      "val_canonical_lf_sha256": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4",
+      "training_data_fingerprint": "62bbee12130ea54f6cae3777eb990a9d54a35411ceeba75030755569c44982ae",
+      "max_steps": 720
+    },
+    "comparator": {
+      "role": "diagnostic_corpus_comparator_never_promotion_candidate",
+      "candidate_path": "training/gold_v1.2.2_phase2_derived_candidate.jsonl",
+      "candidate_record_count": 78,
+      "data_dir": "training/data/processed_gold_v1.2.2_phase2_v2contract_seed17",
+      "train_count": 72,
+      "val_count": 6,
+      "training_data_fingerprint": "9d6817152087685b653830ad671f9304e4226b095a202ca57f5ca52bc3a14c1f",
+      "max_steps": 720,
+      "implementation_requirement": "Claude must recompute and pin canonical git-blob SHA-256 values at the pinned milestone; do not reuse checkout-byte hashes as blob hashes."
+    }
+  },
+  "shared_configuration": {
+    "base_model": "google/flan-t5-base",
+    "base_model_snapshot_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "per_device_train_batch_size": 4,
+    "per_device_eval_batch_size": 4,
+    "learning_rate": "3e-4",
+    "weight_decay": 0.01,
+    "load_best_model_at_end": false,
+    "max_input_tokens": 512,
+    "max_target_tokens": 512,
+    "generation_max_new_tokens": 300,
+    "generation_repetition_penalty": 1.3,
+    "precision": "bf16_on_cuda"
+  },
+  "benchmarks": {
+    "protected16": {
+      "path": "datasets/benchmark/gold_v1.2.1_probes.jsonl",
+      "record_count": 16,
+      "canonical_sha256": "044708641c8dd584f334f16bde21ed89550bb7c464160827433f825eb0c48e94"
+    },
+    "acceptance10": {
+      "path": "datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl",
+      "record_count": 10,
+      "canonical_sha256": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+    }
+  },
+  "gate6_required_pass_set": [
+    "01",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "09",
+    "10",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16"
+  ],
+  "dependency_versions": {
+    "torch": "2.11.0+cu128",
+    "transformers": "4.57.6",
+    "datasets": "5.0.0",
+    "accelerate": "1.14.0",
+    "sentencepiece": "0.2.2"
+  },
+  "real_validation_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "execution_order": [
+    "treatment_train",
+    "treatment_protected16_raw_eval",
+    "treatment_acceptance10_raw_eval",
+    "comparator_train",
+    "comparator_protected16_raw_eval",
+    "comparator_acceptance10_raw_eval"
+  ],
+  "outcomes": ["C17-A", "C17-B", "C17-C", "C17-D", "C17-X"]
+}

@@ -1,0 +1,126 @@
+{
+  "timestamp_utc": "2026-08-10T21:07:34.856777+00:00",
+  "git": {
+    "head_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
+    "origin_main_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
+    "head_matches_origin_main": true,
+    "head_parent_commit": "398874504f2ea3bc8a710a2de56225381ea3900f",
+    "changed_files_since_parent": [],
+    "working_tree_clean": false,
+    "working_tree_status_raw": "?? training/controlled_seed17_contrastive_replay_frozen_fingerprints.json\n?? training/controlled_seed17_contrastive_replay_frozen_manifest.md\n?? training/controlled_seed17_contrastive_replay_manifest_dryrun_receipt_sample.json\n?? training/controlled_seed17_phase2_replay_run/control/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/control/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/train_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/primary/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/train_log.txt\n?? training/phase2_contrastive_attribution_design_claude_cross_review.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt_r2.md\n?? training/phase2_contrastive_implementation_staged_manifest_claude.md\n?? training/phase2_seed17_p2d_postmortem_final_decision_memo_chatgpt.md\n?? training/run_seed17_contrastive_replay.py\n?? training/seed17_contrastive_replay_design_chatgpt.md\n?? training/seed17_contrastive_replay_design_constants_chatgpt.json\n?? training/test_run_seed17_contrastive_replay.py"
+  },
+  "package_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
+  "package_commit_parent": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
+  "planned_commands": {
+    "treatment": [
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe train.py --seed 17 --data-dir data/processed_gold_v1.2.2_phase2_contrastive_v2contract_seed17 --output-dir controlled_seed17_contrastive_replay_run\\treatment\\checkpoint --max-steps 720",
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/gold_v1.2.1_probes.jsonl controlled_seed17_contrastive_replay_run\\treatment\\checkpoint\\final controlled_seed17_contrastive_replay_run\\treatment\\protected16_results.json --contract=v2",
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl controlled_seed17_contrastive_replay_run\\treatment\\checkpoint\\final controlled_seed17_contrastive_replay_run\\treatment\\acceptance10_results.json --contract=v2"
+    ],
+    "comparator": [
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe train.py --seed 17 --data-dir data/processed_gold_v1.2.2_phase2_v2contract_seed17 --output-dir controlled_seed17_contrastive_replay_run\\comparator\\checkpoint --max-steps 720",
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/gold_v1.2.1_probes.jsonl controlled_seed17_contrastive_replay_run\\comparator\\checkpoint\\final controlled_seed17_contrastive_replay_run\\comparator\\protected16_results.json --contract=v2",
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl controlled_seed17_contrastive_replay_run\\comparator\\checkpoint\\final controlled_seed17_contrastive_replay_run\\comparator\\acceptance10_results.json --contract=v2"
+    ]
+  },
+  "environment": {
+    "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "torch": "2.11.0+cu128",
+    "transformers": "4.57.6",
+    "datasets": "5.0.0",
+    "accelerate": "1.14.0",
+    "sentencepiece": "0.2.2",
+    "huggingface_hub": "0.36.2",
+    "cuda_available": true
+  },
+  "shared_configuration": {
+    "seed": 17,
+    "contract": "v2",
+    "base_model": "google/flan-t5-base",
+    "base_model_snapshot_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "batch_size": 4,
+    "learning_rate": "3e-4",
+    "weight_decay": 0.01,
+    "max_steps": 720,
+    "protected_benchmark": "../datasets/benchmark/gold_v1.2.1_probes.jsonl",
+    "acceptance_benchmark": "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl"
+  },
+  "arms": {
+    "treatment": {
+      "data_dir": "data/processed_gold_v1.2.2_phase2_contrastive_v2contract_seed17",
+      "candidate_record_count": 82,
+      "train_count": 76,
+      "val_count": 6,
+      "max_steps": 720,
+      "role": "sole decision-bearing candidate"
+    },
+    "comparator": {
+      "data_dir": "data/processed_gold_v1.2.2_phase2_v2contract_seed17",
+      "candidate_record_count": 78,
+      "train_count": 72,
+      "val_count": 6,
+      "max_steps": 720,
+      "role": "diagnostic corpus comparator, never a promotion candidate"
+    }
+  },
+  "gate6_required_pass_set": [
+    "01",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "09",
+    "10",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16"
+  ],
+  "governing_document": "training/seed17_contrastive_replay_design_chatgpt.md",
+  "resolved_configuration": {
+    "treatment_checkpoint_dir": "controlled_seed17_contrastive_replay_run\\treatment\\checkpoint",
+    "comparator_checkpoint_dir": "controlled_seed17_contrastive_replay_run\\comparator\\checkpoint"
+  },
+  "base_model": {
+    "repo_id": "google/flan-t5-base",
+    "pinned_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "file_fingerprints": {
+      "config.json": "7c1853dbfa0e4aac093eb109a358b6ab25fe86b7c15185a91322f0ed26f0f940",
+      "generation_config.json": "f5a1c7e2be8092018d8835128987edf0111637dd98e90599cc80310fef75d95a",
+      "model.safetensors": "1dfb70afdcedceb9f9fae2f9b68e004ad934361fb35b9b2bd50b45ea90790fc8",
+      "special_tokens_map.json": "5c87151ef0f72a99d1f766a4c418bd2a1f90aaa30a8e22fe5eca9641daebb64f",
+      "spiece.model": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86",
+      "tokenizer.json": "fe2ebbbbde2985be723e0ce18217853e4020c5e9d35bd07be2c27ab9d3ead57a",
+      "tokenizer_config.json": "4c55124402e4ce48c7125d04b9af152a125eda9e7c80829f8f99f2ec69f3f68d"
+    }
+  },
+  "executable_code_fingerprints": {
+    "prompt_contract_v2_candidate.py": "2069c6508cd3f342151f6c545598264c183e61dd1a66341ef5ea06fb56aa03ba",
+    "real_data_manifest.py": "ea39bc7a29ee6a13b2f61ff9fb53dc02f0ddd99d7b55198712e1f5210019b1ce",
+    "run_seed17_contrastive_replay.py": "986fde38731906c300a5d78d0ade71d6bfe12f88242a28919db518275fde36d0",
+    "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
+    "real_data_private.py": "8a5e20fe78846c8b1436c817e8cfa31e6c6564b1d72d8c8679d7a3140d23f47d",
+    "contract_adapters.py": "c28a774941580bba3984b9c6d6d5ebf7c8d159afa10af20fe4cd4e4e2d89950e",
+    "prompt_contract_v2_parser.py": "343699dad193d8b00c2d6c66ac66bc03bc966b1eeb9d96969195c4f02a687101",
+    "real_data_eval_logging.py": "f2470e7856bd500a11a4a8d020863478fb1417f752733a71fbda78bfd0ab903c",
+    "report_benchmark.py": "8b14f3436b4920eeaade8ad1dc39e898c4bdcfe6fca594251b3e56dfeb1de042",
+    "evaluate_real_validation.py": "3ee74f4a49aeae52bcf1067088073e4164fda826aa9c4d0433163abde3740ff8",
+    "prepare_data.py": "2e620cf82a4dbfbc60fa71b9df914aab3086fdd4b2c33afde9685ec5a60480cc",
+    "train.py": "730f7a388830cd3ac6092983a3474ef9f570203cc5ea83cd37c6c60bccd93217"
+  },
+  "governing_input_canonical_fingerprints": {
+    "gold_v1.2.2_phase2_contrastive_derived_candidate.jsonl": "7760f377dcd7ab35b54fe6c2c274e6615a5641acaa73ec0a30da64d78db9df2d",
+    "data/processed_gold_v1.2.2_phase2_contrastive_v2contract_seed17/train.jsonl": "597b61202b4cc805dfc9eb3376e15d10583c13f41d8a44b7d9d13139acd5c658",
+    "data/processed_gold_v1.2.2_phase2_contrastive_v2contract_seed17/val.jsonl": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4",
+    "phase2_contrastive_attribution_composite_proposal.jsonl": "519823faf69bda2dcf74b816c63f15ecc16e5e902bc8f8bdee73a559326fba9c",
+    "gold_v1.2.2_phase2_derived_candidate.jsonl": "6e9e5f1bea8fc3cbcb615376a1d055bd273605d0f8c1e40a8c120720c8cb836c",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/train.jsonl": "8760378519365c4fe2ae4dcebdc6379214cc0fcf93442521f64d6d4508bafae6",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/val.jsonl": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4",
+    "../datasets/benchmark/gold_v1.2.1_probes.jsonl": "767fe21a1097b51cef38728dcff0ff9ca4cf280bde8e65a7d885729f40990c0f",
+    "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+  },
+  "real_validation_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "_sample_disclaimer": "LABELED NON-EXECUTION SAMPLE. Generated by calling build_receipt() directly (read-only: touches git, filesystem, and already-imported module __version__ attributes only) -- never via --confirm-execute, no subprocess was started, no training or inference occurred. package_commit equals package_commit_parent here because this sample was generated before the package itself was committed. Regenerated 2026-08-10 after correcting the module docstrings stale claim about real_validation.jsonl (has no committed blob but IS covered by the committed datasets/.gitignore; placeholder creation happens inside bootstrap_clean_tree_then_real_validation(), strictly after clean-tree verification, not before preflight). Regenerated again the same day via write_bytes() directly (not print() + shell redirection, which applies Windows newline translation and had silently produced a CRLF-encoded working-tree copy -- caught only by independently hashing the actual staged git blob before commit, not by re-checking the working-tree file, which stayed consistent with itself and hid the problem)."
+}
