@@ -117,23 +117,35 @@ TRAINING_DIR = Path(__file__).parent
 REPO_ROOT = TRAINING_DIR.parent
 FROZEN_FINGERPRINTS_PATH = TRAINING_DIR / "controlled_seed17_contrastive_replay_frozen_fingerprints.json"
 
-# The commit this package was built against -- the milestone named in the
-# governing design's own header. This is the PARENT of the eventual
-# package commit, never a value HEAD itself is required to equal (same
-# reasoning as the prior Phase-2 replay package: committing this package
-# necessarily advances HEAD past this commit). Preflight requires HEAD to
-# be a direct child of this commit whose delta contains exactly the
-# reviewed package files -- see verify_package_commit().
-PINNED_PARENT_COMMIT = "17c58bf102b7cb442c312f916b3c7c52e3cd8815"
+# CORPUS_BASELINE_COMMIT is the corpus/input provenance root -- the
+# milestone the treatment/comparator corpora, splits, and benchmarks are
+# all pinned against (see the frozen manifest and CANONICAL_LF_GOVERNING_INPUTS).
+# It is documentation only from here on; no active git-ancestry check
+# requires HEAD to descend from it directly. The commit boundary that
+# actually gates execution is PINNED_PARENT_COMMIT below.
+CORPUS_BASELINE_COMMIT = "17c58bf102b7cb442c312f916b3c7c52e3cd8815"
+
+# Corrected 2026-08-10 (autocrlf-in-executable-code correction round): the
+# first package commit (`2595f563...`, parent `17c58bf...`) shipped with a
+# real defect -- verify_frozen_executable_code() did a flat hash
+# comparison, so a genuine fresh `git worktree add` (which materializes
+# every text file with CRLF under this repository's core.autocrlf=true,
+# regardless of what's actually stored) failed preflight before any
+# subprocess started. Confirmed via an actual execution attempt: zero
+# compute, zero experiment-directory creation, exactly the fail-closed
+# behavior this design requires. This correction is a direct child of
+# that first package commit, not of CORPUS_BASELINE_COMMIT -- committing
+# a correction necessarily advances HEAD past whatever it corrects, so
+# the check is always against the immediately preceding package commit,
+# never a fixed historical point.
+PINNED_PARENT_COMMIT = "2595f563712ae0989f6f26f646c841eede900ca0"
 
 EXPECTED_PACKAGE_COMMIT_FILES = frozenset({
-    "training/seed17_contrastive_replay_design_chatgpt.md",
-    "training/seed17_contrastive_replay_design_constants_chatgpt.json",
-    "training/controlled_seed17_contrastive_replay_frozen_manifest.md",
     "training/controlled_seed17_contrastive_replay_frozen_fingerprints.json",
+    "training/controlled_seed17_contrastive_replay_frozen_manifest.md",
+    "training/controlled_seed17_contrastive_replay_manifest_dryrun_receipt_sample.json",
     "training/run_seed17_contrastive_replay.py",
     "training/test_run_seed17_contrastive_replay.py",
-    "training/controlled_seed17_contrastive_replay_manifest_dryrun_receipt_sample.json",
 })
 
 HF_REPO_ID = "google/flan-t5-base"
@@ -443,12 +455,26 @@ def compute_import_closure(entry_points: list[str]) -> set[str]:
     return seen
 
 
-def fingerprint_import_closure(entry_points: list[str] | None = None) -> dict[str, str]:
-    closure = compute_import_closure(entry_points if entry_points is not None else EXECUTABLE_CODE_ENTRY_POINTS)
-    return {name: file_fingerprint(TRAINING_DIR / name) for name in closure}
 
+def verify_frozen_executable_code(lock: dict | None = None) -> dict[str, bytes]:
+    """Corrected 2026-08-10: was a flat hash comparison against raw
+    checkout bytes, so a genuine fresh `git worktree add` -- which
+    materializes every text file with CRLF under this repository's
+    `core.autocrlf=true`, regardless of what's actually stored -- failed
+    this check before any subprocess started (confirmed via a real
+    execution attempt, zero compute incurred). Now canonicalizes each
+    file exactly like the nine governing data inputs: accepts the pinned
+    canonical LF bytes or a uniform CRLF re-encoding of exactly those
+    bytes, rejects everything else. The closure-set comparison (a new or
+    removed local import) is unchanged and still runs first, independent
+    of any byte-level check.
 
-def verify_frozen_executable_code(lock: dict | None = None) -> None:
+    Returns the verified canonical-LF byte map, keyed by filename, so
+    callers never need a second, unverified raw read of these files --
+    fixes the related finding that build_receipt() used to re-read raw
+    checkout bytes for its executable_code fingerprints, which would
+    silently reintroduce a platform-dependent value into the receipt even
+    after this exact check had already passed."""
     lock = lock if lock is not None else load_frozen_fingerprints()
     expected = lock["executable_code"]
     current_closure = compute_import_closure(EXECUTABLE_CODE_ENTRY_POINTS)
@@ -460,8 +486,12 @@ def verify_frozen_executable_code(lock: dict | None = None) -> None:
             f"set -- the import graph itself has drifted. Missing: {missing}. Unexpected extra (new "
             f"local import introduced somewhere in the closure): {extra}."
         )
-    actual = {name: file_fingerprint(TRAINING_DIR / name) for name in current_closure}
-    _compare_fingerprint_dicts(expected, actual, "executable code")
+    canonical_bytes: dict[str, bytes] = {}
+    for name in sorted(current_closure):
+        raw = (TRAINING_DIR / name).read_bytes()
+        canonical_bytes[name] = canonicalize_pinned_lf_bytes(raw, expected[name], f"executable code: {name}")
+    print(f"[executable code OK] all {len(current_closure)} file(s) match the frozen lock file exactly (checkout-portable).")
+    return canonical_bytes
 
 
 def verify_pinned_dependency_versions(lock: dict | None = None) -> None:
@@ -520,17 +550,17 @@ def verify_package_commit(state: dict | None = None) -> None:
         raise ReplayPreflightError(
             f"HEAD's parent is {state['head_parent_commit']}, expected the pinned parent commit "
             f"{PINNED_PARENT_COMMIT}. The package commit must be a direct child of the reviewed "
-            "corpus-implementation commit -- not the parent commit itself (package not yet "
-            "committed), not a later descendant, and not a commit on a different history."
+            "prior package commit -- not the parent commit itself (correction not yet committed), "
+            "not a later descendant, and not a commit on a different history."
         )
     changed = set(state["changed_files_since_parent"] or [])
     if changed != EXPECTED_PACKAGE_COMMIT_FILES:
         missing = sorted(EXPECTED_PACKAGE_COMMIT_FILES - changed)
         extra = sorted(changed - EXPECTED_PACKAGE_COMMIT_FILES)
         raise ReplayPreflightError(
-            "The commit delta from the pinned parent to HEAD does not contain exactly the seven "
-            f"reviewed package files. Missing: {missing}. Unexpected extra (unreviewed file riding "
-            f"along in the same commit): {extra}."
+            f"The commit delta from the pinned parent to HEAD does not contain exactly the "
+            f"{len(EXPECTED_PACKAGE_COMMIT_FILES)} reviewed package files. Missing: {missing}. "
+            f"Unexpected extra (unreviewed file riding along in the same commit): {extra}."
         )
     print(
         f"[package commit OK] HEAD ({state['head_commit']}) is a direct child of the pinned parent "
@@ -942,9 +972,19 @@ def verify_completed_steps(output_dir: Path, expected_steps: int, run_name: str)
     print(f"[step count OK] {run_name}: {last_checkpoint.name}/trainer_state.json confirms exactly {actual_steps} step(s).")
 
 
-def build_receipt(experiment_dir: Path, commands: dict[str, list[str]]) -> dict:
+def build_receipt(experiment_dir: Path, commands: dict[str, list[str]], executable_code_canonical: dict[str, bytes]) -> dict:
     """Read-only: touches git, the filesystem, and already-imported module
-    __version__ attributes -- never loads a model or starts a subprocess."""
+    __version__ attributes -- never loads a model or starts a subprocess.
+
+    Corrected 2026-08-10: previously re-read every executable-code file's
+    raw checkout bytes here, independently of verify_frozen_executable_code()'s
+    own check -- on a genuine fresh checkout (CRLF, per this repository's
+    core.autocrlf=true) that would have silently written a
+    platform-dependent fingerprint into the receipt even after
+    verification had already passed against the canonical form.
+    executable_code_canonical must be the exact dict verify_frozen_executable_code()
+    returned this run; this function only hashes those already-verified
+    canonical-LF bytes, never reads the files again."""
     state = git_state()
     receipt = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -997,7 +1037,7 @@ def build_receipt(experiment_dir: Path, commands: dict[str, list[str]]) -> dict:
             "pinned_revision": PINNED_BASE_MODEL_REVISION,
             "file_fingerprints": PINNED_BASE_MODEL_FILE_FINGERPRINTS,
         },
-        "executable_code_fingerprints": {name: file_fingerprint(TRAINING_DIR / name) for name in compute_import_closure(EXECUTABLE_CODE_ENTRY_POINTS)},
+        "executable_code_canonical_fingerprints": {name: hashlib.sha256(data).hexdigest() for name, data in executable_code_canonical.items()},
         "governing_input_canonical_fingerprints": dict(CANONICAL_LF_GOVERNING_INPUTS),
         "real_validation_fingerprint": file_fingerprint(TRAINING_DIR / REAL_VALIDATION_REL_PATH),
     }
@@ -1074,7 +1114,7 @@ def main() -> None:
     # but adopted as defense-in-depth regardless) failure mode this guards.
     bootstrap_clean_tree_then_real_validation(state)
     verify_pinned_dependency_versions(lock)
-    verify_frozen_executable_code(lock)
+    executable_code_canonical = verify_frozen_executable_code(lock)
     canonical_inputs = load_canonical_governing_inputs()
     verify_benchmark_counts(canonical_inputs)
     verify_arm_split_and_fingerprint(
@@ -1096,7 +1136,7 @@ def main() -> None:
         raise ReplayPreflightError(f"Experiment root already exists: {experiment_dir}. Refusing to reuse or overwrite it.")
 
     create_exclusive_experiment_dir(experiment_dir)
-    receipt = build_receipt(experiment_dir, commands)
+    receipt = build_receipt(experiment_dir, commands, executable_code_canonical)
     write_exclusive(experiment_dir / "receipt.json", json.dumps(receipt, indent=2, ensure_ascii=False))
     print(f"[receipt written] {experiment_dir / 'receipt.json'}")
 

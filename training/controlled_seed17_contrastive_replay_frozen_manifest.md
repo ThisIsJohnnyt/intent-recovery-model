@@ -3,7 +3,8 @@
 **Date:** 2026-08-10
 **Author:** Claude, implementing ChatGPT's governing design after independent review and agreement
 **Governing design:** `training/seed17_contrastive_replay_design_chatgpt.md`
-**Package parent commit:** `17c58bf102b7cb442c312f916b3c7c52e3cd8815` (must be HEAD's direct parent at execution time)
+**Package parent commit:** `2595f563712ae0989f6f26f646c841eede900ca0` (must be HEAD's direct parent at execution time — advanced from `17c58bf...` in the third review round, §1.2, since this correction is a direct child of the first replay-package commit, not of the corpus baseline)
+**Corpus baseline commit:** `17c58bf102b7cb442c312f916b3c7c52e3cd8815` (documentation only from here on — the commit the treatment/comparator corpora, splits, and benchmarks are all pinned against; no active git-ancestry check requires HEAD to descend from it directly)
 **Status:** Static package only. No training, inference, or compute of any kind performed by this document or its sibling package files.
 
 ## 1. Independent review findings (before implementation)
@@ -62,6 +63,63 @@ Two non-blocking findings were both confirmed exactly as reported and fixed:
   `TRAINING_DIR`; an absolute path outside `TRAINING_DIR` now fails with a controlled diagnostic
   instead of a raw traceback. The default path was already correct and is unchanged.
 
+## 1.2 Third review round (2026-08-10): a real execution attempt, one confirmed defect, zero compute
+
+The prior package (commit `2595f563...`) was fully accepted through two review rounds and explicitly
+authorized for execution. Claude set up a genuine fresh `git worktree add` at exactly that commit
+(verified: correct HEAD, clean tree, `datasets/.gitignore` present, `real_validation.jsonl` correctly
+absent beforehand) and ran the wrapper with `--confirm-execute` for real.
+
+**Result: preflight failure, before any experiment directory was created or any subprocess started.**
+Confirmed directly, not assumed: no `controlled_seed17_contrastive_replay_run/` directory exists after
+the attempt; no checkpoint, log, or result file of any kind was written; zero GPU time, zero compute
+cost. This is the wrapper's fail-closed design working exactly as intended — an unauthorized or
+defective execution stops before doing anything, not partway through.
+
+**Root cause, fully diagnosed:** `verify_frozen_executable_code()` did a flat hash comparison against
+raw checkout bytes. This repository's `core.autocrlf=true` materializes *every* text file with CRLF on
+a genuine checkout (`git worktree add`, `git clone`, `git checkout`) — unconditionally, regardless of
+what's actually stored — but the pinned lock hashes had been computed from Claude's main working
+directory, which is a mix of git-checked-out CRLF files and tool-written LF files that happened, for
+only 5 of the 12 executable-code closure files, to still be LF. Those 5 (`contract_adapters.py`,
+`prompt_contract_v2_candidate.py`, `prompt_contract_v2_parser.py`, `run_benchmark.py`,
+`run_seed17_contrastive_replay.py`) failed outright against the real fresh checkout. The other 7 had
+*also* been mispinned (to CRLF-checkout bytes, not the canonical LF blob) but never surfaced, because
+a genuine fresh checkout's CRLF happened to coincidentally match the old, wrong pin. **No prior review
+round caught this because every "live check against real pinned files" in the test suite ran against
+Claude's main working directory, never an actual fresh checkout** — this was the first time the
+wrapper was genuinely checked out and run.
+
+**Fix applied**, all independently verified end-to-end, including against the actual fresh worktree
+that originally failed:
+
+1. `verify_frozen_executable_code()` now canonicalizes each of the 12 closure files exactly like the
+   nine governing data inputs (accepts pinned canonical LF or a uniform CRLF checkout of exactly those
+   bytes; rejects everything else) and returns the verified canonical-LF byte map.
+2. All 12 executable-code lock entries repinned to their canonical git-blob (LF) hash — recomputed
+   directly from `git show 2595f563:training/<file>`, not copied from the prior (partially wrong) lock.
+   7 of the 11 unchanged files actually needed a new value; the other 4 happened to already be correct.
+3. `build_receipt()` no longer re-reads raw checkout bytes for its executable-code fingerprints (which
+   would have silently reintroduced a platform-dependent value into the receipt even after
+   verification passed) — it now receives and records the exact canonical byte map
+   `verify_frozen_executable_code()` already verified. Receipt field renamed
+   `executable_code_canonical_fingerprints` to document this explicitly, matching
+   `governing_input_canonical_fingerprints`'s existing naming.
+4. `PINNED_PARENT_COMMIT` advanced to `2595f563...` (see header); `EXPECTED_PACKAGE_COMMIT_FILES`
+   narrowed to the exact five-file correction delta (§6 lists all seven package files' roles; only
+   five change in this round: the lock file, this manifest, the dry-run receipt sample, the wrapper,
+   and its test suite — the two ChatGPT-authored design documents are untouched).
+5. Added a real scratch-git-repository regression test (`core.autocrlf=true` explicitly configured, a
+   genuine `git worktree add`) that asserts CRLF materialization actually occurred *before* proving
+   the corrected verifier passes against it — the only way to catch this exact bug class in an
+   automated suite rather than a live execution attempt. All prior rejection tests (mixed endings,
+   bare CR, BOM, missing newline, content drift, closure-set drift) remain, now also covering the
+   executable-code path directly rather than only the data-input path.
+
+The fresh worktree from the failed attempt was reused (not recreated) to independently confirm the
+fix against the exact same real CRLF checkout that originally failed, before this correction was
+written up.
+
 ## 2. Frozen arms
 
 ### 2.1 Treatment (sole decision-bearing candidate)
@@ -95,14 +153,20 @@ Two non-blocking findings were both confirmed exactly as reported and fixed:
 
 All governing inputs are verified via `canonicalize_pinned_lf_bytes()`: accepts the pinned canonical
 LF bytes or a uniform CRLF checkout of exactly those bytes, rejects mixed endings, bare CR, BOM,
-missing terminal newline, and any content drift after normalization.
+missing terminal newline, and any content drift after normalization. As of the third review round
+(§1.2), the same function verifies all 12 executable-code closure files too, not just the nine
+governing data inputs — a real fresh-checkout execution attempt found the executable-code path had
+been left on a flat, checkout-dependent comparison.
 
 ## 3. Execution-environment requirement
 
-Run from a **fresh linked worktree or fresh clone at the pinned parent commit**, not the main Windows
-checkout directly — the main checkout deliberately carries legitimate untracked historical artifacts
-(prior replay run logs/checkpoints, earlier design/review docs) that would otherwise always fail the
-wrapper's unmodified, strict `git status --porcelain == ""` check. This avoids needing any allowlist.
+Run from a **fresh linked worktree or fresh clone at the exact corrective package commit** (the
+not-yet-created commit whose immediate parent is `2595f563712ae0989f6f26f646c841eede900ca0` — never
+at `2595f563...` itself, which `verify_package_commit()` requires to be HEAD's *parent*, not HEAD),
+not the main Windows checkout directly — the main checkout deliberately carries legitimate untracked
+historical artifacts (prior replay run logs/checkpoints, earlier design/review docs) that would
+otherwise always fail the wrapper's unmodified, strict `git status --porcelain == ""` check. This
+avoids needing any allowlist.
 
 `datasets/real_validation.jsonl` has no committed blob of its own — it's listed in the committed,
 tracked `datasets/.gitignore` alongside `real_holdout.jsonl` and `private/` — so a fresh worktree or

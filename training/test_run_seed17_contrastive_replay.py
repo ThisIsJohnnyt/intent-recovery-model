@@ -16,7 +16,7 @@ ensure_real_validation_placeholder (create-if-missing, never overwrite);
 verify_arm_split_and_fingerprint for both arm shapes; verify_treatment_proposal_membership;
 verify_command_shape's now-symmetric --max-steps 720 check with explicit
 cross-arm data-directory-confusion rejection; and verify_package_commit
-against the new seven-file package set and pinned parent commit.
+against the package's own commit set and pinned parent commit.
 
 Revised 2026-08-10 per ChatGPT's second review round: added
 bootstrap_clean_tree_then_real_validation regression tests against three
@@ -27,6 +27,26 @@ resolve_experiment_dir tests (relative path resolves against TRAINING_DIR,
 not cwd; an absolute path outside TRAINING_DIR fails with a controlled
 diagnostic; the actual reported build_commands() ValueError reproduction
 no longer occurs).
+
+Revised again 2026-08-10 (autocrlf-in-executable-code correction round),
+after a real execution attempt against a genuine fresh `git worktree add`
+found verify_frozen_executable_code() doing a flat hash comparison --
+this repository's core.autocrlf=true materializes every text file with
+CRLF on any real checkout, regardless of what's stored, and the prior
+flat comparison had never been exercised against a real checkout by this
+suite, only against the main working directory (a mix of git-checked-out
+CRLF files and tool-written LF files that happened, for some files, to
+coincide). Added a real scratch-repository regression test with
+core.autocrlf=true explicitly configured and a genuine `git worktree add`
+-- asserting CRLF materialization actually occurred before proving the
+canonicalized 12-file verifier passes against it, which is the only way
+to catch this class of bug in an automated suite rather than a live
+execution attempt. Added coverage for verify_frozen_executable_code's
+return value (the canonical-LF byte map, consumed by build_receipt() so
+it never re-reads raw checkout bytes) and closure-set drift. Updated
+verify_package_commit's real scratch-repository tests' dummy file count
+to five, matching this correction's own actual scope; the mechanism
+itself was already generic and needed no behavioral change.
 """
 import json
 import subprocess
@@ -265,7 +285,7 @@ check("HEAD diverged from origin/main fails closed", msg is not None)
 
 # ---------------------------------------------------------------------------
 # verify_package_commit -- real scratch git repository, adapted for this
-# package's seven-file set and new pinned parent commit.
+# package's five-file corrective set and new pinned parent commit.
 # ---------------------------------------------------------------------------
 
 print("\n=== verify_package_commit (real scratch git repository) ===")
@@ -293,11 +313,9 @@ def commit_files(tmp_path: Path, files: dict[str, str], message: str) -> str:
 TEST_PACKAGE_FILES = {
     "training/pkg_a.md": "a",
     "training/pkg_b.json": "b",
-    "training/pkg_c.md": "c",
-    "training/pkg_d.json": "d",
+    "training/pkg_c.json": "c",
+    "training/pkg_d.py": "d",
     "training/pkg_e.py": "e",
-    "training/pkg_f.py": "f",
-    "training/pkg_g.json": "g",
 }
 
 with tempfile.TemporaryDirectory() as tmp:
@@ -319,7 +337,7 @@ with tempfile.TemporaryDirectory() as tmp:
         commit_files(tmp_path, TEST_PACKAGE_FILES, "add the reviewed package")
         state = w.git_state()
         msg = expect_system_exit(w.verify_package_commit, state)
-        check("a direct child commit containing exactly the expected seven files passes", msg is None, detail=str(msg))
+        check("a direct child commit containing exactly the expected five files passes", msg is None, detail=str(msg))
     finally:
         w.REPO_ROOT = _orig_repo_root
         w.PINNED_PARENT_COMMIT = _orig_pinned_parent
@@ -872,6 +890,161 @@ finally:
 
 
 # ---------------------------------------------------------------------------
+# verify_frozen_executable_code -- added 2026-08-10 (autocrlf-in-executable-
+# code correction round). Synthetic closure-set-drift and canonicalization
+# coverage first (using write_bytes(), never write_text(), so these
+# fixtures are genuinely LF and don't accidentally inherit Windows'
+# platform-default newline translation the way the OLD wrapper's
+# synthetic import-closure tests were vulnerable to); then the real
+# scratch-repository regression that actually reproduces the failure mode
+# a live execution attempt found.
+# ---------------------------------------------------------------------------
+
+print("\n=== verify_frozen_executable_code (synthetic closure + canonicalization) ===")
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmp_path = Path(tmp)
+    entry_lf = b"import mid\nimport os\n"
+    mid_lf = b"import leaf\nimport sys\n"
+    leaf_lf = b"import json\n"
+    (tmp_path / "entry.py").write_bytes(entry_lf)
+    (tmp_path / "mid.py").write_bytes(mid_lf)
+    (tmp_path / "leaf.py").write_bytes(leaf_lf)
+    (tmp_path / "unrelated.py").write_bytes(b"import re\n")
+
+    _orig_training_dir, _orig_entry_points = w.TRAINING_DIR, w.EXECUTABLE_CODE_ENTRY_POINTS
+    w.TRAINING_DIR = tmp_path
+    w.EXECUTABLE_CODE_ENTRY_POINTS = ["entry.py"]
+    try:
+        closure = w.compute_import_closure(["entry.py"])
+        check("closure includes the entry point, a direct import, and a transitive import", closure == {"entry.py", "mid.py", "leaf.py"})
+        check("closure excludes an unreferenced local file", "unrelated.py" not in closure)
+
+        import hashlib as _hashlib
+
+        lf_lock = {"executable_code": {
+            "entry.py": _hashlib.sha256(entry_lf).hexdigest(),
+            "mid.py": _hashlib.sha256(mid_lf).hexdigest(),
+            "leaf.py": _hashlib.sha256(leaf_lf).hexdigest(),
+        }}
+        result = None
+        try:
+            result = w.verify_frozen_executable_code(lf_lock)
+        except SystemExit as e:
+            result = str(e)
+        check(
+            "LF checkout matches its own canonical pin and returns the exact canonical byte map",
+            result == {"entry.py": entry_lf, "mid.py": mid_lf, "leaf.py": leaf_lf},
+            detail=str(result),
+        )
+
+        # Uniform CRLF materialization (what a genuine checkout under
+        # core.autocrlf=true actually produces) of the exact same content
+        # must still pass, canonicalizing back to the LF pin.
+        (tmp_path / "entry.py").write_bytes(entry_lf.replace(b"\n", b"\r\n"))
+        (tmp_path / "mid.py").write_bytes(mid_lf.replace(b"\n", b"\r\n"))
+        (tmp_path / "leaf.py").write_bytes(leaf_lf.replace(b"\n", b"\r\n"))
+        result = None
+        try:
+            result = w.verify_frozen_executable_code(lf_lock)
+        except SystemExit as e:
+            result = str(e)
+        check(
+            "uniform CRLF checkout of the same content still passes, canonicalizing to the LF pin",
+            result == {"entry.py": entry_lf, "mid.py": mid_lf, "leaf.py": leaf_lf},
+            detail=str(result),
+        )
+        (tmp_path / "entry.py").write_bytes(entry_lf)
+        (tmp_path / "mid.py").write_bytes(mid_lf)
+        (tmp_path / "leaf.py").write_bytes(leaf_lf)  # restore
+
+        (tmp_path / "leaf.py").write_bytes(b"import json\nX = 'drifted content'\n")
+        msg = expect_system_exit(w.verify_frozen_executable_code, lf_lock)
+        check("content drift in a transitive module fails closed", msg is not None)
+        (tmp_path / "leaf.py").write_bytes(leaf_lf)  # restore
+
+        (tmp_path / "mid.py").write_bytes(b"import leaf\nimport newdep\nimport sys\n")
+        (tmp_path / "newdep.py").write_bytes(b"X = 1\n")
+        msg = expect_system_exit(w.verify_frozen_executable_code, lf_lock)
+        check("a NEW transitive import (closure-set drift) fails closed", msg is not None)
+        (tmp_path / "mid.py").write_bytes(mid_lf)  # restore
+    finally:
+        w.TRAINING_DIR, w.EXECUTABLE_CODE_ENTRY_POINTS = _orig_training_dir, _orig_entry_points
+
+
+print("\n=== verify_frozen_executable_code (real scratch git repository, core.autocrlf=true, genuine `git worktree add`) ===")
+
+with tempfile.TemporaryDirectory() as tmp:
+    origin_path = Path(tmp) / "origin"
+    worktree_path = Path(tmp) / "fresh_checkout"
+    origin_path.mkdir()
+
+    def run_git(*args, cwd):
+        return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True)
+
+    run_git("init", "-q", cwd=origin_path)
+    run_git("config", "user.email", "test@example.com", cwd=origin_path)
+    run_git("config", "user.name", "Test", cwd=origin_path)
+    # The property under test: core.autocrlf=true is what makes a genuine
+    # checkout differ from the committed blob. Set explicitly, not assumed
+    # inherited from the environment, so this test is self-contained and
+    # reproduces the exact mechanism regardless of the host's own config.
+    run_git("config", "core.autocrlf", "true", cwd=origin_path)
+
+    entry_lf = b"import mid\n"
+    mid_lf = b"import json\n"
+    (origin_path / "entry.py").write_bytes(entry_lf)
+    (origin_path / "mid.py").write_bytes(mid_lf)
+    run_git("add", "-A", cwd=origin_path)
+    run_git("commit", "-q", "-m", "initial commit, LF-committed source", cwd=origin_path)
+    commit_hash = run_git("rev-parse", "HEAD", cwd=origin_path).stdout.strip()
+
+    run_git("worktree", "add", "--detach", str(worktree_path), commit_hash, cwd=origin_path)
+
+    # Assert CRLF materialization actually occurred BEFORE trusting the
+    # verifier's result -- this is the load-bearing assertion; a
+    # correction that silently stopped exercising the real failure mode
+    # (e.g. because some environment already had autocrlf=false) would
+    # otherwise pass for the wrong reason.
+    fresh_entry_bytes = (worktree_path / "entry.py").read_bytes()
+    fresh_mid_bytes = (worktree_path / "mid.py").read_bytes()
+    entry_cr_count = fresh_entry_bytes.count(b"\r")
+    mid_cr_count = fresh_mid_bytes.count(b"\r")
+    check(
+        "genuine `git worktree add` under core.autocrlf=true actually materialized CRLF (precondition for this test to mean anything)",
+        entry_cr_count > 0 and mid_cr_count > 0,
+        detail=f"entry.py CR count={entry_cr_count}, mid.py CR count={mid_cr_count}",
+    )
+    check("the committed blob itself is pure LF (the checkout, not the storage, introduced CRLF)", entry_lf.count(b"\r") == 0 and mid_lf.count(b"\r") == 0)
+
+    import hashlib as _hashlib
+
+    real_worktree_lock = {"executable_code": {
+        "entry.py": _hashlib.sha256(entry_lf).hexdigest(),
+        "mid.py": _hashlib.sha256(mid_lf).hexdigest(),
+    }}
+
+    _orig_training_dir, _orig_entry_points = w.TRAINING_DIR, w.EXECUTABLE_CODE_ENTRY_POINTS
+    w.TRAINING_DIR = worktree_path
+    w.EXECUTABLE_CODE_ENTRY_POINTS = ["entry.py"]
+    try:
+        result = None
+        try:
+            result = w.verify_frozen_executable_code(real_worktree_lock)
+        except SystemExit as e:
+            result = str(e)
+        check(
+            "the corrected verifier passes against a genuine fresh CRLF checkout, canonicalizing to the LF-committed pin "
+            "-- this is the exact reproduction of the real execution-attempt failure, now fixed",
+            result == {"entry.py": entry_lf, "mid.py": mid_lf},
+            detail=str(result),
+        )
+    finally:
+        w.TRAINING_DIR, w.EXECUTABLE_CODE_ENTRY_POINTS = _orig_training_dir, _orig_entry_points
+        run_git("worktree", "remove", "--force", str(worktree_path), cwd=origin_path)
+
+
+# ---------------------------------------------------------------------------
 # GATE6_REQUIRED_PASS_SET sanity
 # ---------------------------------------------------------------------------
 
@@ -892,8 +1065,20 @@ check("gate-6 pass set excludes 02, 08, 11", not ({"02", "08", "11"} & w.GATE6_R
 print("\n=== live checks against real pinned files ===")
 
 lock = w.load_frozen_fingerprints()
-msg = expect_system_exit(w.verify_frozen_executable_code, lock)
-check("real import closure (12 files) verifies clean against the real lock", msg is None, detail=str(msg))
+real_executable_code_canonical = None
+try:
+    real_executable_code_canonical = w.verify_frozen_executable_code(lock)
+except SystemExit as e:
+    real_executable_code_canonical = str(e)
+check(
+    "real import closure (12 files) verifies clean against the real lock, checkout-portable",
+    isinstance(real_executable_code_canonical, dict) and len(real_executable_code_canonical) == 12,
+    detail=str(real_executable_code_canonical),
+)
+check(
+    "returned canonical bytes are all genuinely LF (no CR), regardless of this checkout's own line endings",
+    isinstance(real_executable_code_canonical, dict) and all(b"\r" not in data for data in real_executable_code_canonical.values()),
+)
 
 msg = expect_system_exit(w.verify_pinned_dependency_versions, lock)
 check("real dependency versions verify clean", msg is None, detail=str(msg))

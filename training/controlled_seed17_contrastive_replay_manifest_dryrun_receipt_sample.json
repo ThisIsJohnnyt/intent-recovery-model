@@ -1,16 +1,16 @@
 {
-  "timestamp_utc": "2026-08-10T21:07:34.856777+00:00",
+  "timestamp_utc": "2026-08-10T21:54:54.730169+00:00",
   "git": {
-    "head_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
-    "origin_main_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
+    "head_commit": "2595f563712ae0989f6f26f646c841eede900ca0",
+    "origin_main_commit": "2595f563712ae0989f6f26f646c841eede900ca0",
     "head_matches_origin_main": true,
-    "head_parent_commit": "398874504f2ea3bc8a710a2de56225381ea3900f",
+    "head_parent_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
     "changed_files_since_parent": [],
     "working_tree_clean": false,
-    "working_tree_status_raw": "?? training/controlled_seed17_contrastive_replay_frozen_fingerprints.json\n?? training/controlled_seed17_contrastive_replay_frozen_manifest.md\n?? training/controlled_seed17_contrastive_replay_manifest_dryrun_receipt_sample.json\n?? training/controlled_seed17_phase2_replay_run/control/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/control/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/train_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/primary/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/train_log.txt\n?? training/phase2_contrastive_attribution_design_claude_cross_review.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt_r2.md\n?? training/phase2_contrastive_implementation_staged_manifest_claude.md\n?? training/phase2_seed17_p2d_postmortem_final_decision_memo_chatgpt.md\n?? training/run_seed17_contrastive_replay.py\n?? training/seed17_contrastive_replay_design_chatgpt.md\n?? training/seed17_contrastive_replay_design_constants_chatgpt.json\n?? training/test_run_seed17_contrastive_replay.py"
+    "working_tree_status_raw": "M training/controlled_seed17_contrastive_replay_frozen_fingerprints.json\n M training/controlled_seed17_contrastive_replay_frozen_manifest.md\n M training/run_seed17_contrastive_replay.py\n M training/test_run_seed17_contrastive_replay.py\n?? training/controlled_seed17_phase2_replay_run/control/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/control/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/train_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/primary/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/train_log.txt\n?? training/phase2_contrastive_attribution_design_claude_cross_review.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt_r2.md\n?? training/phase2_contrastive_implementation_staged_manifest_claude.md\n?? training/phase2_seed17_p2d_postmortem_final_decision_memo_chatgpt.md"
   },
-  "package_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
-  "package_commit_parent": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
+  "package_commit": "2595f563712ae0989f6f26f646c841eede900ca0",
+  "package_commit_parent": "2595f563712ae0989f6f26f646c841eede900ca0",
   "planned_commands": {
     "treatment": [
       "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe train.py --seed 17 --data-dir data/processed_gold_v1.2.2_phase2_contrastive_v2contract_seed17 --output-dir controlled_seed17_contrastive_replay_run\\treatment\\checkpoint --max-steps 720",
@@ -96,19 +96,19 @@
       "tokenizer_config.json": "4c55124402e4ce48c7125d04b9af152a125eda9e7c80829f8f99f2ec69f3f68d"
     }
   },
-  "executable_code_fingerprints": {
-    "prompt_contract_v2_candidate.py": "2069c6508cd3f342151f6c545598264c183e61dd1a66341ef5ea06fb56aa03ba",
-    "real_data_manifest.py": "ea39bc7a29ee6a13b2f61ff9fb53dc02f0ddd99d7b55198712e1f5210019b1ce",
-    "run_seed17_contrastive_replay.py": "986fde38731906c300a5d78d0ade71d6bfe12f88242a28919db518275fde36d0",
-    "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
-    "real_data_private.py": "8a5e20fe78846c8b1436c817e8cfa31e6c6564b1d72d8c8679d7a3140d23f47d",
+  "executable_code_canonical_fingerprints": {
     "contract_adapters.py": "c28a774941580bba3984b9c6d6d5ebf7c8d159afa10af20fe4cd4e4e2d89950e",
+    "evaluate_real_validation.py": "d8c82c719099e4e3912f6fb1f538e83c013dfbeb94f204ed79b11e5f8df3682a",
+    "prepare_data.py": "6264f66b3dcb778001633fc5884c537ce691dcc7dcfeff514cf33ee66a940aec",
+    "prompt_contract_v2_candidate.py": "2069c6508cd3f342151f6c545598264c183e61dd1a66341ef5ea06fb56aa03ba",
     "prompt_contract_v2_parser.py": "343699dad193d8b00c2d6c66ac66bc03bc966b1eeb9d96969195c4f02a687101",
-    "real_data_eval_logging.py": "f2470e7856bd500a11a4a8d020863478fb1417f752733a71fbda78bfd0ab903c",
-    "report_benchmark.py": "8b14f3436b4920eeaade8ad1dc39e898c4bdcfe6fca594251b3e56dfeb1de042",
-    "evaluate_real_validation.py": "3ee74f4a49aeae52bcf1067088073e4164fda826aa9c4d0433163abde3740ff8",
-    "prepare_data.py": "2e620cf82a4dbfbc60fa71b9df914aab3086fdd4b2c33afde9685ec5a60480cc",
-    "train.py": "730f7a388830cd3ac6092983a3474ef9f570203cc5ea83cd37c6c60bccd93217"
+    "real_data_eval_logging.py": "42bed184104bbf9791d0f642a09d6a239b228b3b5a712da37784783d5f7a7623",
+    "real_data_manifest.py": "667d2f661bc828d2242913ba9f1d490361b3a21f6fea5bf69b2a07f61a5a8915",
+    "real_data_private.py": "1af4786e5ee38bd85ecdefa7ed79f2f5776ef2271219ea4521591f7bed4d7801",
+    "report_benchmark.py": "51293eec9467a513726652436486494207b8530ede41f043889685135c65c69f",
+    "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
+    "run_seed17_contrastive_replay.py": "a5c319bccd4aa978e74acb1801e5445ad977c234585718cdc47327365c3c312a",
+    "train.py": "b8b22aac06e0a4fdb2a2018cb2fd2dcd6023b9319aca71160279f97a93b41551"
   },
   "governing_input_canonical_fingerprints": {
     "gold_v1.2.2_phase2_contrastive_derived_candidate.jsonl": "7760f377dcd7ab35b54fe6c2c274e6615a5641acaa73ec0a30da64d78db9df2d",
@@ -122,5 +122,5 @@
     "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
   },
   "real_validation_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "_sample_disclaimer": "LABELED NON-EXECUTION SAMPLE. Generated by calling build_receipt() directly (read-only: touches git, filesystem, and already-imported module __version__ attributes only) -- never via --confirm-execute, no subprocess was started, no training or inference occurred. package_commit equals package_commit_parent here because this sample was generated before the package itself was committed. Regenerated 2026-08-10 after correcting the module docstrings stale claim about real_validation.jsonl (has no committed blob but IS covered by the committed datasets/.gitignore; placeholder creation happens inside bootstrap_clean_tree_then_real_validation(), strictly after clean-tree verification, not before preflight). Regenerated again the same day via write_bytes() directly (not print() + shell redirection, which applies Windows newline translation and had silently produced a CRLF-encoded working-tree copy -- caught only by independently hashing the actual staged git blob before commit, not by re-checking the working-tree file, which stayed consistent with itself and hid the problem)."
+  "_sample_disclaimer": "LABELED NON-EXECUTION SAMPLE. Generated by calling build_receipt() directly (read-only: touches git, filesystem, and already-imported module __version__ attributes only) -- never via --confirm-execute, no subprocess was started, no training or inference occurred. package_commit equals package_commit_parent here because this sample was generated before the correction commit itself. Regenerated 2026-08-10 (autocrlf-in-executable-code correction round): executable_code_canonical_fingerprints now comes from verify_frozen_executable_code own verified canonical-LF byte map, never a second raw read of checkout files; package_commit_parent advanced to 2595f563... (see the frozen manifest section 1.2 for the full correction record and the failed real execution attempt that found this)."
 }

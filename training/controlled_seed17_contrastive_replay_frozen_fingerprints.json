@@ -1,21 +1,32 @@
 {
   "schema_version": "1.0",
-  "package_parent_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
+  "package_parent_commit": "2595f563712ae0989f6f26f646c841eede900ca0",
+  "corpus_baseline_commit": "17c58bf102b7cb442c312f916b3c7c52e3cd8815",
   "governing_document": "training/seed17_contrastive_replay_design_chatgpt.md",
-  "note": "All fingerprints in this file were independently recomputed by Claude from committed git blobs at the pinned parent commit, never copied from the design draft's own citations -- three of which were Windows-checkout bytes, corrected here.",
+  "note": "All fingerprints in this file were independently recomputed by Claude from committed git blobs, never copied from the design draft's own citations -- three of which were Windows-checkout bytes, corrected here. Revised 2026-08-10 (autocrlf-in-executable-code correction round): 'executable_code' entries are now the canonical LF git-blob hashes for all 12 closure files, verified via canonicalize_pinned_lf_bytes() -- a real fresh `git worktree add` execution attempt found the prior flat-hash pins (main-checkout bytes, which happened to be LF for only 5 of the 12 files and CRLF for the other 7, matching neither a genuinely fresh checkout nor each other) failed preflight before any subprocess started. package_parent_commit advanced from corpus_baseline_commit to the first replay-package commit, since this correction is a direct child of that commit, not of the corpus baseline.",
   "executable_code": {
     "contract_adapters.py": "c28a774941580bba3984b9c6d6d5ebf7c8d159afa10af20fe4cd4e4e2d89950e",
-    "evaluate_real_validation.py": "3ee74f4a49aeae52bcf1067088073e4164fda826aa9c4d0433163abde3740ff8",
-    "prepare_data.py": "2e620cf82a4dbfbc60fa71b9df914aab3086fdd4b2c33afde9685ec5a60480cc",
+    "evaluate_real_validation.py": "d8c82c719099e4e3912f6fb1f538e83c013dfbeb94f204ed79b11e5f8df3682a",
+    "prepare_data.py": "6264f66b3dcb778001633fc5884c537ce691dcc7dcfeff514cf33ee66a940aec",
     "prompt_contract_v2_candidate.py": "2069c6508cd3f342151f6c545598264c183e61dd1a66341ef5ea06fb56aa03ba",
     "prompt_contract_v2_parser.py": "343699dad193d8b00c2d6c66ac66bc03bc966b1eeb9d96969195c4f02a687101",
-    "real_data_eval_logging.py": "f2470e7856bd500a11a4a8d020863478fb1417f752733a71fbda78bfd0ab903c",
-    "real_data_manifest.py": "ea39bc7a29ee6a13b2f61ff9fb53dc02f0ddd99d7b55198712e1f5210019b1ce",
-    "real_data_private.py": "8a5e20fe78846c8b1436c817e8cfa31e6c6564b1d72d8c8679d7a3140d23f47d",
-    "report_benchmark.py": "8b14f3436b4920eeaade8ad1dc39e898c4bdcfe6fca594251b3e56dfeb1de042",
+    "real_data_eval_logging.py": "42bed184104bbf9791d0f642a09d6a239b228b3b5a712da37784783d5f7a7623",
+    "real_data_manifest.py": "667d2f661bc828d2242913ba9f1d490361b3a21f6fea5bf69b2a07f61a5a8915",
+    "real_data_private.py": "1af4786e5ee38bd85ecdefa7ed79f2f5776ef2271219ea4521591f7bed4d7801",
+    "report_benchmark.py": "51293eec9467a513726652436486494207b8530ede41f043889685135c65c69f",
     "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
-    "run_seed17_contrastive_replay.py": "986fde38731906c300a5d78d0ade71d6bfe12f88242a28919db518275fde36d0",
-    "train.py": "730f7a388830cd3ac6092983a3474ef9f570203cc5ea83cd37c6c60bccd93217"
+    "run_seed17_contrastive_replay.py": "a5c319bccd4aa978e74acb1801e5445ad977c234585718cdc47327365c3c312a",
+    "train.py": "b8b22aac06e0a4fdb2a2018cb2fd2dcd6023b9319aca71160279f97a93b41551"
+  },
+  "executable_code_corrections_from_prior_lock": {
+    "evaluate_real_validation.py": {"prior_lock_cited": "3ee74f4a49aeae52bcf1067088073e4164fda826aa9c4d0433163abde3740ff8", "corrected_to": "d8c82c719099e4e3912f6fb1f538e83c013dfbeb94f204ed79b11e5f8df3682a", "reason": "prior value was Claude's main-checkout CRLF bytes (that checkout happened to already be CRLF for this file), not the canonical git blob -- coincidentally still matched a fresh worktree's CRLF checkout under the old flat-hash comparison, so this file never actually failed preflight, but was never verifying the true canonical form either"},
+    "prepare_data.py": {"prior_lock_cited": "2e620cf82a4dbfbc60fa71b9df914aab3086fdd4b2c33afde9685ec5a60480cc", "corrected_to": "6264f66b3dcb778001633fc5884c537ce691dcc7dcfeff514cf33ee66a940aec", "reason": "same as evaluate_real_validation.py"},
+    "real_data_eval_logging.py": {"prior_lock_cited": "f2470e7856bd500a11a4a8d020863478fb1417f752733a71fbda78bfd0ab903c", "corrected_to": "42bed184104bbf9791d0f642a09d6a239b228b3b5a712da37784783d5f7a7623", "reason": "same as evaluate_real_validation.py"},
+    "real_data_manifest.py": {"prior_lock_cited": "ea39bc7a29ee6a13b2f61ff9fb53dc02f0ddd99d7b55198712e1f5210019b1ce", "corrected_to": "667d2f661bc828d2242913ba9f1d490361b3a21f6fea5bf69b2a07f61a5a8915", "reason": "same as evaluate_real_validation.py"},
+    "real_data_private.py": {"prior_lock_cited": "8a5e20fe78846c8b1436c817e8cfa31e6c6564b1d72d8c8679d7a3140d23f47d", "corrected_to": "1af4786e5ee38bd85ecdefa7ed79f2f5776ef2271219ea4521591f7bed4d7801", "reason": "same as evaluate_real_validation.py"},
+    "report_benchmark.py": {"prior_lock_cited": "8b14f3436b4920eeaade8ad1dc39e898c4bdcfe6fca594251b3e56dfeb1de042", "corrected_to": "51293eec9467a513726652436486494207b8530ede41f043889685135c65c69f", "reason": "same as evaluate_real_validation.py"},
+    "train.py": {"prior_lock_cited": "730f7a388830cd3ac6092983a3474ef9f570203cc5ea83cd37c6c60bccd93217", "corrected_to": "b8b22aac06e0a4fdb2a2018cb2fd2dcd6023b9319aca71160279f97a93b41551", "reason": "same as evaluate_real_validation.py"},
+    "run_seed17_contrastive_replay.py": {"prior_lock_cited": "986fde38731906c300a5d78d0ade71d6bfe12f88242a28919db518275fde36d0", "corrected_to": "a5c319bccd4aa978e74acb1801e5445ad977c234585718cdc47327365c3c312a", "reason": "content changed: canonicalized executable-code verification, receipt fingerprint semantics, and advanced package-commit boundary"}
   },
   "governing_inputs_canonical_lf": {
     "gold_v1.2.2_phase2_contrastive_derived_candidate.jsonl": "7760f377dcd7ab35b54fe6c2c274e6615a5641acaa73ec0a30da64d78db9df2d",
