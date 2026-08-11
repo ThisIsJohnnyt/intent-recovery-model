@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "status": "static_package_no_compute_authorized",
+  "repository": "ThisIsJohnnyt/intent-recovery-model",
+  "pinned_implementation_milestone": "90ee08d17304e5a124f15f19f9644a1f609083ba",
+  "seed": 17,
+  "contract": "v2",
+  "note": "Machine-readable transliteration of seed17_regression_balanced_repair_execution_design_chatgpt.md's frozen tables, authored by Claude (there is no separate ChatGPT-authored JSON draft for this package to preserve as-is, unlike seed17_contrastive_replay_design_constants_chatgpt.json for the prior package) -- every value independently verified against committed git blobs and this package's own runtime lock (controlled_seed17_regression_balanced_repair_execution_frozen_fingerprints.json), which is the file run_seed17_regression_balanced_repair.py actually reads at preflight time. Claude's review of the original design draft found section 3 self-inconsistent -- it stated the treatment's 79-record train split reaches 'approximately 36.46 epoch-equivalents' at 720 steps, in the same paragraph as the (correct) claim that a natural 40-epoch treatment schedule would reach 800 steps (mutually inconsistent: 800 steps at 40 epochs implies exactly 20 steps/epoch, making 720 steps exactly 36.0 epoch-equivalents, matching this codebase's actual ceiling-based dataloader behavior and gold_v1.2.3_groupscreen_seed17_scoring.md's established convention). The governing design document has SINCE been corrected to state exactly this (its own section 3 now reads '36.0 epoch-equivalents... ceil(79/4)=20'), confirmed by re-reading and re-hashing it during this same implementation turn (canonical LF SHA-256 fe316fb1ee919f9f56ba01be559be1fa7781135f9610ceacca4990637bba6fa6, changed from the originally-cited ceac0d2f8ae3d93ad1bd2b57ffaff453c3d444fda8233239a9a0d84c437bedb9 -- a full line-by-line comparison confirmed this is the only change). See epoch_equivalent_at_720_steps below.",
+  "arms": {
+    "treatment": {
+      "role": "sole_decision_bearing_candidate",
+      "candidate_path": "training/gold_v1.2.2_regression_balanced_repair_candidate.jsonl",
+      "candidate_record_count": 85,
+      "candidate_canonical_lf_sha256": "955437e2ac014c3e48402867e51ac539334e907d61d05dde6e7d7da1ded254ea",
+      "data_dir": "training/data/processed_gold_v1.2.2_regression_balanced_repair_v2contract_seed17",
+      "train_count": 79,
+      "train_canonical_lf_sha256": "7b76450be9f38447b8d5d0acc88d9b3683fd68a3af834961c425f50a97024578",
+      "val_count": 6,
+      "val_canonical_lf_sha256": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4",
+      "training_data_fingerprint": "badfed9f946bd13379e1f74336b18c596c922cf378cc3853ea95a2098ea03800",
+      "proposal_path": "training/regression_balanced_repair_proposal.jsonl",
+      "proposal_record_count": 7,
+      "proposal_canonical_lf_sha256": "192372fd44fc87ea879d2ab7b751a3d54be100b447b886c213b26553284a747a",
+      "max_steps": 720,
+      "epoch_equivalent_at_720_steps": 36.0,
+      "natural_40_epoch_step_count": 800,
+      "structural_relationship": "candidate[0:78] byte-identical to the comparator candidate; candidate[78:85] matches the proposal's input text, in order"
+    },
+    "comparator": {
+      "role": "diagnostic_corpus_comparator_never_promotion_candidate",
+      "candidate_path": "training/gold_v1.2.2_phase2_derived_candidate.jsonl",
+      "candidate_record_count": 78,
+      "candidate_canonical_lf_sha256": "6e9e5f1bea8fc3cbcb615376a1d055bd273605d0f8c1e40a8c120720c8cb836c",
+      "data_dir": "training/data/processed_gold_v1.2.2_phase2_v2contract_seed17",
+      "train_count": 72,
+      "train_canonical_lf_sha256": "8760378519365c4fe2ae4dcebdc6379214cc0fcf93442521f64d6d4508bafae6",
+      "val_count": 6,
+      "val_canonical_lf_sha256": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4",
+      "training_data_fingerprint": "9d6817152087685b653830ad671f9304e4226b095a202ca57f5ca52bc3a14c1f",
+      "max_steps": 720,
+      "epoch_equivalent_at_720_steps": 40.0
+    }
+  },
+  "shared_configuration": {
+    "base_model": "google/flan-t5-base",
+    "base_model_snapshot_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "per_device_train_batch_size": 4,
+    "per_device_eval_batch_size": 4,
+    "learning_rate": "3e-4",
+    "weight_decay": 0.01,
+    "load_best_model_at_end": false,
+    "max_input_tokens": 512,
+    "max_target_tokens": 512,
+    "generation_max_new_tokens": 300,
+    "generation_repetition_penalty": 1.3,
+    "precision": "bf16_on_cuda"
+  },
+  "benchmarks": {
+    "protected16": {
+      "path": "datasets/benchmark/gold_v1.2.1_probes.jsonl",
+      "record_count": 16,
+      "canonical_sha256": "767fe21a1097b51cef38728dcff0ff9ca4cf280bde8e65a7d885729f40990c0f"
+    },
+    "acceptance10": {
+      "path": "datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl",
+      "record_count": 10,
+      "canonical_sha256": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+    }
+  },
+  "gate6_required_pass_set": [
+    "01", "03", "04", "05", "06", "07", "09", "10", "12", "13", "14", "15", "16"
+  ],
+  "gate6_excluded_diagnostic_only": ["02", "08", "11"],
+  "dependency_versions": {
+    "torch": "2.11.0+cu128",
+    "transformers": "4.57.6",
+    "datasets": "5.0.0",
+    "accelerate": "1.14.0",
+    "sentencepiece": "0.2.2"
+  },
+  "real_validation_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "execution_order": [
+    "treatment_train",
+    "treatment_protected16_raw_eval",
+    "treatment_acceptance10_raw_eval",
+    "comparator_train",
+    "comparator_protected16_raw_eval",
+    "comparator_acceptance10_raw_eval"
+  ],
+  "outcomes": ["RBR17-A", "RBR17-B", "RBR17-C", "RBR17-D", "RBR17-X"],
+  "seed_73_eligibility": "RBR17-A only, not automatic even then -- separately reviewed matched-package proposal required"
+}

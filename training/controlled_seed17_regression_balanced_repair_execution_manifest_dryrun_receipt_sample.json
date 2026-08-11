@@ -1,0 +1,126 @@
+{
+  "timestamp_utc": "2026-08-11T14:49:23.225796+00:00",
+  "git": {
+    "head_commit": "90ee08d17304e5a124f15f19f9644a1f609083ba",
+    "origin_main_commit": "90ee08d17304e5a124f15f19f9644a1f609083ba",
+    "head_matches_origin_main": true,
+    "head_parent_commit": "43f4fc41264469ac2848340c8bea8e216dba8368",
+    "changed_files_since_parent": [],
+    "working_tree_clean": false,
+    "working_tree_status_raw": "?? training/controlled_seed17_phase2_replay_run/control/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/control/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/train_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/primary/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/train_log.txt\n?? training/controlled_seed17_regression_balanced_repair_execution_frozen_fingerprints.json\n?? training/controlled_seed17_regression_balanced_repair_execution_frozen_manifest.md\n?? training/controlled_seed17_regression_balanced_repair_execution_manifest_dryrun_receipt_sample.json\n?? training/phase2_contrastive_attribution_design_claude_cross_review.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt_r2.md\n?? training/phase2_contrastive_implementation_staged_manifest_claude.md\n?? training/phase2_seed17_p2d_postmortem_final_decision_memo_chatgpt.md\n?? training/run_seed17_regression_balanced_repair.py\n?? training/seed17_regression_balanced_repair_execution_design_chatgpt.md\n?? training/seed17_regression_balanced_repair_execution_design_constants.json\n?? training/test_run_seed17_regression_balanced_repair.py"
+  },
+  "package_commit": "90ee08d17304e5a124f15f19f9644a1f609083ba",
+  "package_commit_parent": "90ee08d17304e5a124f15f19f9644a1f609083ba",
+  "planned_commands": {
+    "treatment": [
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe train.py --seed 17 --data-dir data/processed_gold_v1.2.2_regression_balanced_repair_v2contract_seed17 --output-dir controlled_seed17_regression_balanced_repair_run\\treatment\\checkpoint --max-steps 720",
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/gold_v1.2.1_probes.jsonl controlled_seed17_regression_balanced_repair_run\\treatment\\checkpoint\\final controlled_seed17_regression_balanced_repair_run\\treatment\\protected16_results.json --contract=v2",
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl controlled_seed17_regression_balanced_repair_run\\treatment\\checkpoint\\final controlled_seed17_regression_balanced_repair_run\\treatment\\acceptance10_results.json --contract=v2"
+    ],
+    "comparator": [
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe train.py --seed 17 --data-dir data/processed_gold_v1.2.2_phase2_v2contract_seed17 --output-dir controlled_seed17_regression_balanced_repair_run\\comparator\\checkpoint --max-steps 720",
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/gold_v1.2.1_probes.jsonl controlled_seed17_regression_balanced_repair_run\\comparator\\checkpoint\\final controlled_seed17_regression_balanced_repair_run\\comparator\\protected16_results.json --contract=v2",
+      "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe run_benchmark.py ../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl controlled_seed17_regression_balanced_repair_run\\comparator\\checkpoint\\final controlled_seed17_regression_balanced_repair_run\\comparator\\acceptance10_results.json --contract=v2"
+    ]
+  },
+  "environment": {
+    "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "torch": "2.11.0+cu128",
+    "transformers": "4.57.6",
+    "datasets": "5.0.0",
+    "accelerate": "1.14.0",
+    "sentencepiece": "0.2.2",
+    "huggingface_hub": "0.36.2",
+    "cuda_available": true
+  },
+  "shared_configuration": {
+    "seed": 17,
+    "contract": "v2",
+    "base_model": "google/flan-t5-base",
+    "base_model_snapshot_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "batch_size": 4,
+    "learning_rate": "3e-4",
+    "weight_decay": 0.01,
+    "max_steps": 720,
+    "protected_benchmark": "../datasets/benchmark/gold_v1.2.1_probes.jsonl",
+    "acceptance_benchmark": "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl"
+  },
+  "arms": {
+    "treatment": {
+      "data_dir": "data/processed_gold_v1.2.2_regression_balanced_repair_v2contract_seed17",
+      "candidate_record_count": 85,
+      "train_count": 79,
+      "val_count": 6,
+      "max_steps": 720,
+      "role": "sole decision-bearing candidate"
+    },
+    "comparator": {
+      "data_dir": "data/processed_gold_v1.2.2_phase2_v2contract_seed17",
+      "candidate_record_count": 78,
+      "train_count": 72,
+      "val_count": 6,
+      "max_steps": 720,
+      "role": "diagnostic corpus comparator, never a promotion candidate"
+    }
+  },
+  "gate6_required_pass_set": [
+    "01",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "09",
+    "10",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16"
+  ],
+  "governing_document": "training/seed17_regression_balanced_repair_execution_design_chatgpt.md",
+  "resolved_configuration": {
+    "treatment_checkpoint_dir": "controlled_seed17_regression_balanced_repair_run\\treatment\\checkpoint",
+    "comparator_checkpoint_dir": "controlled_seed17_regression_balanced_repair_run\\comparator\\checkpoint"
+  },
+  "base_model": {
+    "repo_id": "google/flan-t5-base",
+    "pinned_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2",
+    "file_fingerprints": {
+      "config.json": "7c1853dbfa0e4aac093eb109a358b6ab25fe86b7c15185a91322f0ed26f0f940",
+      "generation_config.json": "f5a1c7e2be8092018d8835128987edf0111637dd98e90599cc80310fef75d95a",
+      "model.safetensors": "1dfb70afdcedceb9f9fae2f9b68e004ad934361fb35b9b2bd50b45ea90790fc8",
+      "special_tokens_map.json": "5c87151ef0f72a99d1f766a4c418bd2a1f90aaa30a8e22fe5eca9641daebb64f",
+      "spiece.model": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86",
+      "tokenizer.json": "fe2ebbbbde2985be723e0ce18217853e4020c5e9d35bd07be2c27ab9d3ead57a",
+      "tokenizer_config.json": "4c55124402e4ce48c7125d04b9af152a125eda9e7c80829f8f99f2ec69f3f68d"
+    }
+  },
+  "executable_code_canonical_fingerprints": {
+    "contract_adapters.py": "c28a774941580bba3984b9c6d6d5ebf7c8d159afa10af20fe4cd4e4e2d89950e",
+    "evaluate_real_validation.py": "d8c82c719099e4e3912f6fb1f538e83c013dfbeb94f204ed79b11e5f8df3682a",
+    "prepare_data.py": "6264f66b3dcb778001633fc5884c537ce691dcc7dcfeff514cf33ee66a940aec",
+    "prompt_contract_v2_candidate.py": "2069c6508cd3f342151f6c545598264c183e61dd1a66341ef5ea06fb56aa03ba",
+    "prompt_contract_v2_parser.py": "343699dad193d8b00c2d6c66ac66bc03bc966b1eeb9d96969195c4f02a687101",
+    "real_data_eval_logging.py": "42bed184104bbf9791d0f642a09d6a239b228b3b5a712da37784783d5f7a7623",
+    "real_data_manifest.py": "667d2f661bc828d2242913ba9f1d490361b3a21f6fea5bf69b2a07f61a5a8915",
+    "real_data_private.py": "1af4786e5ee38bd85ecdefa7ed79f2f5776ef2271219ea4521591f7bed4d7801",
+    "report_benchmark.py": "51293eec9467a513726652436486494207b8530ede41f043889685135c65c69f",
+    "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
+    "run_seed17_regression_balanced_repair.py": "2dafb160c3450c0925e3dce93afb87dc3c2b4b7d9222efa8d8c03eb3a43f7af5",
+    "train.py": "b8b22aac06e0a4fdb2a2018cb2fd2dcd6023b9319aca71160279f97a93b41551"
+  },
+  "governing_input_canonical_fingerprints": {
+    "gold_v1.2.2_regression_balanced_repair_candidate.jsonl": "955437e2ac014c3e48402867e51ac539334e907d61d05dde6e7d7da1ded254ea",
+    "data/processed_gold_v1.2.2_regression_balanced_repair_v2contract_seed17/train.jsonl": "7b76450be9f38447b8d5d0acc88d9b3683fd68a3af834961c425f50a97024578",
+    "data/processed_gold_v1.2.2_regression_balanced_repair_v2contract_seed17/val.jsonl": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4",
+    "regression_balanced_repair_proposal.jsonl": "192372fd44fc87ea879d2ab7b751a3d54be100b447b886c213b26553284a747a",
+    "gold_v1.2.2_phase2_derived_candidate.jsonl": "6e9e5f1bea8fc3cbcb615376a1d055bd273605d0f8c1e40a8c120720c8cb836c",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/train.jsonl": "8760378519365c4fe2ae4dcebdc6379214cc0fcf93442521f64d6d4508bafae6",
+    "data/processed_gold_v1.2.2_phase2_v2contract_seed17/val.jsonl": "8aa99a794f495cf75e6904ee28789e06ac43c1f9ee424f0b2ce2f219527623c4",
+    "../datasets/benchmark/gold_v1.2.1_probes.jsonl": "767fe21a1097b51cef38728dcff0ff9ca4cf280bde8e65a7d885729f40990c0f",
+    "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+  },
+  "real_validation_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "_sample_disclaimer": "LABELED NON-EXECUTION SAMPLE. Generated by calling build_receipt() directly (read-only: touches git, filesystem, and already-imported module __version__ attributes only) -- never via --confirm-execute, no subprocess was started, no training or inference occurred. package_commit equals the current HEAD (90ee08d17304e5a124f15f19f9644a1f609083ba) because this sample was generated before the package itself has been committed -- package_commit_parent is this package's own pinned parent commit, the same value, since no execution-package commit exists yet."
+}
