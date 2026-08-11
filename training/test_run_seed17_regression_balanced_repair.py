@@ -1149,11 +1149,18 @@ check("real base-model snapshot verifies clean", msg is None, detail=str(msg))
 state = w.git_state()
 check("HEAD currently matches origin/main (package built on a synced repo)", state["head_matches_origin_main"])
 
-# verify_package_commit is correctly NOT expected to pass yet -- this
-# package hasn't been committed, so HEAD still IS the pinned parent commit
-# rather than a child of it.
+# verify_package_commit's expected outcome depends on whether this package
+# has been committed yet -- adaptive rather than hardcoded to one state, so
+# this suite stays correct whether run pre-commit (HEAD still IS the pinned
+# parent) or post-commit (HEAD is a direct child whose delta is exactly the
+# seven reviewed package files).
 msg = expect_system_exit(w.verify_package_commit, state)
-check("verify_package_commit correctly fails pre-commit (HEAD is still the parent, not a child)", msg is not None)
+if state["head_commit"] == w.PINNED_PARENT_COMMIT:
+    check("verify_package_commit correctly fails pre-commit (HEAD is still the parent, not a child)", msg is not None)
+elif state["head_parent_commit"] == w.PINNED_PARENT_COMMIT:
+    check("verify_package_commit correctly passes post-commit (HEAD is a direct child with exactly the reviewed delta)", msg is None, detail=str(msg))
+else:
+    check(f"verify_package_commit: unexpected repo state -- HEAD {state['head_commit']!r} is neither the pinned parent nor its direct child", False)
 
 
 # ---------------------------------------------------------------------------
