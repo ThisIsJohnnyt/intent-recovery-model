@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "package_parent_commit": "90ee08d17304e5a124f15f19f9644a1f609083ba",
+  "package_parent_commit": "ecb3ddced284a76c1baaeec2c6d03fdeaf9a3e4a",
   "corpus_baseline_commit": "90ee08d17304e5a124f15f19f9644a1f609083ba",
   "governing_document": "training/seed17_regression_balanced_repair_execution_design_chatgpt.md",
   "note": "All fingerprints in this file were independently recomputed by Claude from committed git blobs at 90ee08d17304e5a124f15f19f9644a1f609083ba, never copied from any prior package's lock file. The 11 executable-code dependencies shared with the prior contrastive-replay package (everything except this package's own wrapper) were independently reverified and happen to be byte-identical to that package's lock, confirming no drift -- not assumed from it. The nine governing data inputs' comparator-arm entries are likewise the SAME corpus/paths as the prior package's comparator arm, independently reverified rather than carried forward.",
@@ -15,7 +15,7 @@
     "real_data_private.py": "1af4786e5ee38bd85ecdefa7ed79f2f5776ef2271219ea4521591f7bed4d7801",
     "report_benchmark.py": "51293eec9467a513726652436486494207b8530ede41f043889685135c65c69f",
     "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
-    "run_seed17_regression_balanced_repair.py": "2dafb160c3450c0925e3dce93afb87dc3c2b4b7d9222efa8d8c03eb3a43f7af5",
+    "run_seed17_regression_balanced_repair.py": "3d08d9c8aea8debe2a0af207df88f78e038be558173c1f907f5dc35264bd3056",
     "train.py": "b8b22aac06e0a4fdb2a2018cb2fd2dcd6023b9319aca71160279f97a93b41551"
   },
   "governing_inputs_canonical_lf": {

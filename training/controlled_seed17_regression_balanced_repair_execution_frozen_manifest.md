@@ -3,8 +3,34 @@
 **Date:** 2026-08-11
 **Author:** Claude, implementing ChatGPT's governing execution design after independent review and agreement, per Johnny's direct authorization
 **Governing design:** `training/seed17_regression_balanced_repair_execution_design_chatgpt.md` (SHA-256 `fe316fb1ee919f9f56ba01be559be1fa7781135f9610ceacca4990637bba6fa6` -- corrected during this review from the originally-cited `ceac0d2f8ae3d93ad1bd2b57ffaff453c3d444fda8233239a9a0d84c437bedb9`; see §1)
-**Package parent commit:** `90ee08d17304e5a124f15f19f9644a1f609083ba` (must be HEAD's direct parent at execution time — the corpus-implementation milestone, 15/15 static gates PASS)
+**Package parent commit:** `ecb3ddced284a76c1baaeec2c6d03fdeaf9a3e4a` (must be HEAD's direct parent at execution time — advanced twice since the first commit, §1.1)
+**Corpus baseline commit:** `90ee08d17304e5a124f15f19f9644a1f609083ba` (documentation only from here on — the commit the treatment/comparator corpora, splits, and benchmarks are all pinned against; no active git-ancestry check requires HEAD to descend from it directly)
 **Status:** Static package only. No training, inference, or compute of any kind performed by this document or its sibling package files.
+
+## 1.1 Post-commit correction rounds (2026-08-11)
+
+The package was first committed as `cd1afa937c538a5b11eead55f64c16ab6284b058` (parent `90ee08d...`), on
+Johnny's hand-typed "Git it done," ahead of ChatGPT's independent review per his explicit authorization
+(see §15 of the governing design — this reorders steps 4/5 of the authorization ladder into commit-then-
+review, which the ladder itself already anticipates at step 6: "Both reviewers verify the exact
+committed package"). Two narrow, real defects were found and fixed immediately after, in the package's
+own test suite rather than in the wrapper's actual logic:
+
+1. **`test_run_seed17_regression_balanced_repair.py`'s live-check section hardcoded a pre-commit-only
+   expectation** for `verify_package_commit()` — it asserted the function must fail because the package
+   "hasn't been committed yet." That assumption went stale the instant the package was actually
+   committed; the function itself was already correct (independently confirmed by running it for real
+   against the committed state, which passed). Made the check adaptive to either repo state. Committed
+   as `ecb3ddced284a76c1baaeec2c6d03fdeaf9a3e4a` (parent `cd1afa9...`), 1 file changed, on a second
+   hand-typed "Git it done" (confirmed directly after an initial "Git er done," per the standing
+   protocol's exact-phrase requirement).
+2. **The same gap recurred one level up**: fixing (1) exposed that `PINNED_PARENT_COMMIT` itself needed
+   to advance again, since HEAD was now a *grandchild*, not a direct child, of the commit the wrapper
+   still pinned. Advanced `PINNED_PARENT_COMMIT` to `ecb3ddc...` and narrowed
+   `EXPECTED_PACKAGE_COMMIT_FILES` to the four files this round actually touches (the wrapper itself,
+   the lock file, this manifest, and the regenerated receipt sample) — exactly the same pattern
+   `run_seed17_contrastive_replay.py`'s own `PINNED_PARENT_COMMIT` used across its two correction
+   rounds. `CORPUS_BASELINE_COMMIT` stays fixed at `90ee08d...`, documentation only.
 
 ## 1. Independent review of the governing execution design (before implementation)
 

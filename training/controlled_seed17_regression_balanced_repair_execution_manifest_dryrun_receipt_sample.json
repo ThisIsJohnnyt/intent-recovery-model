@@ -1,16 +1,16 @@
 {
-  "timestamp_utc": "2026-08-11T14:49:23.225796+00:00",
+  "timestamp_utc": "2026-08-11T15:24:09.321530+00:00",
   "git": {
-    "head_commit": "90ee08d17304e5a124f15f19f9644a1f609083ba",
-    "origin_main_commit": "90ee08d17304e5a124f15f19f9644a1f609083ba",
+    "head_commit": "ecb3ddced284a76c1baaeec2c6d03fdeaf9a3e4a",
+    "origin_main_commit": "ecb3ddced284a76c1baaeec2c6d03fdeaf9a3e4a",
     "head_matches_origin_main": true,
-    "head_parent_commit": "43f4fc41264469ac2848340c8bea8e216dba8368",
+    "head_parent_commit": "cd1afa937c538a5b11eead55f64c16ab6284b058",
     "changed_files_since_parent": [],
     "working_tree_clean": false,
-    "working_tree_status_raw": "?? training/controlled_seed17_phase2_replay_run/control/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/control/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/train_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/primary/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/train_log.txt\n?? training/controlled_seed17_regression_balanced_repair_execution_frozen_fingerprints.json\n?? training/controlled_seed17_regression_balanced_repair_execution_frozen_manifest.md\n?? training/controlled_seed17_regression_balanced_repair_execution_manifest_dryrun_receipt_sample.json\n?? training/phase2_contrastive_attribution_design_claude_cross_review.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt_r2.md\n?? training/phase2_contrastive_implementation_staged_manifest_claude.md\n?? training/phase2_seed17_p2d_postmortem_final_decision_memo_chatgpt.md\n?? training/run_seed17_regression_balanced_repair.py\n?? training/seed17_regression_balanced_repair_execution_design_chatgpt.md\n?? training/seed17_regression_balanced_repair_execution_design_constants.json\n?? training/test_run_seed17_regression_balanced_repair.py"
+    "working_tree_status_raw": "M training/controlled_seed17_regression_balanced_repair_execution_frozen_fingerprints.json\n M training/controlled_seed17_regression_balanced_repair_execution_frozen_manifest.md\n M training/run_seed17_regression_balanced_repair.py\n?? training/controlled_seed17_phase2_replay_run/control/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/control/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/control/train_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/acceptance10_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/checkpoint/\n?? training/controlled_seed17_phase2_replay_run/primary/protected16_log.txt\n?? training/controlled_seed17_phase2_replay_run/primary/train_log.txt\n?? training/phase2_contrastive_attribution_design_claude_cross_review.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt.md\n?? training/phase2_contrastive_attribution_field_role_design_proposal_chatgpt_r2.md\n?? training/phase2_contrastive_implementation_staged_manifest_claude.md\n?? training/phase2_seed17_p2d_postmortem_final_decision_memo_chatgpt.md"
   },
-  "package_commit": "90ee08d17304e5a124f15f19f9644a1f609083ba",
-  "package_commit_parent": "90ee08d17304e5a124f15f19f9644a1f609083ba",
+  "package_commit": "ecb3ddced284a76c1baaeec2c6d03fdeaf9a3e4a",
+  "package_commit_parent": "ecb3ddced284a76c1baaeec2c6d03fdeaf9a3e4a",
   "planned_commands": {
     "treatment": [
       "C:\\Users\\thisi\\OneDrive\\Desktop\\DeepThoughts\\training\\venv\\Scripts\\python.exe train.py --seed 17 --data-dir data/processed_gold_v1.2.2_regression_balanced_repair_v2contract_seed17 --output-dir controlled_seed17_regression_balanced_repair_run\\treatment\\checkpoint --max-steps 720",
@@ -107,7 +107,7 @@
     "real_data_private.py": "1af4786e5ee38bd85ecdefa7ed79f2f5776ef2271219ea4521591f7bed4d7801",
     "report_benchmark.py": "51293eec9467a513726652436486494207b8530ede41f043889685135c65c69f",
     "run_benchmark.py": "4e94445d282a54a80f4cb40276574e718b0935dbc2a117a7f90f26e1e44910a6",
-    "run_seed17_regression_balanced_repair.py": "2dafb160c3450c0925e3dce93afb87dc3c2b4b7d9222efa8d8c03eb3a43f7af5",
+    "run_seed17_regression_balanced_repair.py": "3d08d9c8aea8debe2a0af207df88f78e038be558173c1f907f5dc35264bd3056",
     "train.py": "b8b22aac06e0a4fdb2a2018cb2fd2dcd6023b9319aca71160279f97a93b41551"
   },
   "governing_input_canonical_fingerprints": {
@@ -122,5 +122,5 @@
     "../datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
   },
   "real_validation_fingerprint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "_sample_disclaimer": "LABELED NON-EXECUTION SAMPLE. Generated by calling build_receipt() directly (read-only: touches git, filesystem, and already-imported module __version__ attributes only) -- never via --confirm-execute, no subprocess was started, no training or inference occurred. package_commit equals the current HEAD (90ee08d17304e5a124f15f19f9644a1f609083ba) because this sample was generated before the package itself has been committed -- package_commit_parent is this package's own pinned parent commit, the same value, since no execution-package commit exists yet."
+  "_sample_disclaimer": "LABELED NON-EXECUTION SAMPLE. Generated by calling build_receipt() directly (read-only: touches git, filesystem, and already-imported module __version__ attributes only) -- never via --confirm-execute, no subprocess was started, no training or inference occurred. package_commit reflects the current HEAD at generation time; package_commit_parent is this package's own pinned parent commit (advanced twice post-commit, see the frozen manifest section 1.1)."
 }

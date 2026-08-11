@@ -124,23 +124,36 @@ TRAINING_DIR = Path(__file__).parent
 REPO_ROOT = TRAINING_DIR.parent
 FROZEN_FINGERPRINTS_PATH = TRAINING_DIR / "controlled_seed17_regression_balanced_repair_execution_frozen_fingerprints.json"
 
-# This package's corpus baseline and its execution-package parent commit
-# are the same commit -- unlike the prior contrastive-replay package
-# (whose lock had already advanced past one corrective round by the time
-# it was finalized), this is a first-time implementation with no prior
-# correction round yet. If a future correction advances PINNED_PARENT_COMMIT
-# past this value, CORPUS_BASELINE_COMMIT stays fixed as documentation of
-# where the corpus/split/benchmark inputs are actually pinned.
+# CORPUS_BASELINE_COMMIT is the corpus/input provenance root -- the
+# milestone the treatment/comparator corpora, splits, and benchmarks are
+# all pinned against. It is documentation only from here on; no active
+# git-ancestry check requires HEAD to descend from it directly. The commit
+# boundary that actually gates execution is PINNED_PARENT_COMMIT below --
+# same pattern as run_seed17_contrastive_replay.py's own
+# CORPUS_BASELINE_COMMIT/PINNED_PARENT_COMMIT split.
 CORPUS_BASELINE_COMMIT = "90ee08d17304e5a124f15f19f9644a1f609083ba"
-PINNED_PARENT_COMMIT = "90ee08d17304e5a124f15f19f9644a1f609083ba"
+
+# Advanced twice 2026-08-11. First: the initial package commit
+# (`cd1afa937c538a5b11eead55f64c16ab6284b058`, parent `90ee08d...`) shipped
+# with a real but narrow defect -- its own test suite's live-check section
+# hardcoded a pre-commit-only expectation for verify_package_commit(),
+# which went stale the moment the package was actually committed (the
+# function itself was already correct; only the test's expectation needed
+# to catch up). That one-file correction was committed as
+# `ecb3ddced284a76c1baaeec2c6d03fdeaf9a3e4a`, parent `cd1afa9...`. Second:
+# this same live-check gap recurred one level up -- fixing it exposed that
+# the pin itself needed to advance again, since HEAD was now a
+# *grandchild*, not a direct child, of the then-current pin. Advanced here
+# to `ecb3ddc...` so this constant always describes the immediately
+# preceding package commit, never a fixed historical point -- exactly the
+# same pattern as run_seed17_contrastive_replay.py's own
+# PINNED_PARENT_COMMIT advancement.
+PINNED_PARENT_COMMIT = "ecb3ddced284a76c1baaeec2c6d03fdeaf9a3e4a"
 
 EXPECTED_PACKAGE_COMMIT_FILES = frozenset({
-    "training/seed17_regression_balanced_repair_execution_design_chatgpt.md",
-    "training/seed17_regression_balanced_repair_execution_design_constants.json",
-    "training/controlled_seed17_regression_balanced_repair_execution_frozen_manifest.md",
-    "training/controlled_seed17_regression_balanced_repair_execution_frozen_fingerprints.json",
     "training/run_seed17_regression_balanced_repair.py",
-    "training/test_run_seed17_regression_balanced_repair.py",
+    "training/controlled_seed17_regression_balanced_repair_execution_frozen_fingerprints.json",
+    "training/controlled_seed17_regression_balanced_repair_execution_frozen_manifest.md",
     "training/controlled_seed17_regression_balanced_repair_execution_manifest_dryrun_receipt_sample.json",
 })
 
