@@ -101,10 +101,15 @@ task?) rather than a single aggregate loss number.
 
 ## License
 
-CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike), effective for
-material published **2026-08-12 or later** — see [LICENSE.md](LICENSE.md).
-Changed from CC-BY-4.0 to match the project's settled noncommercial policy.
-**If you obtained this dataset before 2026-08-12** (`gold_v1.1` through
-`gold_v1.2.3`), you received it under CC-BY-4.0, which is irrevocable —
-see LICENSE.md's "Effective date and prospective scope" section for what
-that means for your copy.
+CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike) applies to material
+first published from commit `d3deeef` (2026-08-12) forward — see
+[LICENSE.md](LICENSE.md) for full terms. Changed from CC-BY-4.0 to match
+the project's settled noncommercial policy.
+
+**`gold_v1.0` through `gold_v1.2.3`** were published under CC-BY-4.0 and
+remain available under those terms, including commercially — via the
+preserved [`last-cc-by-4.0`](https://github.com/ThisIsJohnnyt/intent-recovery-model/releases/tag/last-cc-by-4.0)
+release, not only for whoever happened to download them before 2026-08-12.
+The license that applies depends on which version you have, not when you
+got it — see LICENSE.md's "Which license applies to which material"
+section.
