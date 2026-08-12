@@ -101,7 +101,10 @@ task?) rather than a single aggregate loss number.
 
 ## License
 
-CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike) — see
-[LICENSE.md](LICENSE.md). Changed 2026-08-12 from CC-BY-4.0 to match the
-project's settled noncommercial policy; see LICENSE.md's revision history
-for why.
+CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike), effective for
+material published **2026-08-12 or later** — see [LICENSE.md](LICENSE.md).
+Changed from CC-BY-4.0 to match the project's settled noncommercial policy.
+**If you obtained this dataset before 2026-08-12** (`gold_v1.1` through
+`gold_v1.2.3`), you received it under CC-BY-4.0, which is irrevocable —
+see LICENSE.md's "Effective date and prospective scope" section for what
+that means for your copy.
