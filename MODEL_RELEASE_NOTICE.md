@@ -31,8 +31,9 @@ what this project can actually grant. Instead:
 We ask — but do not represent as a legally enforceable license condition —
 that anyone using these released weights:
 
-1. **Acknowledge** the Intent Recovery Model project (this repository) as
-   the creator of this implementation and its annotation/training framework.
+1. **Acknowledge** ThisIsJohnnyt (https://github.com/ThisIsJohnnyt/intent-recovery-model)
+   as the initiator of the Intent Recovery Model project and creator of
+   this implementation and its annotation/training framework.
 2. **Use the weights noncommercially** — consistent with the rest of this
    project's licensing posture (see [PDR-006](docs/decisions/PDR-006.md) and
    [PDR-008](docs/decisions/PDR-008.md)).

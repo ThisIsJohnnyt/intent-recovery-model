@@ -38,6 +38,14 @@ so it wouldn't have reliably delivered that guarantee anyway. See
 [PDR-008](docs/decisions/PDR-008.md) for the full reasoning and the
 tradeoff as presented to the product owner.
 
+PolyForm Noncommercial's attribution mechanism is a licensor-provided
+`Required Notice:` line, which every recipient must receive along with the
+terms (see the license text's "Notices" section). This project's Required
+Notice:
+
+> Required Notice: Intent Recovery Model software was created by
+> ThisIsJohnnyt — https://github.com/ThisIsJohnnyt/intent-recovery-model
+
 ## 4. Released model weights (`intent-recovery-model-*` releases)
 
 **Not covered by an asserted copyright license.** Whether trained model

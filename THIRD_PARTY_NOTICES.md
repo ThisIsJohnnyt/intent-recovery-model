@@ -38,13 +38,46 @@ recorded" rather than assuming it matches the later-pinned revision above.
 
 ## Provenance of released files (`intent-recovery-model-v0.1.0` and later)
 
-Verified against `training/export_onnx.py` directly rather than assumed:
+Verified against `training/export_onnx.py` directly, and then checked further:
+these files are copied via `shutil.copy()` from the fine-tuned model's
+Hugging Face export directory (`export_onnx.py` line ~83), but "copied by
+our script" is not the same as "byte-identical to Google's original." To
+find out, the actual `v0.1.0` release assets were downloaded and hashed
+against the same files at the later-pinned upstream revision
+(`7bcac572ce56db69c1ea7c8af255c5d7c9672fc2` — not `v0.1.0`'s own exact
+revision, which is unrecorded per above, but the closest verifiable
+reference available):
+
+| File | SHA-256 matches pinned upstream revision? |
+|---|---|
+| `spiece.model` | **Yes** — byte-identical. |
+| `config.json` | **No.** |
+| `generation_config.json` | **No.** |
+| `special_tokens_map.json` | **No.** |
+| `tokenizer.json` | **No.** |
+| `tokenizer_config.json` | **No.** |
+
+Diffing the two smaller files explains why: `config.json` and
+`generation_config.json` gained fields (`classifier_dropout`,
+`dense_act_fn`, `dtype`, `is_gated_act`) and changed `eos_token_id` from a
+scalar to a list, all consistent with `save_pretrained()` reserializing
+through a newer `transformers` version (`4.57.6` in the release vs.
+`4.23.1`/`4.27.0.dev0` at the pinned upstream revision) — not a deliberate
+edit, but a real change in bytes and, in places, content.
+
+**Corrected provenance**, replacing the earlier blanket "not authored by
+this project" claim:
 
 | File | Provenance |
 |---|---|
-| `config.json`, `generation_config.json`, `special_tokens_map.json`, `spiece.model`, `tokenizer.json`, `tokenizer_config.json` | Copied via `shutil.copy()` from the fine-tuned model's Hugging Face export directory (`export_onnx.py` line ~83) — these originate from `google/flan-t5-base`'s own tokenizer/config files as written out by `save_pretrained()`. Not authored by this project. Subject to Apache 2.0 as Google's Source-form material. |
+| `spiece.model` | Copied upstream binary; verified byte-identical to the later pinned reference (`v0.1.0`'s own exact upstream revision is unrecorded, so this is the closest available comparison, not a guarantee of identity to what `v0.1.0` specifically started from). |
+| `config.json`, `generation_config.json`, `special_tokens_map.json`, `tokenizer.json`, `tokenizer_config.json` | Upstream-derived, but **reserialized** through this project's fine-tuning/export pipeline (`save_pretrained()` via a newer `transformers` version than Google's original upload used) — verified to differ byte-for-byte from the pinned upstream reference. Treated as modified/derived files under Apache §4(b), not unmodified Source form, unless byte-identity to the specific historical upstream revision is separately proven. |
 | `encoder_model_quantized.onnx`, `decoder_model_merged_quantized.onnx` | Derivative Works under Apache 2.0's definition — exported to ONNX format and quantized from the fine-tuned model weights, which are themselves fine-tuned from `google/flan-t5-base`'s original weights. This project's contribution: the fine-tuning (via `datasets/gold/` training data) and the ONNX export/quantization transformation. |
 | `intent-recovery-model-v0.1.0.manifest.json` | Project-created (SHA-256 checksums of the above). |
+
+Per Apache §4(b), the reserialized configuration/tokenizer files above
+count as modified files carrying prominent notices that they changed — this
+table is that notice.
 
 ## What this means practically
 
