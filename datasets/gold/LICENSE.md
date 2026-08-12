@@ -86,11 +86,11 @@ assume code or model-weight terms from this file alone.
   independent review found Revision 1 stated the noncommercial lineage as
   unqualified, omitting that the prior CC-BY-4.0 grant is irrevocable.
   Also widened the ShareAlike clause to match legal-code §3(b).
-- **Revision 3** (this version, pending commit): corrects Revision 2's
-  own framing after ChatGPT's second independent review — the section
-  tied the license boundary to *download date* ("obtained on or after
+- **Revision 3** (`b4416cb`, 2026-08-12): corrects Revision 2's own
+  framing after ChatGPT's second independent review — the section tied
+  the license boundary to *download date* ("obtained on or after
   2026-08-12"), which breaks once the `last-cc-by-4.0` tag/release keeps
-  the historical version obtainable indefinitely. Reworded around
+  the historical version obtainable going forward. Reworded around
   *which version* rather than *when obtained*. Also corrected the version
   range, which had dropped `gold_v1.0` (published in the same commit,
   `1cb3490`, that first set CC-BY-4.0).
