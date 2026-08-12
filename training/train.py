@@ -44,6 +44,14 @@ from prepare_data import check_format_valid
 from real_data_private import checkpoint_fingerprint, git_commit
 
 BASE_MODEL = "google/flan-t5-base"
+# Pinned for reproducibility and third-party-notice accuracy (see
+# THIRD_PARTY_NOTICES.md) -- the same revision already used by the seed-17
+# studies (training/controlled_seed17_*_frozen_manifest.md), resolved via
+# huggingface_hub.scan_cache_dir() against the local cache. Earlier runs
+# (including the v0.1.0 release) predate this pin and their exact revision
+# was never recorded -- disclosed as a gap in THIRD_PARTY_NOTICES.md, not
+# assumed to match this one.
+BASE_MODEL_REVISION = "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2"
 DEFAULT_DATA_DIR = Path(__file__).parent / "data" / "processed"
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / "checkpoints" / "thoughtorganizer-flan-t5"
 MAX_INPUT_TOKENS = 512
@@ -93,8 +101,8 @@ def main() -> None:
         f"max_steps: {cli_args.max_steps if cli_args.max_steps is not None else '(unset, epoch-based)'}"
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, revision=BASE_MODEL_REVISION)
+    model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL, revision=BASE_MODEL_REVISION).to(device)
 
     train_ds = load_split(data_dir, "train.jsonl")
     val_ds = load_split(data_dir, "val.jsonl")

@@ -99,8 +99,14 @@ For UI, storage, or application-level issues, open one in
 
 ## License
 
-CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike) — see
-[LICENSE](LICENSE) for the full project-wide terms, including the specific
-carve-out for `datasets/gold/`'s early CC-BY-4.0-licensed releases. See
-[PDR-006](docs/decisions/PDR-006.md) and
-[PDR-007](docs/decisions/PDR-007.md) for the decision records.
+This repository uses multiple, artifact-appropriate license classes rather
+than one blanket license — see [LICENSE](LICENSE) for the full routing:
+CC BY-NC-SA 4.0 for the dataset and documentation (with a specific
+CC-BY-4.0 historical carve-out for `datasets/gold/`'s early releases),
+PolyForm Noncommercial 1.0.0 for code, and a plain acknowledgment/
+noncommercial-use *request* (not an asserted license) for released model
+weights — see [`MODEL_RELEASE_NOTICE.md`](MODEL_RELEASE_NOTICE.md) and
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Decision records:
+[PDR-006](docs/decisions/PDR-006.md),
+[PDR-007](docs/decisions/PDR-007.md) (superseded in part), and
+[PDR-008](docs/decisions/PDR-008.md).

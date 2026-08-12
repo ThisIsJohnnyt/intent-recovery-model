@@ -68,11 +68,14 @@ are excluded from version control, and are never published.
 
 This file's terms apply specifically to `datasets/gold/`, including the
 CC-BY-4.0 historical exception above, which is unique to this directory.
-The rest of the project (training/inference code, documentation, and
-released model weights) carries the same CC BY-NC-SA 4.0 license via the
-project-wide root [`LICENSE`](../../LICENSE) file — see
-[PDR-007](../../docs/decisions/PDR-007.md). Nothing else in the repository
-has a comparable prior CC-BY-4.0 grant to account for.
+Documentation elsewhere in the project shares this same CC BY-NC-SA 4.0
+license. **Code and released model weights do not** — see the project-wide
+root [`LICENSE`](../../LICENSE) for the full routing: code is PolyForm
+Noncommercial 1.0.0, and model weights carry a request, not an asserted
+license. See [PDR-008](../../docs/decisions/PDR-008.md), which corrected
+[PDR-007](../../docs/decisions/PDR-007.md)'s original claim that one
+license covered everything. Nothing else in the repository has a
+comparable prior CC-BY-4.0 grant to account for.
 
 ## Revision history
 
@@ -95,10 +98,17 @@ has a comparable prior CC-BY-4.0 grant to account for.
   *which version* rather than *when obtained*. Also corrected the version
   range, which had dropped `gold_v1.0` (published in the same commit,
   `1cb3490`, that first set CC-BY-4.0).
-- **Revision 5** (this version, pending commit; there is no Revision 4 in
-  this file's own history — Revision 4 was PDR-006's mechanical cleanup,
-  which didn't touch this file): "Scope of this file" section updated
-  after [PDR-007](../../docs/decisions/PDR-007.md) extended CC BY-NC-SA
-  4.0 to the rest of the project. Previously said code/docs/weights were
+- **Revision 5** (`95e16df`, 2026-08-12; there is no Revision 4 in this
+  file's own history — Revision 4 was PDR-006's mechanical cleanup, which
+  didn't touch this file): "Scope of this file" section updated after
+  [PDR-007](../../docs/decisions/PDR-007.md) extended CC BY-NC-SA 4.0 to
+  the rest of the project. Previously said code/docs/weights were
   "not-yet-decided" — now cross-references the new project-wide root
   `LICENSE` file instead.
+- **Revision 6** (this version, pending commit): corrects Revision 5,
+  which is now stale after [PDR-008](../../docs/decisions/PDR-008.md)
+  found PDR-007's "one license for everything" claim materially incomplete
+  for code and model weights specifically. Updated to state precisely:
+  documentation shares this file's CC BY-NC-SA 4.0 terms, but code
+  (PolyForm Noncommercial 1.0.0) and model weights (request, not a
+  license) do not.
