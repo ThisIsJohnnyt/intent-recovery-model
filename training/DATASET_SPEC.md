@@ -174,7 +174,7 @@ datasets/gold/gold_v1.0.jsonl         <- hand-curated gold-tier examples, one fi
                                           with (or instead of) synthetic.jsonl
 datasets/gold/DATASET_CARD.md         <- purpose, scope, generation process, limitations, ethics
 datasets/gold/CHANGELOG.md            <- version history of the gold tier
-datasets/gold/LICENSE.md              <- CC-BY-4.0
+datasets/gold/LICENSE.md              <- CC BY-NC-SA 4.0
 ```
 
 Each gold release is a full bundle, not just the `.jsonl` — design notes,

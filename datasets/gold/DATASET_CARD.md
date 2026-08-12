@@ -101,4 +101,7 @@ task?) rather than a single aggregate loss number.
 
 ## License
 
-CC-BY-4.0 — see [LICENSE.md](LICENSE.md).
+CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike) — see
+[LICENSE.md](LICENSE.md). Changed 2026-08-12 from CC-BY-4.0 to match the
+project's settled noncommercial policy; see LICENSE.md's revision history
+for why.

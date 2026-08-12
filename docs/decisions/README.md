@@ -54,3 +54,6 @@ Each PDR is a short file: `PDR-NNN.md`, three-digit zero-padded, sequential.
 - [PDR-001](PDR-001.md) — Build dataset infrastructure before large datasets
 - [PDR-002](PDR-002.md) — Sync the dataset curator via live GitHub read access, not manual relay
 - [PDR-003](PDR-003.md) — Split into `intent-recovery-model` and `thought-organizer` repos (see [migration plan](PDR-003-migration-plan.md))
+- [PDR-004](PDR-004.md) — Split real-note evaluation into routine validation and sealed holdout
+- [PDR-005](PDR-005.md) — Govern and strictly evaluate private real-note data
+- [PDR-006](PDR-006.md) — License the gold dataset CC BY-NC-SA 4.0, not CC-BY-4.0
