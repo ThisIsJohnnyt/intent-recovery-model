@@ -96,3 +96,11 @@ Open an issue here for dataset problems, evaluation problems, training
 problems, export problems, model behavior, or inference contract changes.
 For UI, storage, or application-level issues, open one in
 [thought-organizer-app](https://github.com/ThisIsJohnnyt/thought-organizer-app) instead.
+
+## License
+
+CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike) — see
+[LICENSE](LICENSE) for the full project-wide terms, including the specific
+carve-out for `datasets/gold/`'s early CC-BY-4.0-licensed releases. See
+[PDR-006](docs/decisions/PDR-006.md) and
+[PDR-007](docs/decisions/PDR-007.md) for the decision records.

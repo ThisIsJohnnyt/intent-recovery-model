@@ -1,0 +1,72 @@
+# License
+
+This repository — including its training/inference code, documentation,
+and released model weights — is licensed under the **Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International License
+(CC BY-NC-SA 4.0)**, unless a specific file or directory states otherwise.
+
+Copyright (c) 2026 ThisIsJohnnyt.
+
+You are free to:
+- **Share** — copy and redistribute the material in any medium or format
+- **Adapt** — remix, transform, and build upon the material
+
+Under the following terms:
+- **Attribution** — you must give appropriate credit to ThisIsJohnnyt,
+  provide a link to the license, and indicate if changes were made.
+- **NonCommercial** — you may not use the material for any purpose primarily
+  intended for commercial advantage or monetary compensation.
+- **ShareAlike** — if you remix, transform, or build upon the material, you
+  must distribute your contributions under CC BY-NC-SA 4.0, a later version
+  with the same license elements, or a BY-NC-SA Compatible License, as
+  permitted by Section 3(b) of the legal code.
+
+No additional restrictions — you may not apply legal terms or technological
+measures that legally restrict others from doing anything the license
+permits.
+
+Full license text: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en
+
+## Scope
+
+This file is the project-wide default. Two areas carry their own, more
+specific terms:
+
+- **`datasets/gold/`** — see [`datasets/gold/LICENSE.md`](datasets/gold/LICENSE.md).
+  Same license (CC BY-NC-SA 4.0) from 2026-08-12 forward, but with an
+  irrevocable historical exception: `gold_v1.0` through `gold_v1.2.3` were
+  published under CC-BY-4.0 before this project-wide decision existed, and
+  that grant cannot be revoked — see that file and
+  [PDR-006](docs/decisions/PDR-006.md) for the full detail. Nothing else in
+  this repository has a comparable prior grant to account for.
+- **`datasets/real_validation.jsonl`** and **`datasets/real_holdout.jsonl`**
+  — not licensed at all; excluded from version control, contain the
+  project owner's real personal notes, never published (see
+  [PDR-004](docs/decisions/PDR-004.md)).
+
+## Model weights
+
+Released model weights (`intent-recovery-model-*` GitHub Releases) carry
+this same license. The base model, `google/flan-t5-base`, is Apache 2.0 —
+a permissive license that does not require derivative works (including
+fine-tuned weights) to remain Apache 2.0 (Apache 2.0 §4: a licensee "may
+provide additional or different license terms... for any such Derivative
+Works"). Google's own Apache 2.0 notice for `flan-t5-base` is unaffected
+and not superseded by this file.
+
+## Why not "open source"
+
+A NonCommercial restriction is incompatible with the Open Source
+Initiative's Open Source Definition (criterion 6: no discrimination
+against fields of endeavor). This project is precisely described as
+**source-available/noncommercial**, not OSI "open source" — even though
+"open source" is how the product owner describes it in plain language
+elsewhere. See [PDR-006](docs/decisions/PDR-006.md) and
+[PDR-007](docs/decisions/PDR-007.md) for the full reasoning.
+
+## GitHub license detection
+
+GitHub's automatic license detector has a known gap identifying
+CC-BY-NC-SA-4.0 even from a root-level file like this one
+(`licensee/licensee#343`). This file's text is what legally governs
+regardless of whether the repository sidebar badge recognizes it.

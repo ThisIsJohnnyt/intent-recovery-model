@@ -66,12 +66,13 @@ are excluded from version control, and are never published.
 
 ## Scope of this file
 
-This license currently covers only the dataset in `datasets/gold/`. It does
-not, by itself, set the license for this project's training/inference code,
-documentation, or any released model weights — those remain a separate,
-not-yet-decided licensing question (tracked in
-`training/intent_recovery_data_model_discovery_plan_chatgpt.md`). Do not
-assume code or model-weight terms from this file alone.
+This file's terms apply specifically to `datasets/gold/`, including the
+CC-BY-4.0 historical exception above, which is unique to this directory.
+The rest of the project (training/inference code, documentation, and
+released model weights) carries the same CC BY-NC-SA 4.0 license via the
+project-wide root [`LICENSE`](../../LICENSE) file — see
+[PDR-007](../../docs/decisions/PDR-007.md). Nothing else in the repository
+has a comparable prior CC-BY-4.0 grant to account for.
 
 ## Revision history
 
@@ -94,3 +95,10 @@ assume code or model-weight terms from this file alone.
   *which version* rather than *when obtained*. Also corrected the version
   range, which had dropped `gold_v1.0` (published in the same commit,
   `1cb3490`, that first set CC-BY-4.0).
+- **Revision 5** (this version, pending commit; there is no Revision 4 in
+  this file's own history — Revision 4 was PDR-006's mechanical cleanup,
+  which didn't touch this file): "Scope of this file" section updated
+  after [PDR-007](../../docs/decisions/PDR-007.md) extended CC BY-NC-SA
+  4.0 to the rest of the project. Previously said code/docs/weights were
+  "not-yet-decided" — now cross-references the new project-wide root
+  `LICENSE` file instead.

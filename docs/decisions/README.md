@@ -57,3 +57,4 @@ Each PDR is a short file: `PDR-NNN.md`, three-digit zero-padded, sequential.
 - [PDR-004](PDR-004.md) — Split real-note evaluation into routine validation and sealed holdout
 - [PDR-005](PDR-005.md) — Govern and strictly evaluate private real-note data
 - [PDR-006](PDR-006.md) — License the gold dataset CC BY-NC-SA 4.0, not CC-BY-4.0
+- [PDR-007](PDR-007.md) — License the whole project CC BY-NC-SA 4.0 (code, docs, model weights)
