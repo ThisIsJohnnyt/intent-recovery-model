@@ -3,10 +3,12 @@
 **Operationalizes:** `training/intent_recovery_data_model_discovery_plan_chatgpt.md` §3, "A1. Rights and
 governance gate (before samples)".
 
-**Status: template only.** No candidate's sheet has been filled in as part of this package. Per Johnny's
-2026-08-12 scope decision, A1 is held to template-only alongside A2–A5, not completed for DialogSum, QMSum,
-or AMI even though the plan's own stop rule only blocks *sample access*, not public-source license
-research. Filling this in for a real candidate is a separate, later step.
+**Status: template, now with two real candidates completed.** Per Johnny's 2026-08-12 scope decision, A1
+was originally held to template-only. **Revised 2026-08-13**: Johnny authorized starting real A1 rights
+research; DialogSum and QMSum are now filled in — see `discovery_audit_package_a1_evidence_dialogsum.md`
+and `discovery_audit_package_a1_evidence_qmsum.md`. AMI (the plan's reserve candidate) remains
+template-only. Both completed sheets are public-source research only — no account created, no term
+accepted, no sample examined — consistent with the boundary below.
 
 **Boundary, restated:** completing this sheet never requires creating an account, accepting a license's
 click-through terms, or opening a gated/paid record. If any field cannot be answered from a publisher's

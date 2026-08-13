@@ -77,11 +77,35 @@ mismatch between what gets hashed locally and what git actually stores. Receipt 
 (`c0c4aff2535eb8150bfd31b217f677a3c82409d95eb083525d3f7fd5aacaecdd`, confirmed byte-identical via `cmp`,
 not just `diff`, across separate process invocations) and every citation in this package updated to match.
 
+**First real execution step (2026-08-13, same day, new milestone):** Johnny authorized starting actual A1
+rights research — the first time this package has been *used*, not just built. Claude conducted
+public-source research (primary sources only: license pages, READMEs, papers; no account created, no term
+accepted, no sample examined) for both of the plan's active candidates and filled in real evidence sheets.
+ChatGPT's independent verification then found real corrections to both — a permission-matrix overstatement
+in DialogSum's sheet and a legal mischaracterization plus a now-resolved provenance gap in QMSum's — all
+confirmed by Claude fetching the actual primary sources before fixing (the House of Commons committee
+report, the QMSum paper's own table, AMI's ethics/consent page). Findings, corrected, in brief:
+**DialogSum** — blocked; MuTual's license is entirely unverifiable, no consent/de-identification statement
+found for any of its four upstream sources, DialogSum's own README disclaims owning the dialogue copyright
+without evidence of a valid sublicense, and its permission matrix now correctly shows `Unclear` throughout
+rather than inheriting DialogSum's own umbrella claim uncritically — an umbrella grant can't clear rights
+the grantor may not hold. **QMSum** — blocked, but unevenly and now more precisely: AMI (137) and ICSI (59)
+have a permissive license and confirmed informed consent (though trained-weight distribution remains
+unresolved for them too, not "clear on every dimension" as first stated); the committee domain splits
+25 Welsh + 11 Canadian (resolved directly from the paper's own table); the Canadian-sourced portion isn't
+"no permission at all" as first written — the House of Commons grants a narrow accurate/non-official/
+noncommercial reproduction permission that just doesn't extend to this project's transformation/training
+use, a materially different and more precise finding. Both sheets sent back to ChatGPT for confirmation.
+Neither candidate is cleared; this is real, decision-useful evidence, corrected under real independent
+review, not a rubber stamp in either direction.
+
 ## File map
 
 | File | Plan section | What it is |
 |---|---|---|
 | `discovery_audit_package_a1_rights_evidence_template.md` | §3 A1 | Rights/governance evidence-sheet template; PDR-006/008-grounded; silence-is-not-clearance fixed |
+| `discovery_audit_package_a1_evidence_dialogsum.md` | §3 A1 | **Real evidence sheet, 2026-08-13** — DialogSum blocked (MuTual provenance, undocumented consent/privacy, unresolved speaker-copyright sublicense) |
+| `discovery_audit_package_a1_evidence_qmsum.md` | §3 A1 | **Real evidence sheet, 2026-08-13** — QMSum blocked unevenly (AMI/ICSI favorable on CC BY 4.0 and documented consent, trained-weight and remaining privacy questions unresolved; Canadian committee content has reserved copyright plus a bounded noncommercial reproduction permission that doesn't cover this project's transformation/training use) |
 | `discovery_audit_package_a2_sample_selection_protocol.md` | §3 A2 | Selection procedure; frozen real pool-source spec; semantic-collision options; hard-stop-on-shortfall (pre- and post-adjudication); four-round defect log |
 | `discovery_audit_package_a2_sample_selection_script.py` | §3 A2 | Reference implementation — multi-speaker caps, mandatory fail-closed pool validation with content hashes, per-record manifest hashes, preflight validation |
 | `discovery_audit_package_a2_selftest_receipt.json` | §3 A2 | 20/20 checks passed, reproduced byte-identically across two process invocations, SHA-256 `c0c4aff2535eb8150bfd31b217f677a3c82409d95eb083525d3f7fd5aacaecdd` |
@@ -98,7 +122,9 @@ not just `diff`, across separate process invocations) and every citation in this
 
 - No dataset has been accessed, downloaded, or sampled.
 - No account has been created, no license term has been accepted.
-- No candidate's rights evidence sheet has been filled in for a real candidate.
+- **Corrected 2026-08-13** (this line was stale, contradicting the completed A1 milestone below): real A1
+  public-source rights sheets have been filled in for DialogSum and QMSum; neither candidate is cleared,
+  and no A2 sample access, acquisition, download, or inspection has occurred for either.
 - No model has been downloaded or run.
 - No corpus has been mutated; no new training record has been authored.
 - No adjudicator has been assigned for any real candidate's disputed tags — Johnny's separate call.
@@ -106,13 +132,25 @@ not just `diff`, across separate process invocations) and every citation in this
 - B1's arm 2 checkpoint identity is determined but not downloaded, executed, or otherwise acted upon.
 - Reading `datasets/benchmark/`'s three existing files to pin their real counts/hashes is the project's own
   already-committed benchmark data, not external dataset access — done openly, not silently.
-- Nothing here has been committed or pushed — gated on Johnny's hand-typed "Git it done."
+- **Corrected 2026-08-13** (this line was imprecise — the package itself was in fact committed and pushed,
+  as this same index states elsewhere): the new A1 evidence milestone (the two evidence sheets and the
+  template/index edits that go with them) has not been committed or pushed — gated on Johnny's hand-typed
+  "Git it done." The underlying design package was previously committed and pushed at `afa32b8`.
 
-## What happens next, per the established sequence
+## Where things actually stand (updated 2026-08-13, replacing the stale pre-approval "what happens next")
 
-1. ChatGPT independently reviews this revision (protocol step 6) — specifically whether the simplified
-   post-adjudication hard-stop rule actually closes the lifecycle gap (rather than reintroducing it in a
-   new form), and whether the mandatory pool-validation fix is sound.
-2. Any material disagreement is work-stopping and returns to Johnny, per protocol step 3.
-3. Johnny separately authorizes any acquisition, model execution, or compute (protocol step 7) — this
-   package's existence is not that authorization, and does not request it.
+- **The package itself**: approved by ChatGPT with no material findings, committed and pushed at
+  `afa32b8`, independently re-verified by both parties against the actual pushed bytes. Closed.
+- **A1 rights research for DialogSum and QMSum**: drafted by Claude, corrected across several rounds of
+  ChatGPT's independent verification (a real legal mischaracterization, a resolved provenance count, and
+  multiple wording/internal-consistency fixes), now accepted by ChatGPT with no remaining material or
+  internal-consistency finding. Not yet committed — **corrected 2026-08-13 for git-status precision**: the
+  two new evidence sheets (`discovery_audit_package_a1_evidence_dialogsum.md` and `..._qmsum.md`) are
+  untracked; the template's status note and this index are tracked files with uncommitted modifications.
+  All four await Johnny's review and "Git it done."
+- **What's next is Johnny's decision, not a queued protocol step**: whether to commit the two evidence
+  sheets as-is (both candidates blocked, neither cleared), pursue the follow-on research either sheet's
+  "What would resolve this" section identifies (e.g. mapping QMSum's Welsh/Canadian meeting IDs, checking
+  MuTual's paper directly for DialogSum), open the RBR17-C-recommended mechanism audit instead, or
+  something else entirely. No compute, dataset access, or model execution is authorized regardless of
+  which he picks.
