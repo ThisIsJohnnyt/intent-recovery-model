@@ -1,0 +1,449 @@
+{
+  "selftest": true,
+  "fixture": "fabricated, 48 synthetic placeholder records, no real dataset content",
+  "run_a_manifest": {
+    "sample_size_target": 8,
+    "sample_size_achieved": 8,
+    "shortfall_reason": null,
+    "must_stop": false,
+    "seed": 24,
+    "speaker_scenario_cap": 2,
+    "collision_thresholds": {
+      "token_jaccard_review": 0.15,
+      "char_ngram_review": 0.1,
+      "containment_min_normalized_chars": 20
+    },
+    "pool_fingerprint": {
+      "total_pool_size": 3,
+      "sources": {
+        "fake-acceptance": {
+          "count": 1,
+          "content_sha256": "ae734df3205d03d3640d2a21981a8e2951d7ba56ab4548b38119f3308623eb9b"
+        },
+        "fake-protected": {
+          "count": 2,
+          "content_sha256": "f1657d03117b61d792162de3bc5f6679d78fa18509b8230eeb29341faf5529a3"
+        }
+      },
+      "aggregate_content_sha256": "09bea20f5b9947f83577ecd78561b8f7bfcbf5861a9d6df2369952ccb05710e1"
+    },
+    "strata_quotas": {
+      "('fake-source-a', 1, '2')": 0,
+      "('fake-source-a', 1, '3')": 1,
+      "('fake-source-a', 1, '4+')": 0,
+      "('fake-source-a', 2, '2')": 1,
+      "('fake-source-a', 2, '3')": 0,
+      "('fake-source-a', 2, '4+')": 0,
+      "('fake-source-a', 3, '2')": 0,
+      "('fake-source-a', 3, '3')": 0,
+      "('fake-source-a', 3, '4+')": 1,
+      "('fake-source-a', 4, '2')": 1,
+      "('fake-source-a', 4, '3')": 1,
+      "('fake-source-a', 4, '4+')": 0,
+      "('fake-source-b', 1, '2')": 0,
+      "('fake-source-b', 1, '3')": 1,
+      "('fake-source-b', 1, '4+')": 0,
+      "('fake-source-b', 2, '2')": 0,
+      "('fake-source-b', 2, '3')": 1,
+      "('fake-source-b', 2, '4+')": 1,
+      "('fake-source-b', 3, '2')": 0,
+      "('fake-source-b', 3, '3')": 0,
+      "('fake-source-b', 3, '4+')": 0,
+      "('fake-source-b', 4, '2')": 0,
+      "('fake-source-b', 4, '3')": 0,
+      "('fake-source-b', 4, '4+')": 0
+    },
+    "selected_record_ids": [
+      "synthetic-028",
+      "synthetic-008",
+      "synthetic-034",
+      "synthetic-036",
+      "synthetic-021",
+      "synthetic-017",
+      "synthetic-020",
+      "synthetic-005"
+    ],
+    "selected_records": [
+      {
+        "record_id": "synthetic-028",
+        "stratum": "('fake-source-b', 1, '3')",
+        "content_sha256": "a6a35c3fa148b8f024c25833c3f7d6f78f90291e79439ea63a529d0b81cd2139"
+      },
+      {
+        "record_id": "synthetic-008",
+        "stratum": "('fake-source-a', 2, '2')",
+        "content_sha256": "4a53b6834cea3595e1ddd2aacebbf6090e5f94160cfe611602cba738e25172e2"
+      },
+      {
+        "record_id": "synthetic-034",
+        "stratum": "('fake-source-b', 2, '3')",
+        "content_sha256": "78e7a7ad35d6bc9b01d9dc51bd6cf7ec37a58351cfc2625ed105e0abd363e8ef"
+      },
+      {
+        "record_id": "synthetic-036",
+        "stratum": "('fake-source-b', 2, '4+')",
+        "content_sha256": "c3f2ff0ea77fc34ef55d569bc5dd0cea31e5060e9e6eeffe315c933b903f825c"
+      },
+      {
+        "record_id": "synthetic-021",
+        "stratum": "('fake-source-a', 4, '3')",
+        "content_sha256": "de06b3241c5a088c6376f07982f8a87b63450cce881b9e6ad05650eee5c1abd9"
+      },
+      {
+        "record_id": "synthetic-017",
+        "stratum": "('fake-source-a', 3, '4+')",
+        "content_sha256": "4df3047581360188152a4f3e73a1b6ed975ce82db0efb6754d72e9b602b3274a"
+      },
+      {
+        "record_id": "synthetic-020",
+        "stratum": "('fake-source-a', 4, '2')",
+        "content_sha256": "daf91e259febd049ee94a129f3a60828655baf02a80c78b55eb9c00b4859165e"
+      },
+      {
+        "record_id": "synthetic-005",
+        "stratum": "('fake-source-a', 1, '4+')",
+        "content_sha256": "080cc78b395c00e50217f84d5dfd9a45114c301fe25090f341e9526f6b99b8e7"
+      }
+    ],
+    "unused_leftover_record_ids": [
+      "synthetic-030",
+      "synthetic-045",
+      "synthetic-010",
+      "synthetic-014",
+      "synthetic-029",
+      "synthetic-031",
+      "synthetic-027",
+      "synthetic-001",
+      "synthetic-037",
+      "synthetic-002",
+      "synthetic-035",
+      "synthetic-009",
+      "synthetic-024",
+      "synthetic-047",
+      "synthetic-025",
+      "synthetic-044",
+      "synthetic-041",
+      "synthetic-048",
+      "synthetic-032",
+      "synthetic-039",
+      "synthetic-022",
+      "synthetic-013",
+      "synthetic-012",
+      "synthetic-042",
+      "synthetic-015",
+      "synthetic-006",
+      "synthetic-038",
+      "synthetic-043",
+      "synthetic-046",
+      "synthetic-011",
+      "synthetic-040",
+      "synthetic-023"
+    ],
+    "excluded_or_redrawn": [
+      {
+        "record_id": "synthetic-033",
+        "reason": "speaker cap (2) reached for speaker_id 'speaker-3'"
+      },
+      {
+        "record_id": "synthetic-004",
+        "reason": "speaker cap (2) reached for speaker_id 'speaker-4'"
+      },
+      {
+        "record_id": "synthetic-003",
+        "reason": "speaker cap (2) reached for speaker_id 'speaker-3'"
+      },
+      {
+        "record_id": "synthetic-018",
+        "reason": "speaker cap (2) reached for speaker_id 'speaker-3'"
+      },
+      {
+        "record_id": "synthetic-019",
+        "reason": "speaker cap (2) reached for speaker_id 'speaker-4'"
+      },
+      {
+        "record_id": "synthetic-007",
+        "reason": "speaker cap (2) reached for speaker_id 'speaker-2'"
+      },
+      {
+        "record_id": "synthetic-016",
+        "reason": "speaker cap (2) reached for speaker_id 'speaker-1'"
+      },
+      {
+        "record_id": "synthetic-026",
+        "reason": "speaker cap (2) reached for speaker_id 'speaker-1'"
+      }
+    ],
+    "collision_review_flags_requiring_adjudication": [
+      {
+        "record_id": "synthetic-008",
+        "flags": [
+          "token-Jaccard 0.778 vs already-selected:synthetic-028 (review, non-fatal)",
+          "char-5gram-Jaccard 0.816 vs already-selected:synthetic-028 (review, non-fatal)"
+        ]
+      },
+      {
+        "record_id": "synthetic-034",
+        "flags": [
+          "token-Jaccard 0.600 vs already-selected:synthetic-028 (review, non-fatal)",
+          "char-5gram-Jaccard 0.731 vs already-selected:synthetic-028 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-008 (review, non-fatal)",
+          "char-5gram-Jaccard 0.745 vs already-selected:synthetic-008 (review, non-fatal)"
+        ]
+      },
+      {
+        "record_id": "synthetic-036",
+        "flags": [
+          "token-Jaccard 0.600 vs already-selected:synthetic-028 (review, non-fatal)",
+          "char-5gram-Jaccard 0.731 vs already-selected:synthetic-028 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-008 (review, non-fatal)",
+          "char-5gram-Jaccard 0.745 vs already-selected:synthetic-008 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-034 (review, non-fatal)",
+          "char-5gram-Jaccard 0.765 vs already-selected:synthetic-034 (review, non-fatal)"
+        ]
+      },
+      {
+        "record_id": "synthetic-021",
+        "flags": [
+          "char-5gram-Jaccard 0.116 vs fake-protected:001 (review, non-fatal)",
+          "token-Jaccard 0.333 vs fake-protected:002 (review, non-fatal)",
+          "char-5gram-Jaccard 0.169 vs fake-protected:002 (review, non-fatal)",
+          "token-Jaccard 1.000 vs fake-acceptance:001 (review, non-fatal)",
+          "char-5gram-Jaccard 0.544 vs fake-acceptance:001 (review, non-fatal)"
+        ]
+      },
+      {
+        "record_id": "synthetic-017",
+        "flags": [
+          "token-Jaccard 0.600 vs already-selected:synthetic-028 (review, non-fatal)",
+          "char-5gram-Jaccard 0.731 vs already-selected:synthetic-028 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-008 (review, non-fatal)",
+          "char-5gram-Jaccard 0.745 vs already-selected:synthetic-008 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-034 (review, non-fatal)",
+          "char-5gram-Jaccard 0.731 vs already-selected:synthetic-034 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-036 (review, non-fatal)",
+          "char-5gram-Jaccard 0.731 vs already-selected:synthetic-036 (review, non-fatal)"
+        ]
+      },
+      {
+        "record_id": "synthetic-020",
+        "flags": [
+          "token-Jaccard 0.600 vs already-selected:synthetic-028 (review, non-fatal)",
+          "char-5gram-Jaccard 0.765 vs already-selected:synthetic-028 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-008 (review, non-fatal)",
+          "char-5gram-Jaccard 0.745 vs already-selected:synthetic-008 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-034 (review, non-fatal)",
+          "char-5gram-Jaccard 0.731 vs already-selected:synthetic-034 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-036 (review, non-fatal)",
+          "char-5gram-Jaccard 0.731 vs already-selected:synthetic-036 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-017 (review, non-fatal)",
+          "char-5gram-Jaccard 0.731 vs already-selected:synthetic-017 (review, non-fatal)"
+        ]
+      },
+      {
+        "record_id": "synthetic-005",
+        "flags": [
+          "token-Jaccard 0.600 vs already-selected:synthetic-028 (review, non-fatal)",
+          "char-5gram-Jaccard 0.745 vs already-selected:synthetic-028 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-008 (review, non-fatal)",
+          "char-5gram-Jaccard 0.760 vs already-selected:synthetic-008 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-034 (review, non-fatal)",
+          "char-5gram-Jaccard 0.745 vs already-selected:synthetic-034 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-036 (review, non-fatal)",
+          "char-5gram-Jaccard 0.745 vs already-selected:synthetic-036 (review, non-fatal)",
+          "token-Jaccard 0.600 vs already-selected:synthetic-017 (review, non-fatal)",
+          "char-5gram-Jaccard 0.745 vs already-selected:synthetic-017 (review, non-fatal)",
+          "token-Jaccard 0.778 vs already-selected:synthetic-020 (review, non-fatal)",
+          "char-5gram-Jaccard 0.780 vs already-selected:synthetic-020 (review, non-fatal)"
+        ]
+      }
+    ]
+  },
+  "run_a_manifest_hash": "6262c1f8f6fdb792aa9b04259771e4440a9ce4ef6ce41a85508635c524f7769e",
+  "run_c_seed": 25,
+  "run_c_selected_record_ids": [
+    "synthetic-012",
+    "synthetic-009",
+    "synthetic-015",
+    "synthetic-006",
+    "synthetic-022",
+    "synthetic-035",
+    "synthetic-028",
+    "synthetic-013"
+  ],
+  "direct_collision_check": {
+    "forced_collision_record_id": "synthetic-001",
+    "fatal": true,
+    "reasons": [
+      "normalized-exact match against fake-protected:001",
+      "token-Jaccard 0.250 vs fake-protected:002 (review, non-fatal)",
+      "char-5gram-Jaccard 0.204 vs fake-protected:002 (review, non-fatal)",
+      "char-5gram-Jaccard 0.116 vs fake-acceptance:001 (review, non-fatal)"
+    ]
+  },
+  "direct_nonfatal_review_check": {
+    "record_id": "synthetic-021",
+    "fatal": false,
+    "reasons": [
+      "char-5gram-Jaccard 0.116 vs fake-protected:001 (review, non-fatal)",
+      "token-Jaccard 0.333 vs fake-protected:002 (review, non-fatal)",
+      "char-5gram-Jaccard 0.169 vs fake-protected:002 (review, non-fatal)",
+      "token-Jaccard 1.000 vs fake-acceptance:001 (review, non-fatal)",
+      "char-5gram-Jaccard 0.544 vs fake-acceptance:001 (review, non-fatal)"
+    ]
+  },
+  "quota_tiebreak_fairness_probe": {
+    "seeds_tested": 30,
+    "distinct_quota_allocations": 30,
+    "selection_frequency_per_stratum": {
+      "('fake-source-a', 1, '2')": 8,
+      "('fake-source-a', 1, '3')": 7,
+      "('fake-source-a', 1, '4+')": 17,
+      "('fake-source-a', 2, '2')": 12,
+      "('fake-source-a', 2, '3')": 12,
+      "('fake-source-a', 2, '4+')": 9,
+      "('fake-source-a', 3, '2')": 8,
+      "('fake-source-a', 3, '3')": 8,
+      "('fake-source-a', 3, '4+')": 12,
+      "('fake-source-a', 4, '2')": 13,
+      "('fake-source-a', 4, '3')": 8,
+      "('fake-source-a', 4, '4+')": 7,
+      "('fake-source-b', 1, '2')": 7,
+      "('fake-source-b', 1, '3')": 7,
+      "('fake-source-b', 1, '4+')": 12,
+      "('fake-source-b', 2, '2')": 11,
+      "('fake-source-b', 2, '3')": 14,
+      "('fake-source-b', 2, '4+')": 8,
+      "('fake-source-b', 3, '2')": 12,
+      "('fake-source-b', 3, '3')": 4,
+      "('fake-source-b', 3, '4+')": 9,
+      "('fake-source-b', 4, '2')": 8,
+      "('fake-source-b', 4, '3')": 12,
+      "('fake-source-b', 4, '4+')": 15
+    }
+  },
+  "shortfall_path_probe": {
+    "sample_size_target": 24,
+    "sample_size_achieved": 5,
+    "shortfall_reason": "pool exhausted after cap/collision exclusions: 5/24 achieved from 5 candidate record(s) total",
+    "must_stop": true,
+    "seed": 24,
+    "speaker_scenario_cap": 2,
+    "collision_thresholds": {
+      "token_jaccard_review": 0.15,
+      "char_ngram_review": 0.1,
+      "containment_min_normalized_chars": 20
+    },
+    "pool_fingerprint": {
+      "total_pool_size": 0,
+      "sources": {},
+      "aggregate_content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strata_quotas": {
+      "('only-source', 1, '2')": 24
+    },
+    "selected_record_ids": [
+      "tiny-04",
+      "tiny-02",
+      "tiny-00",
+      "tiny-01",
+      "tiny-03"
+    ],
+    "selected_records": [
+      {
+        "record_id": "tiny-04",
+        "stratum": "('only-source', 1, '2')",
+        "content_sha256": "0f70edeed9c63049f2d3dc2930b2523de4f76411cbb36563ed66f0fbf0a72d1b"
+      },
+      {
+        "record_id": "tiny-02",
+        "stratum": "('only-source', 1, '2')",
+        "content_sha256": "ffe52239d51fc44b03cd6b561bdf419672be8062af394753f960c3a1b13a055d"
+      },
+      {
+        "record_id": "tiny-00",
+        "stratum": "('only-source', 1, '2')",
+        "content_sha256": "ec89605caa6c4ad3ae29f37b5a376ece639b2611c2b88f8ff13565c70633df43"
+      },
+      {
+        "record_id": "tiny-01",
+        "stratum": "('only-source', 1, '2')",
+        "content_sha256": "c62bdbb32319e0c3e1d980b78b5f819a2ed3b0aa00ae5a2f487cd815d1edd3a3"
+      },
+      {
+        "record_id": "tiny-03",
+        "stratum": "('only-source', 1, '2')",
+        "content_sha256": "fe51e029b66c5c75d33657a8ee09381b707e514c1fe345237c5a82539a2e12c0"
+      }
+    ],
+    "unused_leftover_record_ids": [],
+    "excluded_or_redrawn": [],
+    "collision_review_flags_requiring_adjudication": [
+      {
+        "record_id": "tiny-02",
+        "flags": [
+          "token-Jaccard 0.714 vs already-selected:tiny-04 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-04 (review, non-fatal)"
+        ]
+      },
+      {
+        "record_id": "tiny-00",
+        "flags": [
+          "token-Jaccard 0.714 vs already-selected:tiny-04 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-04 (review, non-fatal)",
+          "token-Jaccard 0.714 vs already-selected:tiny-02 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-02 (review, non-fatal)"
+        ]
+      },
+      {
+        "record_id": "tiny-01",
+        "flags": [
+          "token-Jaccard 0.714 vs already-selected:tiny-04 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-04 (review, non-fatal)",
+          "token-Jaccard 0.714 vs already-selected:tiny-02 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-02 (review, non-fatal)",
+          "token-Jaccard 0.714 vs already-selected:tiny-00 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-00 (review, non-fatal)"
+        ]
+      },
+      {
+        "record_id": "tiny-03",
+        "flags": [
+          "token-Jaccard 0.714 vs already-selected:tiny-04 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-04 (review, non-fatal)",
+          "token-Jaccard 0.714 vs already-selected:tiny-02 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-02 (review, non-fatal)",
+          "token-Jaccard 0.714 vs already-selected:tiny-00 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-00 (review, non-fatal)",
+          "token-Jaccard 0.714 vs already-selected:tiny-01 (review, non-fatal)",
+          "char-5gram-Jaccard 0.939 vs already-selected:tiny-01 (review, non-fatal)"
+        ]
+      }
+    ]
+  },
+  "preflight_validation_probe": {
+    "duplicate_id_error_raised": true
+  },
+  "checks": {
+    "determinism_same_seed_identical_manifest": true,
+    "different_seed_gives_different_selection": true,
+    "sample_size_achieved_equals_target_when_pool_sufficient": true,
+    "speaker_and_scenario_cap_respected": true,
+    "multi_speaker_fixture_records_exist": true,
+    "direct_collision_check_flags_forced_duplicate": true,
+    "direct_collision_check_passes_clean_record": true,
+    "direct_check_flags_nonfatal_review_case": true,
+    "manifest_review_flags_well_formed_no_mutable_field": true,
+    "selected_records_have_correct_content_hashes": true,
+    "pool_fingerprint_has_per_source_breakdown": true,
+    "pool_validation_catches_missing_source": true,
+    "pool_validation_catches_unexpected_source": true,
+    "pool_validation_catches_hash_mismatch": true,
+    "unused_leftovers_well_formed": true,
+    "quota_tiebreak_varies_across_seeds": true,
+    "no_stratum_always_selected_or_always_excluded": true,
+    "shortfall_reported_when_pool_insufficient": true,
+    "preflight_validation_catches_duplicate_id": true,
+    "manifest_hash_deterministic_and_content_sensitive": true
+  },
+  "all_checks_passed": true
+}
