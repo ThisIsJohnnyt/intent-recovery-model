@@ -1,0 +1,11 @@
+{
+  "annotation_sha256": "ceddb5f2b9a174bd7a1f7636d065e26a19bceb74eca90a7f21a80de8a3f3908f",
+  "compute_authorized": false,
+  "max_propositions_per_record": 8,
+  "ordered_duplicate_pair_count": 108,
+  "positive_duplicate_count": 1,
+  "positive_duplicate_rate": 0.009259259259259259,
+  "proposition_count": 47,
+  "record_count": 10,
+  "status": "chatgpt_pass_pending_independent_annotation"
+}

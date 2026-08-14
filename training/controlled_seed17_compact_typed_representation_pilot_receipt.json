@@ -1,0 +1,22 @@
+{
+  "compute_authorized": false,
+  "corpus_canonical_lf_sha256": "6e9e5f1bea8fc3cbcb615376a1d055bd273605d0f8c1e40a8c120720c8cb836c",
+  "frozen_locators": [
+    "comparator:007",
+    "comparator:040",
+    "comparator:042",
+    "comparator:048",
+    "comparator:053",
+    "comparator:054",
+    "comparator:056",
+    "comparator:069",
+    "comparator:074",
+    "comparator:075"
+  ],
+  "independent_review_complete": false,
+  "pilot_sha256": "1c3bc4ffea1abb78a4b9224cbe907475b90b7ecd1e0504668319eb806b3066b8",
+  "record_count": 10,
+  "rendered_suffixes_byte_identical": true,
+  "round_trip_passed": true,
+  "status": "static_pilot_no_compute"
+}

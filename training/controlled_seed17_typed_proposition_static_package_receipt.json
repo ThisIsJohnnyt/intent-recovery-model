@@ -1,0 +1,19 @@
+{
+  "compute_authorized": false,
+  "corpus_canonical_lf_sha256": "6e9e5f1bea8fc3cbcb615376a1d055bd273605d0f8c1e40a8c120720c8cb836c",
+  "independent_review_complete": false,
+  "plan_count": 78,
+  "plans_sha256": "ce05b89045cc02a6f1a486e07a6cf63ddddae4547180958d5396b4e2c231900f",
+  "rendered_suffixes_byte_identical": true,
+  "splits": {
+    "train": {
+      "count": 72,
+      "sha256": "b135141a5aeb1f7ecea630152051e932f03b7aeff0430c3899115ef632f57916"
+    },
+    "val": {
+      "count": 6,
+      "sha256": "4f77bd9ff1d8ab9de5b58fce60c8662e8dec6b2ebf004614396ab486c81a9058"
+    }
+  },
+  "status": "static_draft_no_compute"
+}

@@ -1,0 +1,388 @@
+{
+  "compute_authorized": false,
+  "limits": {
+    "generation_max_new_tokens": 300,
+    "input": 512,
+    "target": 512
+  },
+  "required_disposition": "Return to Johnny. Do not compress, omit, raise limits, change schedule, or continue implementation under this proposal.",
+  "splits": {
+    "train": {
+      "count": 72,
+      "generation_limit_failures": [
+        {
+          "row_index_zero_based": 0,
+          "tokens": 455
+        },
+        {
+          "row_index_zero_based": 1,
+          "tokens": 356
+        },
+        {
+          "row_index_zero_based": 2,
+          "tokens": 570
+        },
+        {
+          "row_index_zero_based": 3,
+          "tokens": 322
+        },
+        {
+          "row_index_zero_based": 4,
+          "tokens": 340
+        },
+        {
+          "row_index_zero_based": 5,
+          "tokens": 513
+        },
+        {
+          "row_index_zero_based": 6,
+          "tokens": 697
+        },
+        {
+          "row_index_zero_based": 7,
+          "tokens": 382
+        },
+        {
+          "row_index_zero_based": 8,
+          "tokens": 502
+        },
+        {
+          "row_index_zero_based": 10,
+          "tokens": 403
+        },
+        {
+          "row_index_zero_based": 11,
+          "tokens": 381
+        },
+        {
+          "row_index_zero_based": 13,
+          "tokens": 611
+        },
+        {
+          "row_index_zero_based": 14,
+          "tokens": 380
+        },
+        {
+          "row_index_zero_based": 15,
+          "tokens": 489
+        },
+        {
+          "row_index_zero_based": 16,
+          "tokens": 522
+        },
+        {
+          "row_index_zero_based": 17,
+          "tokens": 530
+        },
+        {
+          "row_index_zero_based": 18,
+          "tokens": 369
+        },
+        {
+          "row_index_zero_based": 23,
+          "tokens": 371
+        },
+        {
+          "row_index_zero_based": 24,
+          "tokens": 593
+        },
+        {
+          "row_index_zero_based": 25,
+          "tokens": 387
+        },
+        {
+          "row_index_zero_based": 26,
+          "tokens": 371
+        },
+        {
+          "row_index_zero_based": 27,
+          "tokens": 407
+        },
+        {
+          "row_index_zero_based": 28,
+          "tokens": 330
+        },
+        {
+          "row_index_zero_based": 29,
+          "tokens": 555
+        },
+        {
+          "row_index_zero_based": 30,
+          "tokens": 389
+        },
+        {
+          "row_index_zero_based": 31,
+          "tokens": 602
+        },
+        {
+          "row_index_zero_based": 32,
+          "tokens": 405
+        },
+        {
+          "row_index_zero_based": 33,
+          "tokens": 509
+        },
+        {
+          "row_index_zero_based": 34,
+          "tokens": 390
+        },
+        {
+          "row_index_zero_based": 35,
+          "tokens": 566
+        },
+        {
+          "row_index_zero_based": 36,
+          "tokens": 796
+        },
+        {
+          "row_index_zero_based": 38,
+          "tokens": 472
+        },
+        {
+          "row_index_zero_based": 39,
+          "tokens": 395
+        },
+        {
+          "row_index_zero_based": 40,
+          "tokens": 391
+        },
+        {
+          "row_index_zero_based": 42,
+          "tokens": 307
+        },
+        {
+          "row_index_zero_based": 43,
+          "tokens": 524
+        },
+        {
+          "row_index_zero_based": 45,
+          "tokens": 526
+        },
+        {
+          "row_index_zero_based": 46,
+          "tokens": 403
+        },
+        {
+          "row_index_zero_based": 47,
+          "tokens": 544
+        },
+        {
+          "row_index_zero_based": 48,
+          "tokens": 692
+        },
+        {
+          "row_index_zero_based": 53,
+          "tokens": 343
+        },
+        {
+          "row_index_zero_based": 54,
+          "tokens": 311
+        },
+        {
+          "row_index_zero_based": 55,
+          "tokens": 419
+        },
+        {
+          "row_index_zero_based": 56,
+          "tokens": 477
+        },
+        {
+          "row_index_zero_based": 57,
+          "tokens": 573
+        },
+        {
+          "row_index_zero_based": 58,
+          "tokens": 491
+        },
+        {
+          "row_index_zero_based": 59,
+          "tokens": 638
+        },
+        {
+          "row_index_zero_based": 61,
+          "tokens": 308
+        },
+        {
+          "row_index_zero_based": 64,
+          "tokens": 635
+        },
+        {
+          "row_index_zero_based": 65,
+          "tokens": 743
+        },
+        {
+          "row_index_zero_based": 66,
+          "tokens": 837
+        },
+        {
+          "row_index_zero_based": 67,
+          "tokens": 941
+        },
+        {
+          "row_index_zero_based": 68,
+          "tokens": 787
+        },
+        {
+          "row_index_zero_based": 69,
+          "tokens": 782
+        }
+      ],
+      "input_tokens": {
+        "max": 382,
+        "median": 339,
+        "min": 315,
+        "over_300": 72,
+        "over_512": 0
+      },
+      "sha256": "b135141a5aeb1f7ecea630152051e932f03b7aeff0430c3899115ef632f57916",
+      "target_limit_failures": [
+        {
+          "row_index_zero_based": 2,
+          "tokens": 570
+        },
+        {
+          "row_index_zero_based": 5,
+          "tokens": 513
+        },
+        {
+          "row_index_zero_based": 6,
+          "tokens": 697
+        },
+        {
+          "row_index_zero_based": 13,
+          "tokens": 611
+        },
+        {
+          "row_index_zero_based": 16,
+          "tokens": 522
+        },
+        {
+          "row_index_zero_based": 17,
+          "tokens": 530
+        },
+        {
+          "row_index_zero_based": 24,
+          "tokens": 593
+        },
+        {
+          "row_index_zero_based": 29,
+          "tokens": 555
+        },
+        {
+          "row_index_zero_based": 31,
+          "tokens": 602
+        },
+        {
+          "row_index_zero_based": 35,
+          "tokens": 566
+        },
+        {
+          "row_index_zero_based": 36,
+          "tokens": 796
+        },
+        {
+          "row_index_zero_based": 43,
+          "tokens": 524
+        },
+        {
+          "row_index_zero_based": 45,
+          "tokens": 526
+        },
+        {
+          "row_index_zero_based": 47,
+          "tokens": 544
+        },
+        {
+          "row_index_zero_based": 48,
+          "tokens": 692
+        },
+        {
+          "row_index_zero_based": 57,
+          "tokens": 573
+        },
+        {
+          "row_index_zero_based": 59,
+          "tokens": 638
+        },
+        {
+          "row_index_zero_based": 64,
+          "tokens": 635
+        },
+        {
+          "row_index_zero_based": 65,
+          "tokens": 743
+        },
+        {
+          "row_index_zero_based": 66,
+          "tokens": 837
+        },
+        {
+          "row_index_zero_based": 67,
+          "tokens": 941
+        },
+        {
+          "row_index_zero_based": 68,
+          "tokens": 787
+        },
+        {
+          "row_index_zero_based": 69,
+          "tokens": 782
+        }
+      ],
+      "target_tokens": {
+        "max": 941,
+        "median": 395,
+        "min": 156,
+        "over_300": 54,
+        "over_512": 23
+      }
+    },
+    "val": {
+      "count": 6,
+      "generation_limit_failures": [
+        {
+          "row_index_zero_based": 0,
+          "tokens": 404
+        },
+        {
+          "row_index_zero_based": 1,
+          "tokens": 488
+        },
+        {
+          "row_index_zero_based": 2,
+          "tokens": 399
+        },
+        {
+          "row_index_zero_based": 3,
+          "tokens": 487
+        },
+        {
+          "row_index_zero_based": 4,
+          "tokens": 394
+        },
+        {
+          "row_index_zero_based": 5,
+          "tokens": 448
+        }
+      ],
+      "input_tokens": {
+        "max": 345,
+        "median": 341,
+        "min": 331,
+        "over_300": 6,
+        "over_512": 0
+      },
+      "sha256": "4f77bd9ff1d8ab9de5b58fce60c8662e8dec6b2ebf004614396ab486c81a9058",
+      "target_limit_failures": [],
+      "target_tokens": {
+        "max": 488,
+        "median": 448,
+        "min": 394,
+        "over_300": 6,
+        "over_512": 0
+      }
+    }
+  },
+  "status": "FAIL_HARD_STOP",
+  "tokenizer_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2"
+}

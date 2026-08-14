@@ -1,0 +1,9 @@
+{
+  "compute_authorized": false,
+  "mapped_span_count": 53,
+  "model_loaded": false,
+  "offsets_sha256": "fea151217f041429a937b3de821a7dd8e51f409e3728719c8db77836fb0f7fb2",
+  "record_count": 10,
+  "status": "PASS",
+  "tokenizer_revision": "7bcac572ce56db69c1ea7c8af255c5d7c9672fc2"
+}

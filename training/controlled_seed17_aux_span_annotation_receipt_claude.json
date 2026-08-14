@@ -1,0 +1,18 @@
+{
+  "annotation_sha256": "a9b7852e80caf98ad48bf786123758886cc0634aaf85566b1376bea7aafd3410",
+  "annotation_file": "controlled_seed17_aux_span_annotations_claude.jsonl",
+  "reviewer": "Claude",
+  "sealed_before_comparison": true,
+  "sealing_method": "hashed and reported to Johnny before opening any ChatGPT annotation/offset/receipt file",
+  "compute_authorized": false,
+  "frozen_record_locators": [
+    "comparator:007", "comparator:040", "comparator:042", "comparator:048", "comparator:053",
+    "comparator:054", "comparator:056", "comparator:069", "comparator:074", "comparator:075"
+  ],
+  "record_count": 10,
+  "proposition_count": 52,
+  "duplicate_link_count": 3,
+  "blindness_limitation": "Not fully blind at the semantic-label layer: Claude had already reviewed and endorsed ChatGPT's compact-representation-pilot state/role/qualifier/coreference labels for these same 10 records earlier the same day (2026-08-13), before this guide existed. The character-span layer (exact source intervals under this guide's boundary rules) was genuinely fresh -- this pilot's guide and span schema did not exist prior to this task. Disclosed here rather than presented as uncontaminated.",
+  "status": "sealed_pass_complete_pending_joint_review",
+  "source_of_annotations": "training/controlled_seed17_aux_span_annotation_guide.md plus raw comparator source/targets in training/gold_v1.2.2_phase2_derived_candidate.jsonl only; no ChatGPT annotation artifact was open at authoring time"
+}
