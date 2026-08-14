@@ -1,0 +1,26 @@
+{
+  "artifact": "controlled_seed17_aux_span_validation_annotation_receipt_chatgpt",
+  "date": "2026-08-14",
+  "reviewer": "ChatGPT",
+  "status": "sealed_independent_pass",
+  "annotation_path": "training/controlled_seed17_aux_span_validation_annotations_chatgpt.jsonl",
+  "annotation_sha256": "55e688425a0e2cd5c409af58e4403ce117d8fe373014a4fed223e3805ce86e37",
+  "annotation_bytes": 26639,
+  "record_count": 14,
+  "proposition_count": 78,
+  "governing_guide_path": "training/controlled_seed17_aux_span_annotation_guide_r2_chatgpt.md",
+  "governing_guide_sha256": "d652cc02958e8575f24d20ab0ecc674f5ce7887f55fd0d8403d58d913dcd0923",
+  "frozen_manifest_path": "training/controlled_seed17_aux_span_validation_manifest.json",
+  "frozen_manifest_sha256": "6314b4336e0fac4a52735f0072ce82a2d5ba44f65a90ef536628a7d34d70dcb5",
+  "validation": {
+    "jsonl_records": "pass",
+    "record_order_and_source_identity": "pass",
+    "exact_source_character_spans": "pass",
+    "sequential_proposition_ids": "pass",
+    "canonical_role_qualifier_and_field_order": "pass",
+    "backward_only_duplicate_links": "pass",
+    "non_task_action_prohibition": "pass"
+  },
+  "independence_attestation": "Created from guide revision 2, the frozen manifest's raw source, and committed target only. Claude's revision-2 pass, both round-one annotation passes, their receipts, and the round-one disagreement record were not opened before this pass was sealed.",
+  "authority_boundary": "Seals ChatGPT's annotation pass only. Does not authorize opening Claude's pass before Claude seals it, post-hoc annotation edits, model or tokenizer use, Gemini activity, staging, commit, or push."
+}

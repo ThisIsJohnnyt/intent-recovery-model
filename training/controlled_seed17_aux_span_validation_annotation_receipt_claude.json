@@ -1,0 +1,16 @@
+{
+  "artifact": "controlled_seed17_aux_span_validation_annotation_receipt_claude",
+  "reviewer": "claude",
+  "date": "2026-08-14",
+  "status": "sealed_independent_pass_before_comparison",
+  "governing_pins": {
+    "annotation_guide_sha256": "d652cc02958e8575f24d20ab0ecc674f5ce7887f55fd0d8403d58d913dcd0923",
+    "manifest_sha256": "6314b4336e0fac4a52735f0072ce82a2d5ba44f65a90ef536628a7d34d70dcb5"
+  },
+  "annotation_file": "training/controlled_seed17_aux_span_validation_annotations_claude.jsonl",
+  "annotation_sha256": "d7b1d73f14406b4b81da9327f26a79ea8fd6e8c32fa92fcdc27e5c5b57dc6943",
+  "record_count": 14,
+  "proposition_count": 78,
+  "blindness_disclosure": "Not fully blind for the 10 regression records. This session already read the full round-1 disagreement record in detail earlier today (all 4 root causes and every per-record disagreement description for comparator 007/040/042/048/053/054/056/069/074/075), and read guide revision 2's own worked examples, which directly state the resolved annotation for specific disputed elements of comparator 048 (boundary/coreference), 069 and 074 (qualifier typing). This exposure was not sought during this annotation pass -- no round-one annotation file, receipt, or the disagreement record itself was reopened during this pass -- but prior knowledge from earlier this session could not be un-learned. Consistent with the guide's own framing (Section 11.1: the regression set is explicitly a non-blind regression test, not a blind generalization test) and with the disclosure practice used in round 1's Claude receipt. For the 4 fresh records (012/073/008/030), the only prior exposure was the selector manifest's mechanical feature_evidence/leakage data seen during manifest verification -- clause splits and cue-word counts, not semantic annotations -- no proposition/state/role/qualifier/coreference content for these records was seen before this pass.",
+  "method_disclosure": "Every record independently read from the frozen manifest only. Propositions, spans, states, roles, qualifiers, coreference, duplicate links, and field obligations determined by direct application of guide Sections 2-9 to each record's raw source and committed target. Exact character spans located programmatically via source-text search to avoid manual offset errors, then schema-validated against guide Section 10's fail-closed rules (sequential IDs, canonical ordering, backward-only duplicate links, non-task action prohibition, exact span text, no overlapping/unsorted intervals) before sealing -- zero validation errors."
+}

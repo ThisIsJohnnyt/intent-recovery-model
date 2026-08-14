@@ -1,0 +1,503 @@
+{
+  "artifact": "controlled_seed17_aux_span_validation_supplement_manifest",
+  "status": "frozen_unannotated",
+  "authority_boundary": "Freezes one supplemental fresh record only. Does not authorize annotation, guide revision, model/tokenizer use, Gemini activity, staging, commit, or push.",
+  "governing_pins": {
+    "base_selector_sha256": "e79d889dd9ab0c5ccc6e8e62be52625fd724786aea3a6095aea368870f88823b",
+    "base_manifest_sha256": "6314b4336e0fac4a52735f0072ce82a2d5ba44f65a90ef536628a7d34d70dcb5",
+    "disagreement_record_sha256": "cd4bc970eaa165f82785e5e5d3bf464a9cef415d877d8004c2c002bd2c17547f"
+  },
+  "input_pins_and_checkout_receipts": {
+    "comparator": {
+      "path": "training/gold_v1.2.2_phase2_derived_candidate.jsonl",
+      "record_count": 78,
+      "checkout_line_endings": "crlf",
+      "checkout_byte_sha256": "f738f9eba2e85086bf6019bffdd27410b7add5c566c086a1b3627703e14ad52b",
+      "canonical_lf_sha256": "6e9e5f1bea8fc3cbcb615376a1d055bd273605d0f8c1e40a8c120720c8cb836c"
+    },
+    "protected": {
+      "path": "datasets/benchmark/gold_v1.2.1_probes.jsonl",
+      "record_count": 16,
+      "checkout_line_endings": "crlf",
+      "checkout_byte_sha256": "044708641c8dd584f334f16bde21ed89550bb7c464160827433f825eb0c48e94",
+      "canonical_lf_sha256": "767fe21a1097b51cef38728dcff0ff9ca4cf280bde8e65a7d885729f40990c0f"
+    },
+    "acceptance": {
+      "path": "datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl",
+      "record_count": 10,
+      "checkout_line_endings": "lf",
+      "checkout_byte_sha256": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e",
+      "canonical_lf_sha256": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+    },
+    "treatment_delta": {
+      "path": "training/regression_balanced_repair_proposal.jsonl",
+      "record_count": 7,
+      "checkout_line_endings": "lf",
+      "checkout_byte_sha256": "192372fd44fc87ea879d2ab7b751a3d54be100b447b886c213b26553284a747a",
+      "canonical_lf_sha256": "192372fd44fc87ea879d2ab7b751a3d54be100b447b886c213b26553284a747a"
+    }
+  },
+  "selection_rules": {
+    "supplement_size": 1,
+    "minimum_content_tokens": 3,
+    "target_content_token_overlap": 0,
+    "predicate_cue_regex": "\\b(?:am|are|arrived|ask|asked|be|been|bring|brought|buy|call|called|can|check|checked|close|closed|confirm|confirmed|could|did|do|does|draft|email|failed|felt|file|forgot|get|got|had|handed|has|have|helped|is|jam|jammed|leave|left|looked|lost|made|must|need|needed|needs|open|opened|order|pick|print|remind|remember|request|return|review|ran|said|schedule|seem|seemed|send|sent|should|stressed|take|test|text|thinking|thought|told|update|upload|wait|waited|want|wanted|was|were|will|wonder|would)\\b",
+    "excluded_existing_validation_ids": [
+      7,
+      8,
+      12,
+      30,
+      40,
+      42,
+      48,
+      53,
+      54,
+      56,
+      69,
+      73,
+      74,
+      75
+    ],
+    "static_protected_analogue_ids": [
+      42,
+      48,
+      53,
+      54,
+      56,
+      61,
+      69,
+      70,
+      74,
+      75,
+      76
+    ],
+    "collision_thresholds": {
+      "normalized_exact": "exclude",
+      "normalized_containment_min_chars": 20,
+      "token_jaccard": 0.15,
+      "character_5gram_jaccard": 0.1,
+      "all_threshold_crossings": "exclude"
+    },
+    "tie_break": "omission segment count desc; longest segment content-token count desc; total omitted content-token count desc; unused fresh category first; token max asc; char-5gram max asc; id asc"
+  },
+  "supplemental_record": {
+    "set": "fresh_supplement",
+    "record_locator": "comparator:018",
+    "record_id": 18,
+    "category": "anxious_task_dump",
+    "difficulty": "medium",
+    "record_sha256": "42a4ed3e43651e8f0b32e5b5f631aaa48cb7ed3547df4a5e16277c6305c80e5b",
+    "source_input": "too much to do. need to study for network+ but also wife wants to go over the budget tonight and I haven't even looked at it. also car needs oil change. just so behind.",
+    "committed_target": {
+      "narrative": "I'm feeling very overwhelmed and behind on my tasks right now. I need to study for my Network+ exam, but my wife wants to review the budget tonight and I haven't prepared for it yet. On top of that, the car is due for an oil change.",
+      "bullets": [
+        "Feeling overwhelmed by tasks",
+        "Need to study for Network+ exam",
+        "Wife wants to review the budget tonight",
+        "Car needs an oil change"
+      ],
+      "action_items": [
+        "Study for Network+",
+        "Review the budget before tonight",
+        "Schedule/get an oil change for the car"
+      ]
+    },
+    "assigned_stress_feature": "unfielded_independent_content_supplement",
+    "omission_signatures": [
+      {
+        "source_segment": "too much to do",
+        "content_tokens": [
+          "do",
+          "much",
+          "too"
+        ],
+        "predicate_cues": [
+          "do"
+        ],
+        "target_content_token_overlap": []
+      }
+    ],
+    "leakage_maxima": {
+      "token_jaccard": 0.113207547,
+      "character_5gram_jaccard": 0.020833333
+    }
+  },
+  "exclusion_audit": [
+    {
+      "record_id": 1,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 2,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 3,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 4,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 5,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.200000 with acceptance:009"
+      ]
+    },
+    {
+      "record_id": 6,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 7,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 8,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 9,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 10,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 11,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.166667 with protected:016",
+        "token Jaccard 0.166667 with comparator:056"
+      ]
+    },
+    {
+      "record_id": 12,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 13,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 14,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 15,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 16,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 17,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 19,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 20,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 21,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.150000 with protected:013"
+      ]
+    },
+    {
+      "record_id": 22,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 23,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.172414 with comparator:030"
+      ]
+    },
+    {
+      "record_id": 24,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 25,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 26,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 27,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 28,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 29,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 30,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 31,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 32,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 33,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 34,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.181818 with comparator:069"
+      ]
+    },
+    {
+      "record_id": 35,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 36,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 37,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 38,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 39,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 40,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 41,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.285714 with protected:001",
+        "character-5-gram Jaccard 0.154472 with protected:001",
+        "token Jaccard 0.153846 with protected:004"
+      ]
+    },
+    {
+      "record_id": 42,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 43,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.152174 with protected:011"
+      ]
+    },
+    {
+      "record_id": 44,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.269231 with protected:004"
+      ]
+    },
+    {
+      "record_id": 45,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.200000 with protected:007"
+      ]
+    },
+    {
+      "record_id": 46,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.242424 with protected:002"
+      ]
+    },
+    {
+      "record_id": 47,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 48,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 49,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.206897 with protected:008"
+      ]
+    },
+    {
+      "record_id": 50,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.250000 with protected:003",
+        "character-5-gram Jaccard 0.110656 with protected:003"
+      ]
+    },
+    {
+      "record_id": 51,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.300000 with protected:005"
+      ]
+    },
+    {
+      "record_id": 52,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.255814 with protected:009"
+      ]
+    },
+    {
+      "record_id": 53,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 54,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 55,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 56,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 57,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.187500 with protected:015"
+      ]
+    },
+    {
+      "record_id": 58,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 59,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 60,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 61,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 62,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 63,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.184211 with protected:003"
+      ]
+    },
+    {
+      "record_id": 64,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.157895 with comparator:054"
+      ]
+    },
+    {
+      "record_id": 65,
+      "reason": "leakage or validation-set collision",
+      "details": [
+        "token Jaccard 0.166667 with protected:009"
+      ]
+    },
+    {
+      "record_id": 66,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 67,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 68,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 69,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 70,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 71,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 72,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 73,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 74,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 75,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 76,
+      "reason": "existing validation or static protected analogue"
+    },
+    {
+      "record_id": 77,
+      "reason": "no strong zero-overlap predicate segment"
+    },
+    {
+      "record_id": 78,
+      "reason": "no strong zero-overlap predicate segment"
+    }
+  ],
+  "combined_validation_record_count": 15,
+  "combined_validation_set_fingerprint": "9ca151dbf4934a8fc1c4808edbb670953c2f1f6b1c0a5b433e6e38abb27cfb78",
+  "future_gemini_quarantine": [
+    "comparator:012",
+    "comparator:073",
+    "comparator:008",
+    "comparator:030",
+    "comparator:018"
+  ],
+  "manifest_sha256": "0be68248d749ac9bd8c1f91f2948f46d8375d7e26bf04c5ab983942a7de10de6"
+}
