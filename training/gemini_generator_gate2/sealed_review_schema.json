@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact", "candidate_hash", "reviewer", "dimensions", "final_verdict", "sealed_payload_hash"],
+  "properties": {
+    "artifact": {"const": "gemini_generator_sealed_review"},
+    "candidate_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "reviewer": {"enum": ["chatgpt", "claude"]},
+    "dimensions": {"type": "object"},
+    "final_verdict": {"enum": ["accept", "reject", "escalate"]},
+    "sealed_payload_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

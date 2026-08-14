@@ -1,0 +1,23 @@
+{
+  "artifact": "gemini_generator_provider_contract",
+  "status": "gate2_local_mock_only_requires_provider_reverification_before_any_connectivity_or_paid_gate",
+  "api_surface": "Gemini Developer API REST v1beta models.generateContent",
+  "method": "POST",
+  "endpoint_template": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+  "content_type": "application/json",
+  "transport": {"streaming": false, "timeout_seconds": 60, "semantic_retries": 0},
+  "request_controls": {
+    "candidate_count": 1,
+    "thinking_level": "minimal",
+    "max_output_tokens": 2048,
+    "response_mime_type": "application/json",
+    "temperature": null,
+    "top_p": null,
+    "top_k": null,
+    "tools": null,
+    "grounding": null,
+    "retrieval": null,
+    "caching": null
+  },
+  "gate2_notice": "No URL is opened and no authorization material is accepted, read, stored, or serialized by the Gate 2 runner."
+}

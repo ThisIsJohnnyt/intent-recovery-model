@@ -1,0 +1,15 @@
+{
+  "artifact": "gemini_generator_response_parser_malformed_fixtures",
+  "cases": [
+    {
+      "id": "valid",
+      "valid": true,
+      "raw": "{\"source_input\":\"Morning scribble: the hallway lamp flickered twice, though the cause is unclear. I moved the spare bulb onto the kitchen shelf after breakfast. Need to call the building desk about the loose switch before Friday, and also order plain envelopes for the neighborhood mailing. The desk may send someone Tuesday, but I did not confirm that. Sam said the earlier note was for them, or perhaps the caretaker; that reference is still unclear. Was the inspection planned for Wednesday or Thursday? I first wrote room 18, correction, room 16. Keep the receipt near the blue tray.\",\"proposed_output\":{\"narrative\":\"The hallway lamp flickered twice, and the cause remains unclear. The scheduling question and Sam's reference are unresolved.\",\"bullets\":[\"The spare bulb is on the kitchen shelf.\",\"The room number was corrected from 18 to 16.\"],\"action_items\":[\"Call the building desk about the loose switch before Friday.\",\"Order plain envelopes for the neighborhood mailing.\"]}}"
+    },
+    {"id": "duplicate_key", "valid": false, "raw": "{\"source_input\":\"x\",\"source_input\":\"y\",\"proposed_output\":{}}"},
+    {"id": "extra_key", "valid": false, "raw": "{\"source_input\":\"x\",\"proposed_output\":{},\"confidence\":1}"},
+    {"id": "short_source", "valid": false, "raw": "{\"source_input\":\"Too short.\",\"proposed_output\":{\"narrative\":\"Short.\",\"bullets\":[\"A\",\"B\"],\"action_items\":[\"C\"]}}"},
+    {"id": "control_character", "valid": false, "raw": "{\"source_input\":\"line one\\nline two\",\"proposed_output\":{\"narrative\":\"Short.\",\"bullets\":[\"A\",\"B\"],\"action_items\":[\"C\"]}}"},
+    {"id": "list_item_type", "valid": false, "raw": "{\"source_input\":\"one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone twentytwo twentythree twentyfour twentyfive twentysix twentyseven twentyeight twentynine thirty thirtyone thirtytwo thirtythree thirtyfour thirtyfive thirtysix thirtyseven thirtyeight thirtynine forty fortyone fortytwo fortythree fortyfour fortyfive fortysix fortyseven fortyeight fortynine fifty fiftyone fiftytwo fiftythree fiftyfour fiftyfive fiftysix fiftyseven fiftyeight fiftynine sixty sixtyone sixtytwo sixtythree sixtyfour sixtyfive sixtysix sixtyseven sixtyeight sixtynine seventy seventyone seventytwo seventythree seventyfour seventyfive seventysix seventyseven seventyeight seventynine eighty\",\"proposed_output\":{\"narrative\":\"Valid sentence.\",\"bullets\":[\"A\",2],\"action_items\":[\"C\"]}}"}
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact", "sequence", "schedule_slot", "model", "mechanism_id", "rate_snapshot_hash", "max_input_tokens", "max_output_tokens", "reserved_usd_millionths", "usage", "actual_usd_millionths", "cumulative_actual_usd_millionths", "outstanding_reservations_usd_millionths", "remaining_reconciliation_authority_usd_millionths", "request_hash", "response_hash", "receipt_hash", "disposition", "stop_or_retry_reason", "prior_row_hash", "row_hash"],
+  "properties": {
+    "artifact": {"const": "gemini_generator_cost_ledger_row"},
+    "sequence": {"type": "integer", "minimum": 1, "maximum": 24},
+    "schedule_slot": {"type": "integer", "minimum": 1, "maximum": 24},
+    "model": {"enum": ["gemini-3.7-flash", "gemini-3.5-flash-lite"]},
+    "mechanism_id": {"type": "string", "pattern": "^M(0[1-9]|1[0-2])$"},
+    "rate_snapshot_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "max_input_tokens": {"const": 4000},
+    "max_output_tokens": {"const": 2048},
+    "reserved_usd_millionths": {"type": "integer", "minimum": 0},
+    "usage": {"type": "object"},
+    "actual_usd_millionths": {"type": "integer", "minimum": 0},
+    "cumulative_actual_usd_millionths": {"type": "integer", "minimum": 0},
+    "outstanding_reservations_usd_millionths": {"type": "integer", "minimum": 0},
+    "remaining_reconciliation_authority_usd_millionths": {"type": "integer", "minimum": 0},
+    "request_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "response_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "receipt_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "disposition": {"enum": ["rejected", "quarantined", "candidate_pool"]},
+    "stop_or_retry_reason": {"type": ["string", "null"]},
+    "prior_row_hash": {"type": ["string", "null"]},
+    "row_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

@@ -1,0 +1,6 @@
+Create exactly one synthetic candidate using this frozen mechanism card:
+
+MECHANISM_ID: {{MECHANISM_ID}}
+MECHANISM_CARD: {{MECHANISM_CARD}}
+
+Keep source_input between 80 and 220 words. Keep narrative between 1 and 4 sentences. Return 2 to 8 bullets and 1 to 6 action_items. Each list item must be a plain string.

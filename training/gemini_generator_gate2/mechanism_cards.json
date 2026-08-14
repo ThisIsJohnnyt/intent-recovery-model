@@ -1,0 +1,17 @@
+{
+  "artifact": "gemini_generator_mechanism_cards",
+  "cards": [
+    {"id": "M01", "text": "A hurried morning note mixing one observation, two unrelated tasks, and an unresolved scheduling question. Include one corrected detail and one pronoun whose referent remains genuinely ambiguous."},
+    {"id": "M02", "text": "A work-meeting capture containing a decision, a tentative idea, a delegated follow-up, a personal reminder, and a deadline that applies to only one task."},
+    {"id": "M03", "text": "A home-maintenance note with a current condition, a past failed attempt, a vendor callback expectation, two next steps in order, and one uncertain cause that must stay uncertain."},
+    {"id": "M04", "text": "A caregiving coordination note with two people, one quoted request, one medication-free health observation, one conditional task, and one detail that must remain attributed to its speaker."},
+    {"id": "M05", "text": "A travel-planning note with alternatives, a quantity, a destination, a time window, one explicit booking task, and one open question that must not become a recommendation."},
+    {"id": "M06", "text": "A creative-project note that jumps between current state, desired outcome, discarded idea, concrete next action, and a dependency on another person's response."},
+    {"id": "M07", "text": "A household-shopping note with inventory facts, preferences, a budget constraint, two purchases, and one item explicitly marked as optional rather than required."},
+    {"id": "M08", "text": "A client-follow-up note with a factual recap, an unresolved interpretation, one promised action by the writer, one requested action by the client, and separate dates for each."},
+    {"id": "M09", "text": "A community-event note with location uncertainty, a confirmed responsibility, a possible volunteer, a quantity estimate, and a condition that would cancel one task."},
+    {"id": "M10", "text": "A learning/research note with a source claim, the writer's doubt, two questions, one experiment to run, and one finding that must not be upgraded into a general conclusion."},
+    {"id": "M11", "text": "A personal-finance administration note with no financial advice: include a statement to verify, a document to locate, a call to make, a due date, and one number whose meaning is explicitly uncertain."},
+    {"id": "M12", "text": "A dense end-of-day brain dump with three topic shifts, one incomplete fragment, one self-correction, one completed action, two future tasks, and one thought that belongs only in narrative context."}
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact", "sequence", "schedule_slot", "model", "mechanism_id", "request_hash", "prompt_hash", "schema_hash", "transport", "network_used", "disposition", "no_corpus_mutation", "prior_row_hash", "row_hash"],
+  "properties": {
+    "artifact": {"const": "gemini_generator_request_receipt"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "schedule_slot": {"type": "integer", "minimum": 1, "maximum": 24},
+    "model": {"enum": ["gemini-3.7-flash", "gemini-3.5-flash-lite"]},
+    "mechanism_id": {"type": "string", "pattern": "^M(0[1-9]|1[0-2])$"},
+    "request_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "prompt_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "schema_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "transport": {"const": "mock"},
+    "network_used": {"const": false},
+    "disposition": {"enum": ["rejected", "quarantined", "candidate_pool"]},
+    "no_corpus_mutation": {"const": true},
+    "prior_row_hash": {"type": ["string", "null"]},
+    "row_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

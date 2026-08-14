@@ -1,0 +1,13 @@
+{
+  "artifact": "gemini_generator_cost_boundary_fixtures",
+  "cases": [
+    {"id": "capability_worst_case", "model": "gemini-3.7-flash", "input_tokens": 4000, "visible_output_tokens": 2048, "thinking_tokens": 0, "expected_usd_millionths": 10680},
+    {"id": "efficiency_worst_case", "model": "gemini-3.5-flash-lite", "input_tokens": 4000, "visible_output_tokens": 2048, "thinking_tokens": 0, "expected_usd_millionths": 6320},
+    {"id": "thinking_is_billable_output", "model": "gemini-3.7-flash", "input_tokens": 100, "visible_output_tokens": 100, "thinking_tokens": 100, "expected_usd_millionths": 825},
+    {"id": "integer_round_up", "model": "gemini-3.5-flash-lite", "input_tokens": 1, "visible_output_tokens": 1, "thinking_tokens": 0, "expected_usd_millionths": 4}
+  ],
+  "expected_24_slot_worst_case_usd_millionths": 204000,
+  "pilot_ceiling_usd_millionths": 3000000,
+  "reconciliation_stop_usd_millionths": 2250000,
+  "account_cap_usd_millionths": 10000000
+}

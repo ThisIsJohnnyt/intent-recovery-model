@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact", "sequence", "request_hash", "raw_response_hash", "reason_code", "disposition", "no_corpus_mutation", "prior_row_hash", "row_hash"],
+  "properties": {
+    "artifact": {"const": "gemini_generator_rejection_ledger_row"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "request_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "raw_response_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "reason_code": {"enum": ["provider_blocked", "transport_failed_no_retry", "model_identity_mismatch", "finish_reason_invalid", "schema_invalid", "extra_key", "size_limit_failed", "prompt_imitation", "protected_collision", "pilot_duplicate", "secret_exposure", "budget_or_usage_unknown", "manual_global_stop"]},
+    "disposition": {"enum": ["rejected", "quarantined", "candidate_pool"]},
+    "no_corpus_mutation": {"const": true},
+    "prior_row_hash": {"type": ["string", "null"]},
+    "row_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

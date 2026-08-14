@@ -1,0 +1,16 @@
+{
+  "artifact": "gemini_generator_setup_attestation",
+  "execution_date": null,
+  "attestor": "Johnny",
+  "provider_terms_reviewed_that_day": false,
+  "paid_tier_confirmed": false,
+  "prepay_plan_confirmed": false,
+  "prepaid_balance_usd_millionths": null,
+  "auto_reload_off": false,
+  "billing_account_isolated_for_pilot": false,
+  "no_other_activity_during_window": false,
+  "exact_models_available_and_not_deprecated": false,
+  "rate_snapshot_verified_that_day": false,
+  "notes_without_identifiers_or_secrets": "",
+  "prohibited_fields_notice": "Do not record account, project, key, payment, billing, secret-store, or other sensitive identifiers."
+}

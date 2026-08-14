@@ -1,0 +1,11 @@
+{
+  "artifact": "gemini_generator_collision_adversarial_fixtures",
+  "reference": "Morgan will deliver twelve blue folders to the west office tomorrow morning after the client confirms.",
+  "cases": [
+    {"id": "normalized_exact", "text": "MORGAN will deliver twelve blue folders to the west office tomorrow morning after the client confirms!", "fatal": true},
+    {"id": "normalized_containment", "text": "Reminder: Morgan will deliver twelve blue folders to the west office tomorrow morning after the client confirms, then wait.", "fatal": true},
+    {"id": "token_jaccard", "text": "Morgan deliver folders west office client confirms unrelated alpha beta gamma delta epsilon.", "fatal": true},
+    {"id": "character_5gram", "text": "The west office tomorrow morning has a separate fictional context.", "fatal": true},
+    {"id": "clean", "text": "Quartz lanterns drift beside silent harbors while cedar maps remain folded.", "fatal": false}
+  ]
+}

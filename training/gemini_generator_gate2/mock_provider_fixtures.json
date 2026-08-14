@@ -1,0 +1,18 @@
+{
+  "artifact": "gemini_generator_mock_provider_fixtures",
+  "fixtures": [
+    {
+      "id": "provider_blocked",
+      "network_used": false,
+      "status": "provider_blocked",
+      "finish_reason": "SAFETY",
+      "usage": {"input_tokens": 0, "visible_output_tokens": 0, "thinking_tokens": 0},
+      "raw_response": ""
+    },
+    {
+      "id": "secret_redaction",
+      "input": {"Authorization": "Bearer example-secret", "nested": {"api_key": "AIzaExampleSecretValue123456789"}},
+      "expected": {"Authorization": "[REDACTED]", "nested": {"api_key": "[REDACTED]"}}
+    }
+  ]
+}

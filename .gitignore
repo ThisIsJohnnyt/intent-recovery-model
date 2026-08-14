@@ -31,3 +31,6 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Session handoffs — local-only, overwritten each session, not part of project history
+/training/Session Handoffs/
