@@ -1,0 +1,31 @@
+{
+  "artifact": "controlled_seed17_aux_span_validation_r3_annotation_receipt_chatgpt",
+  "date": "2026-08-14",
+  "reviewer": "ChatGPT",
+  "status": "sealed_independent_correction_pass",
+  "annotation_path": "training/controlled_seed17_aux_span_validation_r3_annotations_chatgpt.jsonl",
+  "annotation_sha256": "55981bf5aa299891120bc24f53a8da6e4569f1951774d1f74a917f9d2f448372",
+  "annotation_bytes": 29461,
+  "record_count": 15,
+  "proposition_count": 88,
+  "fresh_empty_field_proposition_count": 0,
+  "governing_guide_path": "training/controlled_seed17_aux_span_annotation_guide_r3_chatgpt.md",
+  "governing_guide_sha256": "96311377b1caa4a3efccb901b557508f85e65b0ce18d1c239da902296d12df82",
+  "base_manifest_path": "training/controlled_seed17_aux_span_validation_manifest.json",
+  "base_manifest_sha256": "6314b4336e0fac4a52735f0072ce82a2d5ba44f65a90ef536628a7d34d70dcb5",
+  "supplement_manifest_path": "training/controlled_seed17_aux_span_validation_supplement_manifest.json",
+  "supplement_manifest_sha256": "3e265857720cc48da6a618d9a534dfa3e69658c869858b1a65170e3bc0ff0467",
+  "validation": {
+    "jsonl_records": "pass",
+    "record_order_and_source_identity": "pass",
+    "exact_source_character_spans": "pass",
+    "sequential_proposition_ids": "pass",
+    "canonical_role_qualifier_and_field_order": "pass",
+    "mandatory_task_actor": "pass",
+    "backward_only_duplicate_links": "pass",
+    "non_task_action_prohibition": "pass",
+    "fresh_empty_field_gate": "fail"
+  },
+  "independence_attestation": "Created anew from committed guide revision 3 and the two frozen source/target manifests. The initial annotation rows were not copied as authority, and Claude's revision-3 correction pass was not opened before sealing. Prior exposure to the initial disagreement evidence and revision-3 worked resolutions is unavoidable and disclosed by the correction design.",
+  "authority_boundary": "Seals ChatGPT's correction pass and records its fresh-coverage failure. Does not authorize editing this pass, opening Claude's pass before Claude seals it, further guide correction, record replacement/redraw, model/tokenizer use, Gemini activity, staging, commit, or push."
+}

@@ -1,0 +1,17 @@
+{
+  "artifact": "controlled_seed17_aux_span_validation_r3_annotation_receipt_claude",
+  "reviewer": "claude",
+  "date": "2026-08-14",
+  "status": "sealed_correction_pass_before_comparison",
+  "governing_pins": {
+    "annotation_guide_sha256": "96311377b1caa4a3efccb901b557508f85e65b0ce18d1c239da902296d12df82",
+    "base_manifest_sha256": "6314b4336e0fac4a52735f0072ce82a2d5ba44f65a90ef536628a7d34d70dcb5",
+    "supplement_manifest_sha256": "3e265857720cc48da6a618d9a534dfa3e69658c869858b1a65170e3bc0ff0467"
+  },
+  "annotation_file": "training/controlled_seed17_aux_span_validation_r3_annotations_claude.jsonl",
+  "annotation_sha256": "e3c165a61304aabd62b7b62fe4ce69bee3d13270347f62317a5b65cc73288d91",
+  "record_count": 15,
+  "proposition_count": 88,
+  "blindness_disclosure": "Did not open either original sealed pass, the disagreement record's underlying annotation rows, or ChatGPT's revision-3 pass during this correction pass. Guide revision 3's Section 10 worked-resolution matrix explicitly governs and was applied as authority for the 12 originally-disputed records and the 2 already-agreed records (074, 073, preserved unchanged per the guide's own instruction). Unavoidable memory exposure from earlier this session (having read the disagreement record, both original sealed passes, and guide revision 3 itself during review) could not be un-learned, consistent with the disclosure practice used throughout this validation sequence -- but no old annotation row was copied as authority; every proposition in this pass was independently derived by applying revision 3's stated rules to the frozen source and committed target. Comparator 018 received a genuinely fresh first annotation -- no prior semantic annotation of it existed anywhere before this pass.",
+  "method_disclosure": "Every record independently derived by applying guide revision 3 Sections 2-9 to the frozen source and committed target from the base and supplement manifests. Exact character spans located programmatically via source-text search to avoid manual offset errors, then schema-validated against Section 9's fail-closed rules (sequential IDs, canonical ordering, backward-only duplicate links, non-task action prohibition, exact span text, no overlapping/unsorted intervals, mandatory task actor) before sealing -- zero validation errors. Comparator 018's field allocation required genuine, non-mechanical judgment on one close call (the opening \"too much to do\" clause) -- resolved by asking whether any committed target field identifiably realizes that specific semantic contribution as opposed to the note's general thematic gist, consistent with Section 8.1's field-mapping test; noting this honestly as a real judgment call, not a predetermined or outcome-biased one."
+}
