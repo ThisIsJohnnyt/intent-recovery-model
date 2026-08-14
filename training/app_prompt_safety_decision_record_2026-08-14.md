@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-14  
 **Author:** ChatGPT  
-**Status:** Independently verified by Claude with no disagreement; decisions accepted by Johnny  
+**Status:** PR-state correction independently verified by Claude; no branch-disposition action remains
 **Governing design:** `training/app_prompt_safety_design_proposal_chatgpt.md` at commit `8b8074bc52a092e78f1ba95c3e0768330bed596b`  
 
 ## 1. Purpose and boundary
@@ -25,11 +25,13 @@ Phase A/B will establish byte-preserving observability before any semantic recon
 
 Phase C remains a later semantic-reconciliation phase. Extraction, versioning, or fingerprinting must not conceal a prompt rewrite or changed product behavior.
 
-## 3. Decision 2 — reconciliation branch disposition
+## 3. Decision 2 — reconciliation branch disposition already satisfied
 
-**Accepted as a disposition; repository action deferred.**
+**Accepted as a disposition; later verification established that no repository action remained.**
 
-The `reconcile-bullet-count-prompt` pull request should eventually be closed as superseded without merging. Its branch and commit history should be preserved for reference and should not be deleted during documentation closure.
+GitHub API verification on 2026-08-14 established that thought-organizer-app PR #4, `Prompt contract v1: source-determined bullets`, had already been closed without merge on 2026-08-03. Its `reconcile-bullet-count-prompt` branch remains intact at `cf76cd9f1fdd53bdc322e0e8084df679d09a78c4`, preserving the requested history. The app repository had no open pull requests at verification time. The linked model-repository PR #13 was merged on 2026-08-02.
+
+The accepted disposition therefore matched an already-satisfied real-world state; nothing needed to be closed, merged, deleted, commented on, or otherwise changed.
 
 Reasons:
 
@@ -41,7 +43,7 @@ Reasons:
 
 A proper three-way merge would retain v2 files; possible v2 deletion is not the reason for closure.
 
-Actually closing the pull request, commenting on it, merging, deleting the branch, or otherwise changing repository state requires a separate authorized action.
+Future merging, reopening, commenting, branch deletion, or other repository-state changes remain outside this record.
 
 ## 4. Decision 3 — Phase A/B implementation proposal
 
@@ -68,10 +70,9 @@ Phase C must not be bundled with byte-preserving Phase A/B work. It requires a s
 
 ## 6. Current result
 
-Milestone 2's design decisions are resolved. Remaining work is deliberately not started:
+Milestone 2's design decisions are resolved, and its branch-disposition item is closed as already satisfied. Remaining work is deliberately not started:
 
-1. close the reconciliation pull request under a separate repository-action authorization;
-2. after documentation closure, consider a separately authorized Phase A/B implementation proposal;
-3. keep Phase C dormant until separately designed and authorized.
+1. after documentation closure, consider a separately authorized Phase A/B implementation proposal;
+2. keep Phase C dormant until separately designed and authorized.
 
 No prior instruction or this decision record substitutes for the later action-specific authorization or the commit/push protocol.
