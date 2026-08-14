@@ -1,0 +1,671 @@
+{
+  "artifact": "controlled_seed17_aux_span_validation_manifest",
+  "status": "frozen_unannotated",
+  "execution_history": {
+    "prior_failed_attempt_count": 1,
+    "prior_failure": {
+      "date": "2026-08-14",
+      "stage": "input_line_ending_preflight",
+      "reason": "original LF-only reader rejected uniform-CRLF Windows checkout materialization",
+      "manifest_written": false
+    },
+    "successful_manifest_generation_count": 1
+  },
+  "authority_boundary": "Freezes records only. Does not authorize annotation, model/tokenizer use, Gemini activity, implementation, training, evaluation, checkpoint operations, staging, commit, or push.",
+  "input_pins_and_checkout_receipts": {
+    "comparator": {
+      "path": "training/gold_v1.2.2_phase2_derived_candidate.jsonl",
+      "record_count": 78,
+      "checkout_line_endings": "crlf",
+      "checkout_byte_sha256": "f738f9eba2e85086bf6019bffdd27410b7add5c566c086a1b3627703e14ad52b",
+      "canonical_lf_sha256": "6e9e5f1bea8fc3cbcb615376a1d055bd273605d0f8c1e40a8c120720c8cb836c"
+    },
+    "protected": {
+      "path": "datasets/benchmark/gold_v1.2.1_probes.jsonl",
+      "record_count": 16,
+      "checkout_line_endings": "crlf",
+      "checkout_byte_sha256": "044708641c8dd584f334f16bde21ed89550bb7c464160827433f825eb0c48e94",
+      "canonical_lf_sha256": "767fe21a1097b51cef38728dcff0ff9ca4cf280bde8e65a7d885729f40990c0f"
+    },
+    "acceptance": {
+      "path": "datasets/benchmark/source_determined_items_v2_acceptance_draft.jsonl",
+      "record_count": 10,
+      "checkout_line_endings": "lf",
+      "checkout_byte_sha256": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e",
+      "canonical_lf_sha256": "b8fe4d4178e5b508757db998eacb1ee979518697c8df759ba1739227c88d448e"
+    },
+    "treatment_delta": {
+      "path": "training/regression_balanced_repair_proposal.jsonl",
+      "record_count": 7,
+      "checkout_line_endings": "lf",
+      "checkout_byte_sha256": "192372fd44fc87ea879d2ab7b751a3d54be100b447b886c213b26553284a747a",
+      "canonical_lf_sha256": "192372fd44fc87ea879d2ab7b751a3d54be100b447b886c213b26553284a747a"
+    }
+  },
+  "governing_pins": {
+    "annotation_guide_sha256": "d652cc02958e8575f24d20ab0ecc674f5ce7887f55fd0d8403d58d913dcd0923",
+    "static_audit_map_sha256": "aee75d7ecd8db680056c8a8e9f11e9ff5cfb52a285fdb2d319d1ca2c6ea6cfca"
+  },
+  "selection_rules": {
+    "fresh_set_size": 4,
+    "feature_order": [
+      "unfielded_independent_content",
+      "implicit_actor_task",
+      "referential_expression",
+      "qualifier_precedence"
+    ],
+    "regression_ids": [
+      7,
+      40,
+      42,
+      48,
+      53,
+      54,
+      56,
+      69,
+      74,
+      75
+    ],
+    "static_protected_analogue_ids": [
+      42,
+      48,
+      53,
+      54,
+      56,
+      61,
+      69,
+      70,
+      74,
+      75,
+      76
+    ],
+    "collision_thresholds": {
+      "normalized_exact": "exclude",
+      "normalized_containment_min_chars": 20,
+      "token_jaccard": 0.15,
+      "character_5gram_jaccard": 0.1,
+      "all_threshold_crossings": "exclude"
+    },
+    "tie_break": "score desc; unused category first; token max asc; char-5gram max asc; record id asc",
+    "within_fresh_set_collision_screen": "same thresholds; any crossing excludes the later choice"
+  },
+  "regression_records": [
+    {
+      "set": "regression",
+      "record_locator": "comparator:007",
+      "record_id": 7,
+      "category": "rapid_branching_excitement",
+      "difficulty": "hard",
+      "record_sha256": "5f61559ba8efd4eccc6d42f8869873a61a7f3bfe7f0c2f59d6a6f6594ff47cef",
+      "source_input": "sunset chasers api integration weather.gov or openweather? openweather cheaper. wait what if we add cloud cover percentage on the main UI? need to move backend to free tier for vacation testing. free tier azure? heroku? look up heroku pricing. color palette should be orange/purple.",
+      "committed_target": {
+        "narrative": "I'm brainstorming features and infrastructure for the Sunset Chasers app. I need to decide between weather.gov and OpenWeather for the API, noting that OpenWeather is cheaper. I'm considering adding a cloud cover percentage to the main UI and setting the color palette to orange and purple. Additionally, I must move the backend to a free hosting tier, like Azure or Heroku, so I can test it remotely during my upcoming vacation.",
+        "bullets": [
+          "Decide between weather.gov and OpenWeather APIs",
+          "Consider adding cloud cover % to main UI",
+          "Set app color palette to orange and purple",
+          "Move backend to a free tier (Azure/Heroku) for vacation testing"
+        ],
+        "action_items": [
+          "Compare OpenWeather and weather.gov APIs",
+          "Look up Heroku pricing",
+          "Move backend to a free tier"
+        ]
+      }
+    },
+    {
+      "set": "regression",
+      "record_locator": "comparator:040",
+      "record_id": 40,
+      "category": "maximum_interleaving",
+      "difficulty": "expert",
+      "record_sha256": "b7224e1a6da6483793db0156f89858a1210b8a8a4bab6f1678af195231a41609",
+      "source_input": "ok the client call got pushed to 3, need new talking points, also i never heard back from the plumber about the leak, still stressed about that, remember to grab the mail it's probably piling up, client call notes, is thursday the trash day or is it friday, plumber never called back.",
+      "committed_target": {
+        "narrative": "The client call got pushed to 3, so I need new talking points. I still haven't heard back from the plumber about the leak, which is stressful. I also need to grab the mail, which is probably piling up, and I'm unsure whether trash day is Thursday or Friday.",
+        "bullets": [
+          "Client call moved to 3, need new talking points",
+          "Plumber never called back about the leak",
+          "Feeling stressed about the unresolved leak",
+          "Mail is probably piling up",
+          "Uncertain if trash day is Thursday or Friday"
+        ],
+        "action_items": [
+          "Prepare new talking points for the 3pm client call",
+          "Follow up with the plumber about the leak",
+          "Grab the mail",
+          "Confirm which day is trash day"
+        ]
+      }
+    },
+    {
+      "set": "regression",
+      "record_locator": "comparator:042",
+      "record_id": 42,
+      "category": "buried_task_retention",
+      "difficulty": "medium",
+      "record_sha256": "e7b9fa4a30519f45123de9fc996ff1f3da5e1502dbd83be9e6a4345fa8d21cf0",
+      "source_input": "The planning meeting felt more focused this time and the shorter agenda probably helped, send Nora the updated attendance sheet, though the last ten minutes still wandered.",
+      "committed_target": {
+        "narrative": "The planning meeting felt more focused, possibly because the agenda was shorter, although the final ten minutes still wandered. Separately, the updated attendance sheet needs to be sent to Nora.",
+        "bullets": [
+          "The planning meeting felt more focused",
+          "The shorter agenda may have helped",
+          "The final ten minutes still wandered",
+          "Send Nora the updated attendance sheet"
+        ],
+        "action_items": [
+          "Send Nora the updated attendance sheet"
+        ]
+      }
+    },
+    {
+      "set": "regression",
+      "record_locator": "comparator:048",
+      "record_id": 48,
+      "category": "multi_person_attribution",
+      "difficulty": "hard",
+      "record_sha256": "959eadf74cbaa07e111b4dd1e58937b3bf5450a5b94f7eae29cb4bd53eb6e6d7",
+      "source_input": "Rina told Marcus the draft was approved after he asked about it. He still needs the signed copy, but I can't tell whether 'he' means Marcus or the client. Ask Rina who needs it.",
+      "committed_target": {
+        "narrative": "Rina told Marcus that the draft was approved after Marcus asked about it. The note does not make clear whether Marcus or the client still needs the signed copy. Rina should be asked who needs it.",
+        "bullets": [
+          "Rina told Marcus that the draft was approved",
+          "Marcus had asked about the draft",
+          "It is unclear whether Marcus or the client needs the signed copy",
+          "Ask Rina who needs the signed copy"
+        ],
+        "action_items": [
+          "Ask Rina who needs the signed copy"
+        ]
+      }
+    },
+    {
+      "set": "regression",
+      "record_locator": "comparator:053",
+      "record_id": 53,
+      "category": "standalone_task_retention",
+      "difficulty": "expert",
+      "record_sha256": "1f4cb4f3319a960c4b0f5015ea3d88f06e1cd8d4c0b70675f458692f6482baca",
+      "source_input": "Submit the mileage form, I know, mileage form before Friday, and the kitchen sink is dripping again which is exhausting, don't let the mileage form disappear under everything else, also text Bea that I'll be ten minutes late.",
+      "committed_target": {
+        "narrative": "The mileage form needs to be submitted before Friday and is emphasized repeatedly. Separately, the kitchen sink is dripping again, and the writer is tired of dealing with it. Bea needs to be told that the writer will be ten minutes late.",
+        "bullets": [
+          "Submit the mileage form before Friday; this is emphasized repeatedly",
+          "The kitchen sink is dripping again",
+          "The writer is tired of dealing with the dripping sink",
+          "Text Bea that the writer will be ten minutes late"
+        ],
+        "action_items": [
+          "Submit the mileage form before Friday",
+          "Text Bea that the writer will be ten minutes late"
+        ]
+      }
+    },
+    {
+      "set": "regression",
+      "record_locator": "comparator:054",
+      "record_id": 54,
+      "category": "buried_task_retention",
+      "difficulty": "expert",
+      "record_sha256": "80fb746166bd3532ec17e86558699c4d70ba3c4e4e14ca0caead4de0da6fa0d3",
+      "source_input": "The demo ran long and I lost the thread around the permissions screen, maybe the examples need labels, did Chris ever send Dana the access list, call the dentist, the room was freezing, access list question still open, and before I close this: replace the porch bulb.",
+      "committed_target": {
+        "narrative": "The demo ran long, and the writer lost the thread around the permissions screen. The examples may need labels. It remains unclear whether Chris sent Dana the access list. Separately, the dentist needs to be called, the room was freezing, and the porch bulb needs to be replaced.",
+        "bullets": [
+          "The demo ran long and the writer lost the thread around the permissions screen",
+          "The examples may need labels",
+          "Unresolved question about whether Chris sent Dana the access list",
+          "Call the dentist",
+          "The room was freezing",
+          "Replace the porch bulb"
+        ],
+        "action_items": [
+          "Call the dentist",
+          "Replace the porch bulb"
+        ]
+      }
+    },
+    {
+      "set": "regression",
+      "record_locator": "comparator:056",
+      "record_id": 56,
+      "category": "dangling_reference",
+      "difficulty": "medium",
+      "record_sha256": "e573084110036d5bb1be7f1e355794e72eaa1e995f6f0e4523ca9fb450a5ee31",
+      "source_input": "Remember to ask her about the earlier version.",
+      "committed_target": {
+        "narrative": "There is a reminder to ask an unresolved female referent about an unresolved earlier version.",
+        "bullets": [
+          "Ask her about the earlier version; both references are unresolved"
+        ],
+        "action_items": [
+          "Ask her about the earlier version"
+        ]
+      }
+    },
+    {
+      "set": "regression",
+      "record_locator": "comparator:069",
+      "record_id": 69,
+      "category": "repeated_reminder",
+      "difficulty": "hard",
+      "record_sha256": "face7eeabb9c7c8ecab5330d5c5e82c9c62cb97859122bf2569ce5a81de6351b",
+      "source_input": "Send the cracked display's warranty paperwork before Friday. Need to get that damage claim filed by Friday.",
+      "committed_target": {
+        "narrative": "The damage claim for the cracked display needs to be filed before Friday.",
+        "bullets": [
+          "File the cracked display's damage claim before Friday."
+        ],
+        "action_items": [
+          "File the cracked display's damage claim before Friday."
+        ]
+      }
+    },
+    {
+      "set": "regression",
+      "record_locator": "comparator:074",
+      "record_id": 74,
+      "category": "simple_list",
+      "difficulty": "expert",
+      "record_sha256": "e6635d0b44d1db63a960e8c3da2efda7339bb01a5c9fa61317532c00fa568f6d",
+      "source_input": "inventory the display easels; replenish packing paper; document the repaired frames; take the loan agreement to the archive; rinse the watercolor cups; pair the translation headsets; portion the soup into freezer containers; secure the mailbox flag before pickup",
+      "committed_target": {
+        "narrative": "Inventory the display easels, replenish the packing paper, document the repaired frames, take the loan agreement to the archive, rinse the watercolor cups, pair the translation headsets, portion the soup into freezer containers, and secure the mailbox flag before pickup.",
+        "bullets": [
+          "Inventory the display easels.",
+          "Replenish the packing paper.",
+          "Document the repaired frames.",
+          "Rinse the watercolor cups.",
+          "Pair the translation headsets.",
+          "Portion the soup into freezer containers.",
+          "Secure the mailbox flag before pickup."
+        ],
+        "action_items": [
+          "Inventory the display easels.",
+          "Replenish the packing paper.",
+          "Document the repaired frames.",
+          "Take the loan agreement to the archive.",
+          "Rinse the watercolor cups.",
+          "Pair the translation headsets.",
+          "Portion the soup into freezer containers.",
+          "Secure the mailbox flag before pickup."
+        ]
+      }
+    },
+    {
+      "set": "regression",
+      "record_locator": "comparator:075",
+      "record_id": 75,
+      "category": "cross_field_completeness",
+      "difficulty": "expert",
+      "record_sha256": "a45f27f36ed45f704d7bb1accb274d07d904549386f82c73088b2f1c4881cb40",
+      "source_input": "Before the open house doors unlock, upload the revised floor plan and call the lighting supplier. I still don't know whether the west window was measured or only photographed. The folding screens looked uneven after setup. Maybe place the visitor cards near the exit. Ren said Salma handed the spare clips to the installation lead.",
+      "committed_target": {
+        "narrative": "Before the open house doors unlock, the revised floor plan needs to be uploaded and the lighting supplier needs to be called. It is still unknown whether the west window was measured or only photographed. The folding screens looked uneven after setup. Placing the visitor cards near the exit is a possibility. Ren said that Salma handed the spare clips to the installation lead.",
+        "bullets": [
+          "Upload the revised floor plan before the open house doors unlock.",
+          "Call the lighting supplier before the open house doors unlock.",
+          "It is still unknown whether the west window was measured or only photographed.",
+          "The folding screens looked uneven after setup.",
+          "Placing the visitor cards near the exit is a possibility.",
+          "Ren said Salma handed the spare clips to the installation lead."
+        ],
+        "action_items": [
+          "Upload the revised floor plan before the open house doors unlock.",
+          "Call the lighting supplier before the open house doors unlock."
+        ]
+      }
+    }
+  ],
+  "fresh_records": [
+    {
+      "set": "fresh",
+      "record_locator": "comparator:012",
+      "record_id": 12,
+      "category": "half_finished_thoughts",
+      "difficulty": "hard",
+      "record_sha256": "be175095f52893e222ba2a6bc0b97a583b6da45de0a81a5ce774535aaadd07f3",
+      "source_input": "if we leave by 5 we can make it to the... wait did I leave the stove on? no it's fine. anyway leaving by 5 means traffic will be",
+      "committed_target": {
+        "narrative": "I was trying to plan our departure time. Leaving by 5 PM means we'll have to deal with traffic, though I didn't finish figuring out our exact arrival time. Briefly panicked about leaving the stove on, but realized it's fine.",
+        "bullets": [
+          "Planning to leave by 5 PM",
+          "Anticipating traffic if leaving at 5 PM",
+          "Confirmed the stove is turned off"
+        ],
+        "action_items": []
+      },
+      "assigned_stress_feature": "unfielded_independent_content",
+      "all_feature_scores": {
+        "unfielded_independent_content": 3,
+        "implicit_actor_task": 0,
+        "referential_expression": 2,
+        "qualifier_precedence": 3
+      },
+      "feature_evidence": {
+        "unfielded_independent_content": [
+          "low-target-overlap segment (0.167): if we leave by 5 we can make it to the",
+          "low-target-overlap segment (0.167): wait did I leave the stove on",
+          "low-target-overlap segment (0.038): no it's fine"
+        ],
+        "implicit_actor_task": [],
+        "referential_expression": [
+          "referential cues: it, it"
+        ],
+        "qualifier_precedence": [
+          "qualifier cues: deadline:2, condition:1, quantity:2"
+        ]
+      },
+      "leakage_maxima": {
+        "token_jaccard": 0.106382979,
+        "character_5gram_jaccard": 0.015463918
+      }
+    },
+    {
+      "set": "fresh",
+      "record_locator": "comparator:073",
+      "record_id": 73,
+      "category": "simple_list",
+      "difficulty": "expert",
+      "record_sha256": "828b8a93e47a0a31dedf5c339ed20b7104dcf8f48fd2e9f3e5d302e5f9f7f8ba",
+      "source_input": "water rooftop planters / update the emergency contact sheet / request the van for the field trip / package the ceramic samples / copy workshop handouts / test the portable microphone / return the folding signs to storage by 3",
+      "committed_target": {
+        "narrative": "Water the rooftop planters, update the emergency contact sheet, request the van for the field trip, package the ceramic samples, copy the workshop handouts, test the portable microphone, and return the folding signs to storage by 3.",
+        "bullets": [
+          "Water the rooftop planters.",
+          "Update the emergency contact sheet.",
+          "Request the van for the field trip.",
+          "Package the ceramic samples.",
+          "Copy the workshop handouts.",
+          "Test the portable microphone.",
+          "Return the folding signs to storage by 3."
+        ],
+        "action_items": [
+          "Water the rooftop planters.",
+          "Update the emergency contact sheet.",
+          "Request the van for the field trip.",
+          "Package the ceramic samples.",
+          "Copy the workshop handouts.",
+          "Test the portable microphone.",
+          "Return the folding signs to storage by 3."
+        ]
+      },
+      "assigned_stress_feature": "implicit_actor_task",
+      "all_feature_scores": {
+        "unfielded_independent_content": 0,
+        "implicit_actor_task": 9,
+        "referential_expression": 0,
+        "qualifier_precedence": 2
+      },
+      "feature_evidence": {
+        "unfielded_independent_content": [],
+        "implicit_actor_task": [
+          "2 task cue(s), 7 committed action(s), no explicit-actor pattern"
+        ],
+        "referential_expression": [],
+        "qualifier_precedence": [
+          "qualifier cues: deadline:1, quantity:1"
+        ]
+      },
+      "leakage_maxima": {
+        "token_jaccard": 0.097560976,
+        "character_5gram_jaccard": 0.026717557
+      }
+    },
+    {
+      "set": "fresh",
+      "record_locator": "comparator:008",
+      "record_id": 8,
+      "category": "zero_action_items",
+      "difficulty": "easy",
+      "record_sha256": "eb494a77580cfc19d81f37df3aed599a14d6128100bf9be31265055294b76582",
+      "source_input": "thinking about that old zesto commercial today. taste so good it will blow your mind. funny how things like that stick in your head from years ago. just a random memory.",
+      "committed_target": {
+        "narrative": "I had a random memory today about the old local Zesto commercial and its slogan, 'Taste so good it will blow your mind.' It's amusing how certain memories from years ago just stick with you.",
+        "bullets": [
+          "Remembered the old Zesto commercial",
+          "Reflected on the slogan 'Taste so good it will blow your mind'",
+          "Amused by how long-term memory works"
+        ],
+        "action_items": []
+      },
+      "assigned_stress_feature": "referential_expression",
+      "all_feature_scores": {
+        "unfielded_independent_content": 2,
+        "implicit_actor_task": 0,
+        "referential_expression": 3,
+        "qualifier_precedence": 1
+      },
+      "feature_evidence": {
+        "unfielded_independent_content": [
+          "low-target-overlap segment (0.172): funny how things like that stick in your head from years ago",
+          "low-target-overlap segment (0.125): just a random memory"
+        ],
+        "implicit_actor_task": [],
+        "referential_expression": [
+          "referential cues: that, it, that"
+        ],
+        "qualifier_precedence": [
+          "qualifier cues: time:1"
+        ]
+      },
+      "leakage_maxima": {
+        "token_jaccard": 0.055555556,
+        "character_5gram_jaccard": 0.01910828
+      }
+    },
+    {
+      "set": "fresh",
+      "record_locator": "comparator:030",
+      "record_id": 30,
+      "category": "idea_among_tasks",
+      "difficulty": "medium",
+      "record_sha256": "2fc41a8e5be03c187379af8e0e7ad3eb14b6e56d81ef03d1cf3155f5dafaceeb",
+      "source_input": "Order more filing folders. What if we color-coded the folders by client instead of by month? Follow up with the vendor about the late shipment.",
+      "committed_target": {
+        "narrative": "I need to order more filing folders and follow up with the vendor about the late shipment. I also had an idea: maybe the folders should be color-coded by client instead of by month.",
+        "bullets": [
+          "Order more filing folders",
+          "Idea: color-code folders by client instead of month",
+          "Follow up with vendor about late shipment"
+        ],
+        "action_items": [
+          "Order filing folders",
+          "Follow up with vendor about late shipment"
+        ]
+      },
+      "assigned_stress_feature": "qualifier_precedence",
+      "all_feature_scores": {
+        "unfielded_independent_content": 0,
+        "implicit_actor_task": 4,
+        "referential_expression": 0,
+        "qualifier_precedence": 3
+      },
+      "feature_evidence": {
+        "unfielded_independent_content": [],
+        "implicit_actor_task": [
+          "2 task cue(s), 2 committed action(s), no explicit-actor pattern"
+        ],
+        "referential_expression": [],
+        "qualifier_precedence": [
+          "qualifier cues: deadline:1, condition:1, time:2"
+        ]
+      },
+      "leakage_maxima": {
+        "token_jaccard": 0.086956522,
+        "character_5gram_jaccard": 0.045454545
+      }
+    }
+  ],
+  "exclusion_audit": [
+    {
+      "record_id": 5,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.200000 with acceptance:009"
+      ]
+    },
+    {
+      "record_id": 7,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 11,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.166667 with protected:016"
+      ]
+    },
+    {
+      "record_id": 21,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.150000 with protected:013"
+      ]
+    },
+    {
+      "record_id": 40,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 41,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.285714 with protected:001",
+        "character-5-gram Jaccard 0.154472 with protected:001",
+        "token Jaccard 0.153846 with protected:004"
+      ]
+    },
+    {
+      "record_id": 42,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 43,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.152174 with protected:011"
+      ]
+    },
+    {
+      "record_id": 44,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.269231 with protected:004"
+      ]
+    },
+    {
+      "record_id": 45,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.200000 with protected:007"
+      ]
+    },
+    {
+      "record_id": 46,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.242424 with protected:002"
+      ]
+    },
+    {
+      "record_id": 48,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 49,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.206897 with protected:008"
+      ]
+    },
+    {
+      "record_id": 50,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.250000 with protected:003",
+        "character-5-gram Jaccard 0.110656 with protected:003"
+      ]
+    },
+    {
+      "record_id": 51,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.300000 with protected:005"
+      ]
+    },
+    {
+      "record_id": 52,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.255814 with protected:009"
+      ]
+    },
+    {
+      "record_id": 53,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 54,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 56,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 57,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.187500 with protected:015"
+      ]
+    },
+    {
+      "record_id": 61,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 63,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.184211 with protected:003"
+      ]
+    },
+    {
+      "record_id": 65,
+      "reason": "leakage threshold",
+      "details": [
+        "token Jaccard 0.166667 with protected:009"
+      ]
+    },
+    {
+      "record_id": 69,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 70,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 74,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 75,
+      "reason": "regression set or static protected-analogue register"
+    },
+    {
+      "record_id": 76,
+      "reason": "regression set or static protected-analogue register"
+    }
+  ],
+  "future_gemini_quarantine": [
+    "comparator:012",
+    "comparator:073",
+    "comparator:008",
+    "comparator:030"
+  ],
+  "validation_set_fingerprint": "c0d11c66dce6f0cee9d4ba21a099154dbb042fe9fea46492dc0c2d40a0af4ee5",
+  "manifest_sha256": "a1910b1144403582cfe6ab4cb38f5f6c73f853e6aace51e363ca17640b78d655"
+}
