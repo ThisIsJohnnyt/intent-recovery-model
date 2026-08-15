@@ -1,0 +1,17 @@
+{
+  "artifact": "gemini_generator_gate4_billing_reconciliation_closure",
+  "record_date": "2026-08-15",
+  "source_receipt_sha256": "dc14c9793c392afa5a641d562d930abe86da036f78241b9917d82c970262a00b",
+  "gate4_execution_timestamp_utc": "2026-08-14T21:27:29Z",
+  "observed_at_utc_approx": "2026-08-15T12:10:00Z",
+  "elapsed_minutes_approx": 883,
+  "attestor": "Johnny",
+  "observed_dashboard_spend_usd_millionths": 0,
+  "billing_posting_window_completed": false,
+  "original_receipt_reconciliation_state": "unknown_pending_billing",
+  "resolution_status": "resolved_accepted_by_johnny_with_partial_window",
+  "acceptance_statement": "Johnny directly observed $0 spend and explicitly accepted the remaining billing-posting timing uncertainty to close Gate 4 reconciliation now.",
+  "scope_limit": "This closes only the Gate 4 local reconciliation record. It does not claim a provider-confirmed final $0.00 charge, change the original receipt, or authorize Gate 5 execution.",
+  "prohibited_fields_notice": "Do not record API keys, authorization headers, secret-store paths, account, project, billing, or payment identifiers.",
+  "record_sha256": "a51af70243aaec57ae5e5b7ef598f4ffa40462307ead4f6624dd0994b9eddbe6"
+}

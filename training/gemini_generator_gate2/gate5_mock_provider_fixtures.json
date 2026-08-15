@@ -1,0 +1,78 @@
+{
+  "artifact": "gemini_generator_gate5_mock_provider_fixtures",
+  "status": "fictional_local_fixtures_no_provider_response_or_candidate_review",
+  "fixtures": [
+    {
+      "id": "valid_stop_with_usage",
+      "modelVersion": "gemini-3.7-flash-fixture",
+      "responseId": "fixture-response-id",
+      "modelStatus": {"modelStage": "STABLE", "message": "fixture status"},
+      "candidates": [
+        {
+          "content": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "{\"source_input\":\"Mara said the Tuesday outline is still rough, the courtyard booking might be Thursday, and the vendor has not confirmed the smaller room. She wrote that the budget note says 60 but may include chairs, while the old invoice mentioned 48 without setup. She wants to ask Devon whether the attendee list is current and whether the afternoon session needs a projector. The draft agenda has a welcome, two short discussions, and an unclear note about sending materials before the meeting. Nothing is final, and Mara crossed out a line that sounded like a deadline.\",\"proposed_output\":{\"narrative\":\"Mara is organizing an early event outline with several unresolved logistics and a potentially inconsistent budget record. The venue, attendee list, projector need, and timing for materials remain uncertain.\",\"bullets\":[\"The courtyard booking may be Thursday, but the vendor has not confirmed the smaller room.\",\"Budget notes mention 60 including possible chairs, while an older invoice listed 48 without setup.\",\"The draft agenda contains a welcome and two short discussions.\"],\"action_items\":[\"Ask Devon whether the attendee list is current.\",\"Confirm whether the afternoon session needs a projector.\",\"Clarify when meeting materials should be sent.\"]}}"
+              }
+            ]
+          },
+          "finishReason": "STOP",
+          "safetyRatings": [],
+          "citationMetadata": {},
+          "tokenCount": 170,
+          "avgLogprobs": -0.1,
+          "logprobsResult": {},
+          "index": 0,
+          "finishMessage": "fixture stop"
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 400,
+        "cachedContentTokenCount": 0,
+        "candidatesTokenCount": 170,
+        "thoughtsTokenCount": 30,
+        "toolUsePromptTokenCount": 0,
+        "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 400}],
+        "cacheTokensDetails": [],
+        "candidatesTokensDetails": [{"modality": "TEXT", "tokenCount": 170}],
+        "toolUsePromptTokensDetails": [],
+        "serviceTier": "STANDARD",
+        "totalTokenCount": 600
+      }
+    },
+    {
+      "id": "blocked_without_usage",
+      "modelVersion": "gemini-3.7-flash-fixture",
+      "candidates": [
+        {
+          "content": {"role": "model", "parts": []},
+          "finishReason": "SAFETY"
+        }
+      ]
+    },
+    {
+      "id": "schema_invalid_before_usage",
+      "modelVersion": "gemini-3.5-flash-lite-fixture",
+      "candidates": [
+        {
+          "content": {
+            "role": "model",
+            "parts": [
+              {"text": "{\"source_input\":\"short\",\"proposed_output\":{\"narrative\":\"short\",\"bullets\":[\"short\",\"short\"],\"action_items\":[\"short\"]}}"}
+            ]
+          },
+          "finishReason": "STOP"
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 4,
+        "cachedContentTokenCount": 0,
+        "candidatesTokenCount": 4,
+        "thoughtsTokenCount": 4,
+        "toolUsePromptTokenCount": 0,
+        "totalTokenCount": 4
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "artifact": "gemini_generator_gate4_pre_execution_attestation",
+  "execution_date": null,
+  "attestor": "Johnny",
+  "paid_tier_confirmed_that_day": false,
+  "prepay_plan_confirmed_that_day": false,
+  "positive_prepaid_balance_usd_millionths": null,
+  "auto_reload_off_that_day": false,
+  "billing_account_currently_isolated_for_pilot": false,
+  "no_unexpected_billing_activity_since_gate3": false,
+  "no_other_activity_during_gate4_window": false,
+  "exact_model_available_and_not_deprecated_that_day": false,
+  "metadata_billing_ambiguity_reviewed": false,
+  "one_request_cost_cap_usd_millionths": 1000000,
+  "one_request_execution_authorized_by_johnny": false,
+  "key_remains_in_user_controlled_encrypted_local_secret_store": false,
+  "notes_without_identifiers_or_secrets": "",
+  "prohibited_fields_notice": "Do not record API keys, headers, secret-store paths, account/project/billing/payment identifiers, or other sensitive identifiers."
+}

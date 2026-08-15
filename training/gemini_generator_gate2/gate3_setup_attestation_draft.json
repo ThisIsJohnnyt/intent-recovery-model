@@ -1,0 +1,21 @@
+{
+  "artifact": "gemini_generator_setup_attestation",
+  "status": "gate3_setup_attested_pending_independent_review_and_later_gate4_authorization",
+  "setup_date": "2026-08-14",
+  "attestor": "Johnny",
+  "provider_terms_reviewed_and_accepted_that_day": true,
+  "paid_tier_confirmed": true,
+  "prepay_plan_confirmed": true,
+  "prepaid_balance_usd_millionths": 10000000,
+  "auto_reload_off": true,
+  "project_scoped_api_key_created_by_attestor": true,
+  "api_key_stored_in_user_controlled_encrypted_local_secret_store": true,
+  "billing_account_isolated_for_pilot": true,
+  "billing_isolation_basis": "At attestation, exactly one project is attached to the pilot billing account. The attestor states that the standard/default Gemini project has been removed and no other project is connected. This attests current project-attachment isolation only; it does not attest future execution-window activity.",
+  "no_other_activity_during_execution_window": false,
+  "exact_models_available_and_not_deprecated_on_setup_date": true,
+  "execution_day_rate_snapshot_verified": false,
+  "gate4_connectivity_check_authorized": false,
+  "notes_without_identifiers_or_secrets": "The future execution-window no-other-activity and execution-day rate attestations remain intentionally incomplete. No key value, secret-store path, project identifier, billing identifier, payment detail, or account identifier is recorded.",
+  "prohibited_fields_notice": "Do not record API keys, authorization headers, secret-store paths, account identifiers, project identifiers, billing identifiers, payment data, or other sensitive identifiers."
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gate 4 zero-content connectivity receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact", "proposal_sha256", "execution_timestamp_utc", "authorization", "transport", "response", "metadata", "redaction_scan", "cost", "disposition", "stop_reason", "prior_receipt_row_hash", "row_hash"],
+  "properties": {
+    "artifact": {"const": "gemini_generator_gate4_connectivity_receipt"},
+    "proposal_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "execution_timestamp_utc": {"type": "string", "format": "date-time"},
+    "authorization": {"type": "string"},
+    "transport": {
+      "type": "object", "additionalProperties": false,
+      "required": ["method", "endpoint", "request_body_byte_count", "header_names", "timeout_seconds", "redirects_disabled", "retries_disabled", "provider_request_count"],
+      "properties": {
+        "method": {"const": "GET"},
+        "endpoint": {"const": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash"},
+        "request_body_byte_count": {"const": 0},
+        "header_names": {"const": ["Accept", "x-goog-api-key"]},
+        "timeout_seconds": {"const": 30},
+        "redirects_disabled": {"const": true},
+        "retries_disabled": {"const": true},
+        "provider_request_count": {"enum": [0, 1]}
+      }
+    },
+    "response": {
+      "type": "object", "additionalProperties": false,
+      "required": ["http_status", "provider_request_id", "byte_count", "sha256", "reported_usage_fields"],
+      "properties": {
+        "http_status": {"type": ["integer", "null"]},
+        "provider_request_id": {"type": ["string", "null"]},
+        "byte_count": {"type": ["integer", "null"], "minimum": 0},
+        "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "reported_usage_fields": {"const": []}
+      }
+    },
+    "metadata": {"type": ["object", "null"]},
+    "redaction_scan": {
+      "type": "object", "additionalProperties": false,
+      "required": ["key_like_value_found", "raw_error_persisted"],
+      "properties": {"key_like_value_found": {"const": false}, "raw_error_persisted": {"const": false}}
+    },
+    "cost": {
+      "type": "object", "additionalProperties": false,
+      "required": ["authorized_cap_usd_millionths", "pre_request_reservation_usd_millionths", "actual_usd_millionths", "reconciliation_state"],
+      "properties": {
+        "authorized_cap_usd_millionths": {"const": 1000000},
+        "pre_request_reservation_usd_millionths": {"const": 1000000},
+        "actual_usd_millionths": {"type": ["integer", "null"]},
+        "reconciliation_state": {"enum": ["not_requested", "unknown_pending_billing"]}
+      }
+    },
+    "disposition": {"enum": ["passed", "stopped", "rejected"]},
+    "stop_reason": {"type": ["string", "null"]},
+    "prior_receipt_row_hash": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "row_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

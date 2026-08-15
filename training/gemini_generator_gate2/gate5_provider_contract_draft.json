@@ -1,0 +1,50 @@
+{
+  "artifact": "gemini_generator_gate5_provider_contract_draft",
+  "status": "local_only_draft_not_authorized_for_provider_execution",
+  "supersedes_for_future_gate5_review_only": "provider_contract.json",
+  "preserves": {
+    "models": ["gemini-3.7-flash", "gemini-3.5-flash-lite"],
+    "slot_count": 24,
+    "slots_per_model": 12,
+    "semantic_attempts_per_model_card_pair": 1,
+    "pilot_ceiling_usd_millionths": 3000000,
+    "maximum_input_tokens": 4000,
+    "maximum_output_tokens": 2048
+  },
+  "api_surface": {
+    "kind": "Gemini Developer API REST v1beta generateContent",
+    "method": "POST",
+    "endpoint_template": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+    "header_names": ["Content-Type", "x-goog-api-key"],
+    "content_type": "application/json"
+  },
+  "transport": {
+    "streaming": false,
+    "timeout_seconds": 60,
+    "semantic_retries": 0,
+    "transport_retries": 0,
+    "redirects": "forbidden"
+  },
+  "request_controls": {
+    "candidateCount": 1,
+    "thinkingConfig": {"thinkingLevel": "low"},
+    "maxOutputTokens": 2048,
+    "responseFormat": {"text": {"mimeType": "application/json", "schema": "frozen_response_schema.json"}},
+    "forbidden_request_fields": ["tools", "toolConfig", "safetySettings", "cachedContent", "generationConfig.temperature", "generationConfig.topP", "generationConfig.topK", "generationConfig.thinkingConfig.thinkingBudget", "contents.role:model", "fileData", "inlineData", "urlContext"]
+  },
+  "redesign_basis": {
+    "replaced_control": "The Gate 2 mock contract's shared thinking_level: minimal is not accepted as a frozen common Gate 5 control for gemini-3.7-flash.",
+    "new_common_control": "Use low thinking for both arms only if execution-day official documentation confirms it for both exact model IDs and this exact API surface.",
+    "wire_format": "Use GenerateContent REST camelCase fields and the current structured-output REST shape responseFormat.text.mimeType/schema. Recheck exact field/model compatibility before final freezing.",
+    "no_model_substitution": "No model ID, model version alias, or endpoint may be substituted. A support mismatch stops the pilot rather than creating asymmetric controls."
+  },
+  "execution_day_gates": [
+    "Gate 4 billing reconciliation is resolved or Johnny separately accepts the recorded unknown state before any paid activity.",
+    "Both exact model IDs are available, non-deprecated, and support generateContent plus the same low thinking control.",
+    "The exact REST names and structured-output field are rechecked against the current official API reference before final contract freezing.",
+    "Current paid/prepay, balance, isolation, auto-reload-off, rates, and no-other-activity facts are attested without identifiers.",
+    "Codex and Claude independently validate the final contract, fixtures, runner, budget arithmetic, and no-network local tests.",
+    "Johnny separately authorizes the frozen paid pilot."
+  ],
+  "non_authorization": "This draft has no credential handling, network transport, model call, spend, candidate review, corpus mutation, staging, commit, or push authority."
+}
