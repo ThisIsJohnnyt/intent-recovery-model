@@ -34,3 +34,6 @@ yarn-error.log*
 
 # Session handoffs — local-only, overwritten each session, not part of project history
 /training/Session Handoffs/
+/training/gemini_generator_gate2/gate5_paid_pilot_retry_campaign_v6_*/private_raw_diagnostics/
+/training/gemini_generator_gate2/gate5_paid_pilot_retry_campaign_v7_*/private_raw_diagnostics/
+/training/gemini_generator_gate2/gate5_paid_pilot_retry_campaign_v8_*/private_raw_diagnostics/

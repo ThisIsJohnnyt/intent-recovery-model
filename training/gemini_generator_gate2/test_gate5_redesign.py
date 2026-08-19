@@ -30,9 +30,30 @@ class Gate5RedesignTests(unittest.TestCase):
         self.assertEqual(request["method"], "POST")
         self.assertEqual(request["header_names"], ["Content-Type", "x-goog-api-key"])
         self.assertEqual(request["body"]["generationConfig"]["thinkingConfig"], {"thinkingLevel": "low"})
+        self.assertEqual(request["body"]["generationConfig"]["responseMimeType"], "application/json")
+        self.assertEqual(request["body"]["generationConfig"]["responseSchema"], redesign.provider_response_schema())
+        self.assertEqual(request["body"]["generationConfig"]["responseSchema"]["type"], "OBJECT")
+        self.assertEqual(gate2.load_json(gate2.SCHEMA_PATH)["type"], "object")
+        self.assertNotIn("responseFormat", request["body"]["generationConfig"])
         self.assertNotIn("temperature", request["body"]["generationConfig"])
         self.assertNotIn("tools", request["body"])
         self.assertFalse(gate2.contains_secret(request))
+
+    def test_provider_schema_uses_uppercase_types_and_omits_unsupported_additional_properties(self) -> None:
+        def lowercase_types(value: object) -> object:
+            if isinstance(value, dict):
+                return {key: item.lower() if key == "type" and isinstance(item, str) else lowercase_types(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [lowercase_types(item) for item in value]
+            return value
+
+        provider = redesign.provider_response_schema()
+        self.assertNotIn("additionalProperties", provider)
+        self.assertNotIn("additionalProperties", provider["properties"]["proposed_output"])
+        expected = gate2.load_json(gate2.SCHEMA_PATH)
+        del expected["additionalProperties"]
+        del expected["properties"]["proposed_output"]["additionalProperties"]
+        self.assertEqual(lowercase_types(provider), expected)
 
     def test_minimal_thinking_or_a_tool_is_rejected(self) -> None:
         slot = gate2.load_json(gate2.PACKAGE / "schedule.json")["slots"][0]

@@ -3,11 +3,44 @@ from __future__ import annotations
 import copy
 import json
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 import gate2
 
 
 class Gate2Tests(unittest.TestCase):
+    def test_canonical_file_retries_transient_oserror_and_maps_persistent_failure(self) -> None:
+        target = gate2.PACKAGE / "system_instruction.txt"
+        original = Path.read_bytes
+        calls = 0
+
+        def transient(path: Path) -> bytes:
+            nonlocal calls
+            calls += 1
+            if calls <= 2:
+                raise PermissionError("synthetic transient read denial")
+            return original(path)
+
+        with patch.object(Path, "read_bytes", transient):
+            canonical, _ = gate2.canonical_file(target)
+        self.assertTrue(canonical)
+        self.assertEqual(calls, 3)
+
+        with patch.object(Path, "read_bytes", side_effect=PermissionError("synthetic persistent read denial")) as mocked:
+            with self.assertRaisesRegex(gate2.Gate2Error, "unreadable"):
+                gate2.canonical_file(target)
+        self.assertEqual(mocked.call_count, 3)
+
+    def test_canonical_file_resolves_repo_relative_path_before_receipt(self) -> None:
+        relative = Path("training/gemini_generator_gate2/system_instruction.txt")
+        canonical, receipt = gate2.canonical_file(relative)
+        self.assertTrue(canonical)
+        self.assertEqual(receipt["path"], relative.as_posix())
+
+        with self.assertRaisesRegex(gate2.Gate2Error, "outside the project root"):
+            gate2.canonical_file(Path(Path(__file__).resolve().anchor) / "outside-project.json")
+
     def test_frozen_prompt_and_schema_hashes(self) -> None:
         expected = {
             "system_instruction.txt": "339b6f7841248ce40dcd925518cd6cea8fe5c069b2e9cf88b1ab75cbefe7e215",

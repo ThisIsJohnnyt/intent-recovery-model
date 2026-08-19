@@ -16,6 +16,7 @@ import gate2
 
 PACKAGE = Path(__file__).resolve().parent
 CONTRACT_PATH = PACKAGE / "gate5_provider_contract_draft.json"
+PROVIDER_SCHEMA_PATH = PACKAGE / "gate5_provider_response_schema.json"
 EXPECTED_MODELS = ("gemini-3.7-flash", "gemini-3.5-flash-lite")
 FORBIDDEN_KEYS = {
     "tools", "toolconfig", "safetysettings", "cachedcontent", "temperature", "topp", "topk",
@@ -49,12 +50,12 @@ def load_contract() -> dict[str, Any]:
     if value["preserves"].get("pilot_ceiling_usd_millionths") != 3_000_000:
         raise Gate5DraftError("pilot ceiling drifted")
     controls = value["request_controls"]
-    expected_controls = {"candidateCount", "thinkingConfig", "maxOutputTokens", "responseFormat", "forbidden_request_fields"}
+    expected_controls = {"candidateCount", "thinkingConfig", "maxOutputTokens", "responseMimeType", "responseSchema", "forbidden_request_fields"}
     if set(controls) != expected_controls or controls["candidateCount"] != 1 or controls["maxOutputTokens"] != 2048:
         raise Gate5DraftError("request cardinality or token cap drifted")
     if controls["thinkingConfig"] != {"thinkingLevel": "low"}:
         raise Gate5DraftError("common low-thinking control is required")
-    if controls["responseFormat"] != {"text": {"mimeType": "application/json", "schema": "frozen_response_schema.json"}}:
+    if controls["responseMimeType"] != "application/json" or controls["responseSchema"] != "gate5_provider_response_schema.json":
         raise Gate5DraftError("structured-output control drifted")
     api = value["api_surface"]
     if api.get("method") != "POST" or api.get("endpoint_template") != "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent":
@@ -74,6 +75,31 @@ def _walk_keys(value: Any) -> set[str]:
     return set()
 
 
+def provider_response_schema() -> dict[str, Any]:
+    try:
+        value = gate2.load_json(PROVIDER_SCHEMA_PATH)
+    except gate2.Gate2Error as exc:
+        raise Gate5DraftError("provider response schema is invalid") from exc
+    allowed_types = {"STRING", "NUMBER", "INTEGER", "BOOLEAN", "ARRAY", "OBJECT", "NULL"}
+
+    def check(item: Any) -> None:
+        if isinstance(item, dict):
+            if "type" in item and item["type"] not in allowed_types:
+                raise Gate5DraftError("provider response schema type drifted")
+            if "additionalProperties" in item:
+                raise Gate5DraftError("provider response schema contains unsupported additionalProperties")
+            for child in item.values():
+                check(child)
+        elif isinstance(item, list):
+            for child in item:
+                check(child)
+
+    if not isinstance(value, dict):
+        raise Gate5DraftError("provider response schema is invalid")
+    check(value)
+    return value
+
+
 def build_request(slot: dict[str, Any]) -> dict[str, Any]:
     """Build a safe-to-inspect payload; it contains no credentials and cannot send."""
     contract = load_contract()
@@ -86,7 +112,8 @@ def build_request(slot: dict[str, Any]) -> dict[str, Any]:
         "systemInstruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": user}]}],
         "generationConfig": {
-            "responseFormat": {"text": {"mimeType": "application/json", "schema": gate2.load_json(gate2.SCHEMA_PATH)}},
+            "responseMimeType": contract["request_controls"]["responseMimeType"],
+            "responseSchema": provider_response_schema(),
             "candidateCount": contract["request_controls"]["candidateCount"],
             "thinkingConfig": contract["request_controls"]["thinkingConfig"],
             "maxOutputTokens": contract["request_controls"]["maxOutputTokens"],
@@ -118,10 +145,12 @@ def validate_request(request: dict[str, Any]) -> None:
     if not isinstance(body, dict) or set(body) != {"systemInstruction", "contents", "generationConfig"}:
         raise Gate5DraftError("body shape drifted")
     config = body["generationConfig"]
-    if not isinstance(config, dict) or set(config) != {"responseFormat", "candidateCount", "thinkingConfig", "maxOutputTokens"}:
+    if not isinstance(config, dict) or set(config) != {"responseMimeType", "responseSchema", "candidateCount", "thinkingConfig", "maxOutputTokens"}:
         raise Gate5DraftError("generation configuration drifted")
     if config["thinkingConfig"] != {"thinkingLevel": "low"} or config["candidateCount"] != 1 or config["maxOutputTokens"] != 2048:
         raise Gate5DraftError("shared generation control drifted")
+    if config["responseMimeType"] != "application/json" or config["responseSchema"] != provider_response_schema():
+        raise Gate5DraftError("structured-output control drifted")
     if FORBIDDEN_KEYS & _walk_keys(request):
         raise Gate5DraftError("forbidden provider control or secret field present")
     if gate2.contains_secret(request):

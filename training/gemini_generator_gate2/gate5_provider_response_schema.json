@@ -1,0 +1,32 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "source_input": {
+      "type": "STRING",
+      "description": "A wholly fictional messy note containing only the evidence used by proposed_output."
+    },
+    "proposed_output": {
+      "type": "OBJECT",
+      "properties": {
+        "narrative": {
+          "type": "STRING",
+          "description": "Contextual state, observations, uncertainty, and incomplete thoughts faithfully organized from source_input."
+        },
+        "bullets": {
+          "type": "ARRAY",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": { "type": "STRING" }
+        },
+        "action_items": {
+          "type": "ARRAY",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": { "type": "STRING" }
+        }
+      },
+      "required": ["narrative", "bullets", "action_items"]
+    }
+  },
+  "required": ["source_input", "proposed_output"]
+}

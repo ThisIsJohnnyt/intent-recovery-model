@@ -35,7 +35,8 @@ x-goog-api-key: supplied only inside a future local process
   "systemInstruction": { ... },
   "contents": [{"role": "user", "parts": [{"text": "..."}]}],
   "generationConfig": {
-    "responseFormat": {"text": {"mimeType": "application/json", "schema": { ... frozen schema ... }}},
+    "responseMimeType": "application/json",
+    "responseSchema": { ... frozen schema ... },
     "candidateCount": 1,
     "thinkingConfig": {"thinkingLevel": "low"},
     "maxOutputTokens": 2048
@@ -48,15 +49,26 @@ extra candidates, tool/caching/URL/file controls, sampling parameters, local cre
 secret-like value. It has no HTTP library, SDK, socket import, or execution command. Its all-24-slot test
 only derives local request-body hashes from the existing frozen prompt, schema, cards, and schedule.
 
+The immutable Gate 2 `response_schema.json` remains lowercase JSON Schema for local response parsing. The
+separate Gate 5 provider-only schema uses the uppercase Gemini/OpenAPI `Type` enum required by
+GenerateContent `responseSchema`. It preserves the local schema's field, required-list, description, and
+cardinality constraints except for the two `additionalProperties: false` declarations: Google's live
+GenerateContent error identified that member as unsupported in `responseSchema`, so it is intentionally
+omitted from the provider wire schema while remaining enforced by application-side validation.
+
 ## Current official basis, not yet an execution-day attestation
 
 The current GenerateContent reference documents camelCase REST fields including `generationConfig`,
-`thinkingConfig.thinkingLevel`, `candidateCount`, `maxOutputTokens`, and JSON response-format controls. Its
-ThinkingLevel enum includes `LOW`, and current examples use a low-thinking configuration. The current official
-structured-output REST example uses `responseFormat.text.mimeType` and `responseFormat.text.schema`. This draft
-follows that current documented REST shape while still requiring an execution-day exact-reference/model-compatibility
-check before final freezing.
-The current structured-output guide still emphasizes that application-side validation remains required.
+`thinkingConfig.thinkingLevel`, `candidateCount`, `maxOutputTokens`, `responseMimeType`, and `responseSchema`.
+Its ThinkingLevel enum includes `LOW`, and current examples use a low-thinking configuration. The flat
+`responseMimeType`/`responseSchema` controls are used specifically for the GenerateContent endpoint; the distinct
+Interactions API response-format shape is not used here. This draft still requires an execution-day
+exact-reference/model-compatibility check before final freezing.
+The current structured-output guide still emphasizes that application-side validation remains required. A
+single capped, status-only diagnostic using the corrected wire format, uppercase provider types, and the
+provider schema without `additionalProperties` returned HTTP 200 on 2026-08-15. Its receipt is preserved as
+live compatibility evidence; it did not parse, retain, or review candidate content and does not authorize the
+paid pilot.
 
 Sources: [GenerateContent REST reference](https://ai.google.dev/api/generate-content), [thinking controls](https://ai.google.dev/gemini-api/docs/generate-content/thinking), and [structured outputs](https://ai.google.dev/gemini-api/docs/generate-content/structured-output).
 

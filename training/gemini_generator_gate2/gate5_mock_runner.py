@@ -20,9 +20,9 @@ FIXTURES_PATH = PACKAGE / "gate5_mock_provider_fixtures.json"
 REQUIRED_USAGE_FIELDS = (
     "promptTokenCount",
     "candidatesTokenCount",
-    "thoughtsTokenCount",
     "totalTokenCount",
 )
+OPTIONAL_COUNT_USAGE_FIELDS = ("thoughtsTokenCount",)
 ZERO_ONLY_USAGE_FIELDS = ("cachedContentTokenCount", "toolUsePromptTokenCount")
 DETAIL_USAGE_FIELDS = (
     "promptTokensDetails",
@@ -30,7 +30,8 @@ DETAIL_USAGE_FIELDS = (
     "candidatesTokensDetails",
     "toolUsePromptTokensDetails",
 )
-OPTIONAL_USAGE_FIELDS = set(ZERO_ONLY_USAGE_FIELDS + DETAIL_USAGE_FIELDS + ("serviceTier",))
+OPTIONAL_USAGE_FIELDS = set(OPTIONAL_COUNT_USAGE_FIELDS + ZERO_ONLY_USAGE_FIELDS + DETAIL_USAGE_FIELDS + ("serviceTier",))
+MAX_THOUGHT_SIGNATURE_CODEPOINTS = 65_536
 REQUIRED_RESPONSE_FIELDS = {"candidates", "modelVersion"}
 OPTIONAL_RESPONSE_FIELDS = {"usageMetadata", "promptFeedback", "responseId", "modelStatus"}
 REQUIRED_CANDIDATE_FIELDS = {"content", "finishReason"}
@@ -82,6 +83,9 @@ def parse_usage(value: Any) -> dict[str, int]:
         raise Gate5MockError("budget_or_usage_unknown")
     if any(type(value[field]) is not int or value[field] < 0 for field in REQUIRED_USAGE_FIELDS):
         raise Gate5MockError("budget_or_usage_unknown")
+    for field in OPTIONAL_COUNT_USAGE_FIELDS:
+        if field in value and (type(value[field]) is not int or value[field] < 0):
+            raise Gate5MockError("budget_or_usage_unknown")
     for field in DETAIL_USAGE_FIELDS:
         if field in value and (
             not isinstance(value[field], list) or any(not isinstance(item, dict) for item in value[field])
@@ -97,6 +101,7 @@ def parse_usage(value: Any) -> dict[str, int]:
     if value.get("toolUsePromptTokenCount", 0) != 0:
         raise Gate5MockError("tool_usage_forbidden")
     usage = {field: value[field] for field in REQUIRED_USAGE_FIELDS}
+    usage["thoughtsTokenCount"] = value.get("thoughtsTokenCount", 0)
     usage["cachedContentTokenCount"] = value.get("cachedContentTokenCount", 0)
     usage["toolUsePromptTokenCount"] = value.get("toolUsePromptTokenCount", 0)
     if usage["totalTokenCount"] < usage["promptTokenCount"] + usage["candidatesTokenCount"] + usage["thoughtsTokenCount"]:
@@ -155,11 +160,15 @@ def parse_generate_content_response(value: Any) -> dict[str, Any]:
     if not isinstance(content, dict) or set(content) != {"role", "parts"} or content["role"] != "model":
         raise Gate5MockError("provider_response_shape_invalid")
     parts = content["parts"]
-    if not isinstance(parts, list) or len(parts) != 1 or not isinstance(parts[0], dict) or set(parts[0]) != {"text"}:
+    if not isinstance(parts, list) or len(parts) != 1 or not isinstance(parts[0], dict) or "text" not in parts[0] or set(parts[0]) - {"text", "thoughtSignature"}:
         raise Gate5MockError("provider_response_shape_invalid")
     text = parts[0]["text"]
     if not isinstance(text, str):
         raise Gate5MockError("provider_response_shape_invalid")
+    if "thoughtSignature" in parts[0]:
+        signature = parts[0]["thoughtSignature"]
+        if not isinstance(signature, str) or not signature or len(signature) > MAX_THOUGHT_SIGNATURE_CODEPOINTS:
+            raise Gate5MockError("provider_response_shape_invalid")
     try:
         candidate_payload = gate2.parse_response(text)
     except gate2.Gate2Error as exc:

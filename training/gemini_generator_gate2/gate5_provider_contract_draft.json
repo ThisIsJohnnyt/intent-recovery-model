@@ -29,13 +29,14 @@
     "candidateCount": 1,
     "thinkingConfig": {"thinkingLevel": "low"},
     "maxOutputTokens": 2048,
-    "responseFormat": {"text": {"mimeType": "application/json", "schema": "frozen_response_schema.json"}},
+    "responseMimeType": "application/json",
+    "responseSchema": "gate5_provider_response_schema.json",
     "forbidden_request_fields": ["tools", "toolConfig", "safetySettings", "cachedContent", "generationConfig.temperature", "generationConfig.topP", "generationConfig.topK", "generationConfig.thinkingConfig.thinkingBudget", "contents.role:model", "fileData", "inlineData", "urlContext"]
   },
   "redesign_basis": {
     "replaced_control": "The Gate 2 mock contract's shared thinking_level: minimal is not accepted as a frozen common Gate 5 control for gemini-3.7-flash.",
     "new_common_control": "Use low thinking for both arms only if execution-day official documentation confirms it for both exact model IDs and this exact API surface.",
-    "wire_format": "Use GenerateContent REST camelCase fields and the current structured-output REST shape responseFormat.text.mimeType/schema. Recheck exact field/model compatibility before final freezing.",
+    "wire_format": "Use GenerateContent REST camelCase fields responseMimeType and responseSchema directly inside generationConfig. The provider-only responseSchema uses uppercase Gemini/OpenAPI Type enum values and omits additionalProperties because a real GenerateContent 400 confirmed that field is unsupported there; the immutable Gate 2 response_schema.json remains lowercase JSON Schema for local parsing and is untouched. Do not use the Interactions responseFormat.text shape on the generateContent endpoint. Recheck exact field/model compatibility before final freezing.",
     "no_model_substitution": "No model ID, model version alias, or endpoint may be substituted. A support mismatch stops the pilot rather than creating asymmetric controls."
   },
   "execution_day_gates": [

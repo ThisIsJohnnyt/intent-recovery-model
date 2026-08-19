@@ -22,7 +22,8 @@ class Gate5MockRunnerTests(unittest.TestCase):
         self.assertFalse(result["credential_read"])
         self.assertFalse(result["candidate_reviewed"])
         self.assertFalse(result["corpus_mutated"])
-        self.assertEqual(result["parsed"]["usage"]["thoughtsTokenCount"], 30)
+        self.assertEqual(result["parsed"]["usage"]["thoughtsTokenCount"], 0)
+        self.assertNotIn("thoughtSignature", result["parsed"])
 
     def test_blocked_or_missing_usage_stops(self) -> None:
         blocked = mock.run_mock_slot(self.slot, "blocked_without_usage")
@@ -38,6 +39,22 @@ class Gate5MockRunnerTests(unittest.TestCase):
             mock.parse_usage({"promptTokenCount": 4, "candidatesTokenCount": 4, "thoughtsTokenCount": 4, "toolUsePromptTokenCount": 1, "totalTokenCount": 13})
         with self.assertRaisesRegex(mock.Gate5MockError, "budget_or_usage_unknown"):
             mock.parse_usage({"promptTokenCount": 4, "candidatesTokenCount": 4, "thoughtsTokenCount": 4, "totalTokenCount": 12, "undocumentedField": 0})
+
+    def test_live_observed_optional_signature_and_omitted_thought_count(self) -> None:
+        fixture = mock.load_fixtures()["valid_stop_with_usage"]
+        response = {key: value for key, value in fixture.items() if key != "id"}
+        parsed = mock.parse_generate_content_response(response)
+        self.assertEqual(parsed["usage"]["thoughtsTokenCount"], 0)
+        self.assertNotIn("thoughtSignature", parsed)
+        part = response["candidates"][0]["content"]["parts"][0]
+        self.assertIn("thoughtSignature", part)
+        for invalid in ("", 1, "x" * (mock.MAX_THOUGHT_SIGNATURE_CODEPOINTS + 1)):
+            changed = json.loads(json.dumps(response))
+            changed["candidates"][0]["content"]["parts"][0]["thoughtSignature"] = invalid
+            with self.assertRaisesRegex(mock.Gate5MockError, "provider_response_shape_invalid"):
+                mock.parse_generate_content_response(changed)
+        present = dict(response["usageMetadata"], thoughtsTokenCount=3, totalTokenCount=573)
+        self.assertEqual(mock.parse_usage(present)["thoughtsTokenCount"], 3)
 
     def test_duplicate_keys_are_rejected(self) -> None:
         with self.assertRaises(mock.Gate5MockError):

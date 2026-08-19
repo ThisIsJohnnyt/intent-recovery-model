@@ -1,0 +1,29 @@
+You generate one synthetic training-candidate pair for a note-organization research pilot.
+
+Your authority is limited to inventing a fictional messy source note and a faithful organized rendering of that same fictional note. Never claim the pair is approved, accepted, gold, safe, reviewed, or suitable for training.
+
+Return only the JSON object required by the response schema.
+
+The source_input must:
+- be wholly fictional and contain no real private data;
+- read like a plausible messy human note rather than polished prose;
+- follow the supplied mechanism card without copying its wording;
+- contain enough explicit evidence for the organized output;
+- preserve genuine ambiguity, uncertainty, questions, corrections, and incomplete thoughts where requested;
+- avoid medical advice, legal advice, financial advice, diagnosis, crisis content, sexual content, hate, wrongdoing instructions, secrets, credentials, and identifying personal data; and
+- not mention this prompt, schemas, models, reviewers, datasets, benchmarks, protected sets, or training.
+
+The proposed_output must:
+- organize only information supported by source_input;
+- use narrative for contextual state, observations, uncertainty, and incomplete thoughts;
+- when narrative expresses an unresolved or ambiguous state, vary sentence structure and word choice each time rather than defaulting to a fixed opening (for example, avoid routinely starting with "It is unresolved whether" or "It remains unclear whether"); express the same required uncertainty in different, natural phrasings;
+- use bullets for concise non-action facts, decisions, questions, and reference details;
+- use action_items only for explicit or strongly recoverable future actions;
+- preserve attribution, ownership, chronology, conditions, quantities, destinations, and uncertainty;
+- never invent facts, people, causes, certainty, recommendations, deadlines, recipients, or tasks;
+- never resolve an ambiguous reference unless source_input resolves it;
+- avoid accidental duplication across fields;
+- use calm, respectful, non-diagnostic language; and
+- contain no commentary outside the three required fields.
+
+Before returning JSON, silently verify that every organized claim is supported by source_input and every explicit task in source_input survives in action_items. Do not reveal hidden reasoning or add confidence scores.

@@ -96,6 +96,14 @@ class Gate2Error(RuntimeError):
     pass
 
 
+class ResponseSchemaError(Gate2Error):
+    """A response-shape failure with a content-free machine reason."""
+
+    def __init__(self, message: str, structured_reason: dict[str, Any]):
+        self.structured_reason = structured_reason
+        super().__init__(message)
+
+
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -105,7 +113,21 @@ def canonical_json_bytes(value: Any) -> bytes:
 
 
 def canonical_file(path: Path, expected_hash: str | None = None) -> tuple[bytes, dict[str, Any]]:
-    raw = path.read_bytes()
+    resolved = path.resolve()
+    try:
+        relative_path = resolved.relative_to(ROOT)
+    except ValueError as exc:
+        raise Gate2Error(f"{path}: path is outside the project root") from exc
+    raw: bytes | None = None
+    last_error: OSError | None = None
+    for _ in range(3):
+        try:
+            raw = resolved.read_bytes()
+            break
+        except OSError as exc:
+            last_error = exc
+    if raw is None:
+        raise Gate2Error(f"{path}: unreadable") from last_error
     if raw.startswith(b"\xef\xbb\xbf"):
         raise Gate2Error(f"{path}: UTF-8 BOM is forbidden")
     if not raw.endswith(b"\n"):
@@ -125,7 +147,7 @@ def canonical_file(path: Path, expected_hash: str | None = None) -> tuple[bytes,
     if expected_hash and digest != expected_hash:
         raise Gate2Error(f"{path}: canonical hash mismatch; expected {expected_hash}, got {digest}")
     return canonical, {
-        "path": path.relative_to(ROOT).as_posix(),
+        "path": relative_path.as_posix(),
         "checkout_line_endings": "crlf" if has_crlf else "lf",
         "checkout_byte_sha256": sha256_bytes(raw),
         "canonical_lf_sha256": digest,
@@ -275,6 +297,7 @@ def collision_check(text: str, references: Iterable[tuple[str, str]]) -> dict[st
     tokens = set(normalized.split())
     grams = char_5grams(text)
     reasons: list[str] = []
+    structured_reasons: list[dict[str, Any]] = []
     max_token = (0.0, None)
     max_char = (0.0, None)
     for label, reference in references:
@@ -290,15 +313,20 @@ def collision_check(text: str, references: Iterable[tuple[str, str]]) -> dict[st
         shorter = min(len(normalized), len(normalized_ref))
         if normalized == normalized_ref:
             reasons.append(f"normalized exact match with {label}")
+            structured_reasons.append({"kind": "normalized_exact_match", "reference": label, "score": None})
         elif shorter >= CONTAINMENT_MIN_NORMALIZED_CHARS and (normalized in normalized_ref or normalized_ref in normalized):
             reasons.append(f"normalized containment with {label}")
+            structured_reasons.append({"kind": "normalized_containment", "reference": label, "score": None})
         if token_score >= TOKEN_JACCARD_THRESHOLD:
             reasons.append(f"token Jaccard {token_score:.6f} with {label}")
+            structured_reasons.append({"kind": "token_jaccard_threshold", "reference": label, "score": round(token_score, 6)})
         if char_score >= CHAR_5GRAM_JACCARD_THRESHOLD:
             reasons.append(f"character-5-gram Jaccard {char_score:.6f} with {label}")
+            structured_reasons.append({"kind": "character_5gram_jaccard_threshold", "reference": label, "score": round(char_score, 6)})
     return {
         "fatal": bool(reasons),
         "reasons": reasons,
+        "structured_reasons": structured_reasons,
         "maximum_token_jaccard": {"score": round(max_token[0], 9), "reference": max_token[1]},
         "maximum_character_5gram_jaccard": {"score": round(max_char[0], 9), "reference": max_char[1]},
     }
@@ -357,6 +385,296 @@ def screen_candidate(
             "below_threshold_qualitative_hits": diagnostic_hits,
         })
     return {"fatal": bool(fatal_reasons), "fatal_reasons": fatal_reasons, "fields": results}
+
+
+# --- V11-only additions below this line -------------------------------------
+# Purely additive: nothing above this comment is modified, and nothing V6-V10
+# call. `collision_check`/`screen_candidate` and their thresholds/behavior are
+# untouched, so every prior version's frozen tests and hash-pinned artifacts
+# keep passing byte-for-byte unchanged. These new functions exist only to let
+# V11 isolate a single variable -- stopword removal ahead of the token-Jaccard
+# comparison -- while leaving char-5-gram scoring, exact-match detection, and
+# normalized-containment detection completely alone, exactly as Johnny asked:
+# fix stopword removal first, reassess from there before touching anything
+# else (thresholds included).
+#
+# The list itself is the closed, deterministic ~120-word set of English
+# function words used by common general-purpose stopword lists (articles,
+# pronouns, prepositions, conjunctions, auxiliary/modal verbs, and a handful
+# of generic quantifiers/discourse words). It is frozen here as part of V11's
+# hash-pinned build, not sourced from any external package at runtime.
+STOPWORDS = frozenset({
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't",
+    "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by",
+    "can", "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't",
+    "down", "during", "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have",
+    "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him",
+    "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't",
+    "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor",
+    "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out",
+    "over", "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't", "so",
+    "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then",
+    "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those",
+    "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're",
+    "we've", "were", "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while",
+    "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll",
+    "you're", "you've", "your", "yours", "yourself", "yourselves",
+})
+
+
+def _stopword_filtered_tokens(normalized_text: str) -> set[str]:
+    """`normalized_for_collision(text).split()` with STOPWORDS removed. Takes
+    already-normalized text (contractions have had their apostrophe stripped
+    by normalize_for_collision's `[^a-z0-9 ]` filter, e.g. "don't" -> "dont"),
+    so STOPWORDS above is only ever matched post-normalization here -- the
+    apostrophe forms in the set exist for readability/documentation of the
+    source list, not because they can literally match."""
+    return {token for token in normalized_text.split() if token not in STOPWORDS}
+
+
+def collision_check_stopword_filtered(text: str, references: Iterable[tuple[str, str]]) -> dict[str, Any]:
+    """Identical to collision_check in every respect -- exact-match,
+    normalized-containment, and character-5-gram Jaccard all reuse the exact
+    same code paths against the exact same normalized text -- except the
+    token-Jaccard comparison strips STOPWORDS from both sides before scoring.
+    Thresholds (TOKEN_JACCARD_THRESHOLD, CHAR_5GRAM_JACCARD_THRESHOLD) are
+    unchanged; only what counts as a "token" changes."""
+    normalized = normalize_for_collision(text)
+    tokens = _stopword_filtered_tokens(normalized)
+    grams = char_5grams(text)
+    reasons: list[str] = []
+    structured_reasons: list[dict[str, Any]] = []
+    max_token = (0.0, None)
+    max_char = (0.0, None)
+    for label, reference in references:
+        normalized_ref = normalize_for_collision(reference)
+        if not normalized or not normalized_ref:
+            continue
+        token_score = jaccard(tokens, _stopword_filtered_tokens(normalized_ref))
+        char_score = jaccard(grams, char_5grams(reference))
+        if token_score > max_token[0]:
+            max_token = (token_score, label)
+        if char_score > max_char[0]:
+            max_char = (char_score, label)
+        shorter = min(len(normalized), len(normalized_ref))
+        if normalized == normalized_ref:
+            reasons.append(f"normalized exact match with {label}")
+            structured_reasons.append({"kind": "normalized_exact_match", "reference": label, "score": None})
+        elif shorter >= CONTAINMENT_MIN_NORMALIZED_CHARS and (normalized in normalized_ref or normalized_ref in normalized):
+            reasons.append(f"normalized containment with {label}")
+            structured_reasons.append({"kind": "normalized_containment", "reference": label, "score": None})
+        if token_score >= TOKEN_JACCARD_THRESHOLD:
+            reasons.append(f"token Jaccard {token_score:.6f} with {label}")
+            structured_reasons.append({"kind": "token_jaccard_threshold", "reference": label, "score": round(token_score, 6)})
+        if char_score >= CHAR_5GRAM_JACCARD_THRESHOLD:
+            reasons.append(f"character-5-gram Jaccard {char_score:.6f} with {label}")
+            structured_reasons.append({"kind": "character_5gram_jaccard_threshold", "reference": label, "score": round(char_score, 6)})
+    return {
+        "fatal": bool(reasons),
+        "reasons": reasons,
+        "structured_reasons": structured_reasons,
+        "maximum_token_jaccard": {"score": round(max_token[0], 9), "reference": max_token[1]},
+        "maximum_character_5gram_jaccard": {"score": round(max_char[0], 9), "reference": max_char[1]},
+    }
+
+
+def screen_candidate_stopword_filtered(
+    candidate: dict[str, Any],
+    quarantine_references: list[tuple[str, str]],
+    earlier_candidate_references: list[tuple[str, str]],
+    prompt_texts: list[tuple[str, str]],
+) -> dict[str, Any]:
+    """Identical to screen_candidate except every collision_check call is
+    collision_check_stopword_filtered instead. qualitative_similarity (the
+    non-fatal below-threshold diagnostic) is intentionally left untouched --
+    it does not drive any rejection decision."""
+    fields = candidate_fields(candidate)
+    results = []
+    fatal_reasons: list[str] = []
+    for field_name, text in fields:
+        protected = collision_check_stopword_filtered(text, quarantine_references)
+        earlier = collision_check_stopword_filtered(text, earlier_candidate_references)
+        prompt = collision_check_stopword_filtered(text, prompt_texts)
+        if protected["fatal"]:
+            fatal_reasons.append(f"{field_name}:protected_collision")
+        if earlier["fatal"]:
+            fatal_reasons.append(f"{field_name}:pilot_duplicate")
+        if prompt["fatal"]:
+            fatal_reasons.append(f"{field_name}:prompt_imitation")
+        diagnostic_hits = []
+        for reference_name, reference in quarantine_references:
+            diagnostics = qualitative_similarity(text, reference)
+            if any(value for value in diagnostics.values()):
+                diagnostic_hits.append({"reference": reference_name, **diagnostics})
+        results.append({
+            "field": field_name,
+            "protected": protected,
+            "earlier_candidates": earlier,
+            "prompt_imitation": prompt,
+            "below_threshold_qualitative_hits": diagnostic_hits,
+        })
+    return {"fatal": bool(fatal_reasons), "fatal_reasons": fatal_reasons, "fields": results}
+# --- end V11-only additions --------------------------------------------------
+
+
+# --- V12-only additions below this line -------------------------------------
+# Purely additive, same discipline as the V11 block above: nothing above this
+# comment is modified, and nothing V6-V11 calls these. V11's own
+# collision_check_stopword_filtered/screen_candidate_stopword_filtered stay
+# completely frozen -- they already ran for real and were reviewed as-is.
+#
+# The one isolated variable this adds: character-5-gram Jaccard is now scored
+# over stopword-filtered text too, using the same fixed STOPWORDS list and the
+# same unchanged CHAR_5GRAM_JACCARD_THRESHOLD. Real V11 production data showed
+# the identical fan-out signature that justified fixing token-Jaccard in the
+# first place -- one real candidate matched 28 different, unrelated reference
+# records simultaneously, all clustered at 0.102-0.109, just over the 0.10
+# threshold -- consistent with common short words inflating character-level
+# n-gram overlap the same way they inflated word-level overlap.
+#
+# Word order must be preserved (not just filtered into a set) for this to be
+# meaningful: character 5-grams span word boundaries, so which stopwords are
+# removed and where changes which 5-grams exist, not just which words remain.
+# A set has no reproducible iteration order (Python hash randomization), so
+# rebuilding filtered text from a set here would make char_5grams_stopword_
+# filtered() nondeterministic across runs -- a real, considered distinction
+# from _stopword_filtered_tokens() above, which only ever feeds Jaccard set
+# arithmetic and never reconstructs ordered text.
+def _stopword_filtered_normalized_text_ordered(normalized_text: str) -> str:
+    return " ".join(token for token in normalized_text.split() if token not in STOPWORDS)
+
+
+def char_5grams_stopword_filtered(text: str) -> set[str]:
+    filtered = _stopword_filtered_normalized_text_ordered(normalize_for_collision(text)).replace(" ", "")
+    if not filtered:
+        return set()
+    if len(filtered) < 5:
+        return {filtered}
+    return {filtered[index:index + 5] for index in range(len(filtered) - 4)}
+
+
+def collision_check_fully_stopword_filtered(text: str, references: Iterable[tuple[str, str]]) -> dict[str, Any]:
+    """Identical to collision_check_stopword_filtered in every respect --
+    token-Jaccard scoring, exact-match detection, and normalized-containment
+    detection are all unchanged from it -- except character-5-gram Jaccard is
+    now also computed over stopword-filtered text instead of the full
+    normalized text. Thresholds are unchanged; only what counts as
+    comparable character content changes, mirroring the token-Jaccard fix
+    exactly."""
+    normalized = normalize_for_collision(text)
+    tokens = _stopword_filtered_tokens(normalized)
+    grams = char_5grams_stopword_filtered(text)
+    reasons: list[str] = []
+    structured_reasons: list[dict[str, Any]] = []
+    max_token = (0.0, None)
+    max_char = (0.0, None)
+    for label, reference in references:
+        normalized_ref = normalize_for_collision(reference)
+        if not normalized or not normalized_ref:
+            continue
+        token_score = jaccard(tokens, _stopword_filtered_tokens(normalized_ref))
+        char_score = jaccard(grams, char_5grams_stopword_filtered(reference))
+        if token_score > max_token[0]:
+            max_token = (token_score, label)
+        if char_score > max_char[0]:
+            max_char = (char_score, label)
+        shorter = min(len(normalized), len(normalized_ref))
+        if normalized == normalized_ref:
+            reasons.append(f"normalized exact match with {label}")
+            structured_reasons.append({"kind": "normalized_exact_match", "reference": label, "score": None})
+        elif shorter >= CONTAINMENT_MIN_NORMALIZED_CHARS and (normalized in normalized_ref or normalized_ref in normalized):
+            reasons.append(f"normalized containment with {label}")
+            structured_reasons.append({"kind": "normalized_containment", "reference": label, "score": None})
+        if token_score >= TOKEN_JACCARD_THRESHOLD:
+            reasons.append(f"token Jaccard {token_score:.6f} with {label}")
+            structured_reasons.append({"kind": "token_jaccard_threshold", "reference": label, "score": round(token_score, 6)})
+        if char_score >= CHAR_5GRAM_JACCARD_THRESHOLD:
+            reasons.append(f"character-5-gram Jaccard {char_score:.6f} with {label}")
+            structured_reasons.append({"kind": "character_5gram_jaccard_threshold", "reference": label, "score": round(char_score, 6)})
+    return {
+        "fatal": bool(reasons),
+        "reasons": reasons,
+        "structured_reasons": structured_reasons,
+        "maximum_token_jaccard": {"score": round(max_token[0], 9), "reference": max_token[1]},
+        "maximum_character_5gram_jaccard": {"score": round(max_char[0], 9), "reference": max_char[1]},
+    }
+
+
+def screen_candidate_fully_stopword_filtered(
+    candidate: dict[str, Any],
+    quarantine_references: list[tuple[str, str]],
+    earlier_candidate_references: list[tuple[str, str]],
+    prompt_texts: list[tuple[str, str]],
+) -> dict[str, Any]:
+    """Identical to screen_candidate_stopword_filtered except every
+    collision_check call is collision_check_fully_stopword_filtered
+    instead. qualitative_similarity is intentionally left untouched, same
+    reasoning as V11: it does not drive any rejection decision."""
+    fields = candidate_fields(candidate)
+    results = []
+    fatal_reasons: list[str] = []
+    for field_name, text in fields:
+        protected = collision_check_fully_stopword_filtered(text, quarantine_references)
+        earlier = collision_check_fully_stopword_filtered(text, earlier_candidate_references)
+        prompt = collision_check_fully_stopword_filtered(text, prompt_texts)
+        if protected["fatal"]:
+            fatal_reasons.append(f"{field_name}:protected_collision")
+        if earlier["fatal"]:
+            fatal_reasons.append(f"{field_name}:pilot_duplicate")
+        if prompt["fatal"]:
+            fatal_reasons.append(f"{field_name}:prompt_imitation")
+        diagnostic_hits = []
+        for reference_name, reference in quarantine_references:
+            diagnostics = qualitative_similarity(text, reference)
+            if any(value for value in diagnostics.values()):
+                diagnostic_hits.append({"reference": reference_name, **diagnostics})
+        results.append({
+            "field": field_name,
+            "protected": protected,
+            "earlier_candidates": earlier,
+            "prompt_imitation": prompt,
+            "below_threshold_qualitative_hits": diagnostic_hits,
+        })
+    return {"fatal": bool(fatal_reasons), "fatal_reasons": fatal_reasons, "fields": results}
+# --- end V12-only additions --------------------------------------------------
+
+
+# --- V13-only additions below this line -------------------------------------
+# Purely additive, same discipline as V11/V12 above: nothing above this
+# comment is modified, and nothing V6-V12 calls this. Collision screening
+# behavior (what gets accepted or rejected) is completely untouched -- this
+# adds a way to *measure* a real production candidate's text length for
+# real-money-spend evidence rows, it does not change any accept/reject
+# decision.
+#
+# Motivation (from the retrospective corpus audit, 2026-08-18): V12 r2's real
+# production data showed one real collision (M07) matching 19 distinct
+# reference records at 22 identical char-5-gram scores -- a signature that's
+# consistent with either genuine corpus repetition or the short-string
+# Jaccard effect already proven twice in this project's own regression tests
+# (V11's token side, V12's char-5-gram side: removing a stopword shrinks the
+# union without shrinking the intersection, which can raise similarity for
+# short strings). Aggregate scores alone can't distinguish the two
+# explanations. Recording how long the compared text actually was --
+# reusing the exact same normalization and stopword-filtering primitives the
+# real scoring already runs, not a new metric -- lets that question be
+# answered directly from real future collision evidence, with zero raw text
+# ever persisted: only two small non-negative integers.
+def field_length_metadata(text: str) -> dict[str, int]:
+    """Length metadata for one piece of text, computed the same way the real
+    collision scoring already sees it: `normalized_char_length` is the
+    character count of `normalize_for_collision(text)` with spaces removed
+    (the same string `char_5grams`/`char_5grams_stopword_filtered` windows
+    over), and `stopword_filtered_token_count` is the size of the same
+    stopword-filtered token set `_stopword_filtered_tokens` already produces
+    for token-Jaccard scoring. Both are plain non-negative integers -- no
+    text, no substring, nothing reversible to the source content."""
+    normalized = normalize_for_collision(text)
+    return {
+        "normalized_char_length": len(normalized.replace(" ", "")),
+        "stopword_filtered_token_count": len(_stopword_filtered_tokens(normalized)),
+    }
+# --- end V13-only additions --------------------------------------------------
 
 
 def load_cards() -> dict[str, str]:
@@ -428,11 +746,13 @@ def build_schedule(references: list[tuple[str, str]]) -> dict[str, Any]:
     return manifest
 
 
-def _validate_plain_string(value: Any, path: str) -> str:
+def _validate_plain_string(value: Any, path: str, structured_reason: dict[str, Any] | None = None) -> str:
     if not isinstance(value, str) or not value.strip():
-        raise Gate2Error(f"{path}: nonblank string required")
+        error = ResponseSchemaError(f"{path}: nonblank string required", structured_reason) if structured_reason else Gate2Error(f"{path}: nonblank string required")
+        raise error
     if any(unicodedata.category(ch) == "Cc" for ch in value):
-        raise Gate2Error(f"{path}: control characters are forbidden")
+        error = ResponseSchemaError(f"{path}: control characters are forbidden", structured_reason) if structured_reason else Gate2Error(f"{path}: control characters are forbidden")
+        raise error
     return value
 
 
@@ -440,31 +760,46 @@ def parse_response(raw: bytes | str) -> dict[str, Any]:
     if isinstance(raw, str):
         raw = raw.encode("utf-8")
     if raw.startswith(b"\xef\xbb\xbf"):
-        raise Gate2Error("response BOM is forbidden")
+        raise ResponseSchemaError("response BOM is forbidden", {"kind": "response_json_invalid"})
     try:
         text = raw.decode("utf-8")
         value = json.loads(text, object_pairs_hook=reject_duplicate_keys)
     except (UnicodeDecodeError, json.JSONDecodeError, Gate2Error) as exc:
-        raise Gate2Error(f"invalid response JSON: {exc}") from exc
+        raise ResponseSchemaError("invalid response JSON: " + str(exc), {"kind": "response_json_invalid"}) from exc
     if not isinstance(value, dict) or set(value) != {"source_input", "proposed_output"}:
-        raise Gate2Error("response has missing or extra top-level keys")
-    source = _validate_plain_string(value["source_input"], "source_input")
+        keys = set(value) if isinstance(value, dict) else set()
+        raise ResponseSchemaError("response has missing or extra top-level keys", {
+            "kind": "top_level_keys_invalid",
+            "has_source_input": "source_input" in keys,
+            "has_proposed_output": "proposed_output" in keys,
+            "extra_key_count": len(keys - {"source_input", "proposed_output"}),
+        })
+    source = _validate_plain_string(value["source_input"], "source_input", {"kind": "source_input_not_plain_string"})
     word_count = len(WORD_RE.findall(source))
     if not 80 <= word_count <= 220:
-        raise Gate2Error(f"source_input word count {word_count} is outside 80..220")
+        raise ResponseSchemaError(f"source_input word count {word_count} is outside 80..220", {"kind": "source_input_word_count_out_of_range", "actual_count": word_count, "min_allowed": 80, "max_allowed": 220})
     output = value["proposed_output"]
     if not isinstance(output, dict) or set(output) != {"narrative", "bullets", "action_items"}:
-        raise Gate2Error("proposed_output has missing or extra keys")
-    narrative = _validate_plain_string(output["narrative"], "proposed_output.narrative")
+        keys = set(output) if isinstance(output, dict) else set()
+        raise ResponseSchemaError("proposed_output has missing or extra keys", {
+            "kind": "proposed_output_keys_invalid",
+            "has_narrative": "narrative" in keys,
+            "has_bullets": "bullets" in keys,
+            "has_action_items": "action_items" in keys,
+            "extra_key_count": len(keys - {"narrative", "bullets", "action_items"}),
+        })
+    narrative = _validate_plain_string(output["narrative"], "proposed_output.narrative", {"kind": "narrative_not_plain_string"})
     sentence_count = len(SENTENCE_RE.findall(narrative))
     if not 1 <= sentence_count <= 4:
-        raise Gate2Error(f"narrative sentence count {sentence_count} is outside 1..4")
+        raise ResponseSchemaError(f"narrative sentence count {sentence_count} is outside 1..4", {"kind": "narrative_sentence_count_out_of_range", "actual_count": sentence_count, "min_allowed": 1, "max_allowed": 4})
     for key, minimum, maximum in (("bullets", 2, 8), ("action_items", 1, 6)):
         items = output[key]
-        if not isinstance(items, list) or not minimum <= len(items) <= maximum:
-            raise Gate2Error(f"proposed_output.{key} item count is outside {minimum}..{maximum}")
+        if not isinstance(items, list):
+            raise ResponseSchemaError(f"proposed_output.{key} item count is outside {minimum}..{maximum}", {"kind": "list_not_array", "field": key})
+        if not minimum <= len(items) <= maximum:
+            raise ResponseSchemaError(f"proposed_output.{key} item count is outside {minimum}..{maximum}", {"kind": "list_item_count_out_of_range", "field": key, "actual_count": len(items), "min_allowed": minimum, "max_allowed": maximum})
         for index, item in enumerate(items):
-            _validate_plain_string(item, f"proposed_output.{key}[{index}]")
+            _validate_plain_string(item, f"proposed_output.{key}[{index}]", {"kind": "list_item_not_plain_string", "field": key, "index": index})
     return value
 
 

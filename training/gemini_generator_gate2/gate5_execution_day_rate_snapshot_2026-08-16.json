@@ -1,0 +1,12 @@
+{
+  "artifact": "gemini_generator_rate_snapshot",
+  "status": "execution_day_verified",
+  "observed_date": "2026-08-16",
+  "currency": "USD",
+  "unit": "usd_millionths_per_million_tokens",
+  "rates": {
+    "gemini-3.7-flash": {"input": 750000, "output_including_thinking": 3750000},
+    "gemini-3.5-flash-lite": {"input": 300000, "output_including_thinking": 2500000}
+  },
+  "source_url": "https://ai.google.dev/gemini-api/docs/pricing"
+}
